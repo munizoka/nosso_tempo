@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nosso Tempo Juntos</title>
+    
+    <!-- Tailwind CSS para estilização rápida -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Fonte Inter para um visual elegante e limpo -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            /* Define a imagem de fundo exata enviada pelo usuário */
+            background-image: url('image_94b1ff.jpg');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            background-repeat: no-repeat;
+            color: white;
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+        }
+
+        /* Sombras fortes para garantir legibilidade contra o céu claro */
+        .text-shadow-strong {
+            text-shadow: 2px 2px 5px rgba(0, 0, 0, 0.9), 0px 0px 10px rgba(0, 0, 0, 0.6);
+        }
+        
+        .text-shadow-medium {
+            text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.8);
+        }
+
+        /* Cartões escuros translúcidos para destacar os números */
+        .glass-card {
+            background: rgba(0, 0, 0, 0.4); /* Fundo um pouco mais escuro para garantir contraste */
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Evita que a largura do elemento mude quando o número muda de largura */
+        .number-display {
+            font-variant-numeric: tabular-nums;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- pt-[12vh] a pt-[15vh] mantém o conteúdo na parte de cima da foto (céu) -->
+    <main class="w-full min-h-screen flex flex-col items-center pt-[10vh] sm:pt-[15vh] px-4 pb-10">
+        
+        <!-- ================= PRIMEIRA DATA ================= -->
+        <div class="mb-12 w-full max-w-4xl">
+            <div class="text-center mb-4">
+                <h2 class="text-2xl sm:text-3xl md:text-4xl font-light mb-1 text-shadow-strong tracking-wide text-pink-200">
+                    Tempo beijando sua boca:
+                </h2>
+                <p class="text-sm sm:text-base text-gray-200 text-shadow-medium">Desde 21 de Agosto de 2023</p>
+            </div>
+
+            <!-- Grade do contador 1 -->
+            <div class="grid grid-cols-3 md:grid-cols-6 gap-2 sm:gap-4 w-full">
+                <div class="glass-card rounded-xl p-3 sm:p-5 flex flex-col items-center justify-center transition-transform hover:scale-105">
+                    <span id="kiss-years" class="number-display text-2xl sm:text-3xl md:text-4xl font-semibold mb-1 text-white">00</span>
+                    <span class="text-[10px] sm:text-xs font-medium uppercase tracking-widest text-gray-300">Anos</span>
+                </div>
+                <div class="glass-card rounded-xl p-3 sm:p-5 flex flex-col items-center justify-center transition-transform hover:scale-105">
+                    <span id="kiss-months" class="number-display text-2xl sm:text-3xl md:text-4xl font-semibold mb-1 text-white">00</span>
+                    <span class="text-[10px] sm:text-xs font-medium uppercase tracking-widest text-gray-300">Meses</span>
+                </div>
+                <div class="glass-card rounded-xl p-3 sm:p-5 flex flex-col items-center justify-center transition-transform hover:scale-105">
+                    <span id="kiss-days" class="number-display text-2xl sm:text-3xl md:text-4xl font-semibold mb-1 text-white">00</span>
+                    <span class="text-[10px] sm:text-xs font-medium uppercase tracking-widest text-gray-300">Dias</span>
+                </div>
+                <div class="glass-card rounded-xl p-3 sm:p-5 flex flex-col items-center justify-center transition-transform hover:scale-105">
+                    <span id="kiss-hours" class="number-display text-2xl sm:text-3xl md:text-4xl font-semibold mb-1 text-white">00</span>
+                    <span class="text-[10px] sm:text-xs font-medium uppercase tracking-widest text-gray-300">Horas</span>
+                </div>
+                <div class="glass-card rounded-xl p-3 sm:p-5 flex flex-col items-center justify-center transition-transform hover:scale-105">
+                    <span id="kiss-minutes" class="number-display text-2xl sm:text-3xl md:text-4xl font-semibold mb-1 text-white">00</span>
+                    <span class="text-[10px] sm:text-xs font-medium uppercase tracking-widest text-gray-300">Min</span>
+                </div>
+                <div class="glass-card rounded-xl p-3 sm:p-5 flex flex-col items-center justify-center transition-transform hover:scale-105">
+                    <span id="kiss-seconds" class="number-display text-2xl sm:text-3xl md:text-4xl font-semibold mb-1 text-white">00</span>
+                    <span class="text-[10px] sm:text-xs font-medium uppercase tracking-widest text-gray-300">Seg</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= SEGUNDA DATA ================= -->
+        <div class="w-full max-w-4xl">
+            <div class="text-center mb-4">
+                <h2 class="text-2xl sm:text-3xl md:text-4xl font-light mb-1 text-shadow-strong tracking-wide text-pink-200">
+                    Tempo de namoro:
+                </h2>
+                <p class="text-sm sm:text-base text-gray-200 text-shadow-medium">Desde 07 de Maio de 2024</p>
+            </div>
+
+            <!-- Grade do contador 2 -->
+            <div class="grid grid-cols-3 md:grid-cols-6 gap-2 sm:gap-4 w-full">
+                <div class="glass-card rounded-xl p-3 sm:p-5 flex flex-col items-center justify-center transition-transform hover:scale-105">
+                    <span id="love-years" class="number-display text-2xl sm:text-3xl md:text-4xl font-semibold mb-1 text-white">00</span>
+                    <span class="text-[10px] sm:text-xs font-medium uppercase tracking-widest text-gray-300">Anos</span>
+                </div>
+                <div class="glass-card rounded-xl p-3 sm:p-5 flex flex-col items-center justify-center transition-transform hover:scale-105">
+                    <span id="love-months" class="number-display text-2xl sm:text-3xl md:text-4xl font-semibold mb-1 text-white">00</span>
+                    <span class="text-[10px] sm:text-xs font-medium uppercase tracking-widest text-gray-300">Meses</span>
+                </div>
+                <div class="glass-card rounded-xl p-3 sm:p-5 flex flex-col items-center justify-center transition-transform hover:scale-105">
+                    <span id="love-days" class="number-display text-2xl sm:text-3xl md:text-4xl font-semibold mb-1 text-white">00</span>
+                    <span class="text-[10px] sm:text-xs font-medium uppercase tracking-widest text-gray-300">Dias</span>
+                </div>
+                <div class="glass-card rounded-xl p-3 sm:p-5 flex flex-col items-center justify-center transition-transform hover:scale-105">
+                    <span id="love-hours" class="number-display text-2xl sm:text-3xl md:text-4xl font-semibold mb-1 text-white">00</span>
+                    <span class="text-[10px] sm:text-xs font-medium uppercase tracking-widest text-gray-300">Horas</span>
+                </div>
+                <div class="glass-card rounded-xl p-3 sm:p-5 flex flex-col items-center justify-center transition-transform hover:scale-105">
+                    <span id="love-minutes" class="number-display text-2xl sm:text-3xl md:text-4xl font-semibold mb-1 text-white">00</span>
+                    <span class="text-[10px] sm:text-xs font-medium uppercase tracking-widest text-gray-300">Min</span>
+                </div>
+                <div class="glass-card rounded-xl p-3 sm:p-5 flex flex-col items-center justify-center transition-transform hover:scale-105">
+                    <span id="love-seconds" class="number-display text-2xl sm:text-3xl md:text-4xl font-semibold mb-1 text-white">00</span>
+                    <span class="text-[10px] sm:text-xs font-medium uppercase tracking-widest text-gray-300">Seg</span>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        // Datas definidas baseadas na sua solicitação. Formato: AAAA-MM-DDTHH:MM:SS
+        const kissDate = new Date('2023-08-21T00:00:00');
+        const loveDate = new Date('2024-05-07T00:00:00');
+
+        // Função genérica para calcular a diferença de tempo entre uma data no passado e o momento atual
+        function calculateTimePassed(startDate) {
+            const now = new Date();
+
+            let years = now.getFullYear() - startDate.getFullYear();
+            let months = now.getMonth() - startDate.getMonth();
+            let days = now.getDate() - startDate.getDate();
+            let hours = now.getHours() - startDate.getHours();
+            let minutes = now.getMinutes() - startDate.getMinutes();
+            let seconds = now.getSeconds() - startDate.getSeconds();
+
+            // Matemática de empréstimo: caso algum valor seja negativo, subtrai da unidade maior e soma na atual
+            if (seconds < 0) {
+                seconds += 60;
+                minutes--;
+            }
+            if (minutes < 0) {
+                minutes += 60;
+                hours--;
+            }
+            if (hours < 0) {
+                hours += 24;
+                days--;
+            }
+            if (days < 0) {
+                // Calcula quantos dias tinha no mês anterior para fazer a conta certa
+                const prevMonth = new Date(now.getFullYear(), now.getMonth(), 0);
+                days += prevMonth.getDate();
+                months--;
+            }
+            if (months < 0) {
+                months += 12;
+                years--;
+            }
+
+            return { years, months, days, hours, minutes, seconds };
+        }
+
+        // Função auxiliar para garantir que números menores de 10 tenham um "0" na frente (ex: 09 em vez de 9)
+        const pad = (num) => num.toString().padStart(2, '0');
+
+        function updateAllCounters() {
+            // Calcula o tempo para o primeiro beijo
+            const kissTime = calculateTimePassed(kissDate);
+            document.getElementById('kiss-years').innerText = pad(kissTime.years);
+            document.getElementById('kiss-months').innerText = pad(kissTime.months);
+            document.getElementById('kiss-days').innerText = pad(kissTime.days);
+            document.getElementById('kiss-hours').innerText = pad(kissTime.hours);
+            document.getElementById('kiss-minutes').innerText = pad(kissTime.minutes);
+            document.getElementById('kiss-seconds').innerText = pad(kissTime.seconds);
+
+            // Calcula o tempo para o namoro
+            const loveTime = calculateTimePassed(loveDate);
+            document.getElementById('love-years').innerText = pad(loveTime.years);
+            document.getElementById('love-months').innerText = pad(loveTime.months);
+            document.getElementById('love-days').innerText = pad(loveTime.days);
+            document.getElementById('love-hours').innerText = pad(loveTime.hours);
+            document.getElementById('love-minutes').innerText = pad(loveTime.minutes);
+            document.getElementById('love-seconds').innerText = pad(loveTime.seconds);
+        }
+
+        // Executa imediatamente para não ter delay e depois atualiza a cada 1 segundo (1000ms)
+        updateAllCounters();
+        setInterval(updateAllCounters, 1000);
+    </script>
+</body>
+</html>
