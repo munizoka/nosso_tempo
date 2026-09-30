@@ -3,206 +3,205 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nosso Tempo Juntos</title>
-    
+    <title>Nossa Linha do Tempo</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Fonte Inter -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
-    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #09090b; /* Fundo quase preto, bem elegante (Zinc 950) */
+            background-color: #09090b; /* Fundo preto minimalista */
             color: #fafafa;
             margin: 0;
             padding: 0;
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
+            overflow-x: hidden;
         }
 
-        /* Animação suave para abrir e fechar o accordion */
-        .accordion-content {
-            display: grid;
-            grid-template-rows: 0fr;
-            transition: grid-template-rows 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-            overflow: hidden;
+        /* Estilo de rolagem sutil */
+        ::-webkit-scrollbar {
+            width: 6px;
         }
-        
-        .accordion-content.open {
-            grid-template-rows: 1fr;
+        ::-webkit-scrollbar-track {
+            background: #09090b;
         }
-
-        .accordion-inner {
-            min-height: 0; /* Necessário para a transição de grid funcionar */
-            opacity: 0;
-            transition: opacity 0.3s ease-in-out;
-            transition-delay: 0s;
+        ::-webkit-scrollbar-thumb {
+            background: #27272a;
+            border-radius: 3px;
         }
 
-        .accordion-content.open .accordion-inner {
-            opacity: 1;
-            transition-delay: 0.2s; /* Atrasa o surgimento do texto até abrir um pouco */
+        /* Animação suave para troca de abas */
+        .tab-view {
+            animation: fadeIn 0.35s ease-out;
         }
-
-        /* Rotação da setinha */
-        .chevron {
-            transition: transform 0.3s ease;
-        }
-        .open-chevron {
-            transform: rotate(180deg);
-        }
-
-        /* Bloco de tempo (Sub-blocos) */
-        .time-block {
-            background-color: #27272a; /* Cinza chumbo (Zinc 800) */
-            border: 1px solid #3f3f46; /* Borda sutil (Zinc 700) */
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5);
-        }
-
-        .number-display {
-            font-variant-numeric: tabular-nums;
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
         }
     </style>
 </head>
-<body class="p-4 sm:p-8">
+<body class="flex h-screen overflow-hidden">
 
-    <main class="w-full max-w-3xl w-full flex flex-col gap-6">
+    <!-- Fundo escuro no celular quando a barra lateral está aberta -->
+    <div id="sidebar-backdrop" onclick="toggleSidebar(false)" class="fixed inset-0 bg-black/60 z-20 hidden md:hidden backdrop-blur-sm transition-opacity"></div>
+
+    <!-- Barra Lateral (Estilo Gemini) -->
+    <aside id="sidebar" class="bg-[#121215] border-r border-zinc-800/80 w-72 flex-shrink-0 flex flex-col transition-all duration-300 ease-in-out fixed md:relative z-30 h-full -translate-x-full md:translate-x-0">
         
-        <div class="text-center mb-8">
-            <h1 class="text-3xl sm:text-4xl font-light tracking-wider text-zinc-200">Nossa Linha do Tempo</h1>
-            <div class="h-1 w-12 bg-zinc-700 mx-auto mt-4 rounded-full"></div>
-        </div>
-
-        <!-- ================= BLOCO 1 ================= -->
-        <div class="rounded-2xl border border-zinc-800 bg-zinc-900 overflow-hidden shadow-2xl">
-            <!-- Cabeçalho clicável -->
-            <button onclick="toggleAccordion('acc1', 'icon1')" class="w-full flex justify-between items-center p-5 sm:p-6 cursor-pointer hover:bg-zinc-800/70 transition-colors focus:outline-none">
-                <div class="text-left">
-                    <h2 class="text-lg sm:text-xl md:text-2xl font-medium tracking-wide text-zinc-100">Tempo beijando sua boca</h2>
-                    <p class="text-zinc-500 text-xs sm:text-sm mt-1 font-light">Desde 21 de Agosto de 2023</p>
-                </div>
-                <!-- Ícone da seta -->
-                <svg id="icon1" class="chevron w-6 h-6 text-zinc-500 flex-shrink-0 ml-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+        <!-- Topo da Barra Lateral -->
+        <div class="p-4 flex items-center justify-between border-b border-zinc-800/60">
+            <div class="flex items-center gap-2.5 pl-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-rose-500"></span>
+                <span class="font-semibold text-zinc-200 tracking-wide text-sm">Nossas Memórias</span>
+            </div>
+            <button onclick="toggleSidebar()" class="p-2 rounded-lg hover:bg-zinc-800/80 text-zinc-400 hover:text-white transition-colors" title="Recolher menu">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect width="18" height="18" x="3" y="3" rx="2"/><path d="M9 3v18"/>
                 </svg>
             </button>
-            
-            <!-- Conteúdo Oculto (Contadores) -->
-            <div id="acc1" class="accordion-content">
-                <div class="accordion-inner">
-                    <div class="p-5 sm:p-6 pt-0 sm:pt-0">
-                        <div class="grid grid-cols-3 md:grid-cols-6 gap-3 sm:gap-4 mt-2">
-                            <!-- Blocos individuais -->
-                            <div class="time-block rounded-xl p-3 sm:p-4 flex flex-col items-center justify-center">
-                                <span id="kiss-years" class="number-display text-2xl sm:text-3xl font-semibold mb-1">00</span>
-                                <span class="text-[9px] sm:text-[10px] font-medium uppercase tracking-widest text-zinc-400">Anos</span>
-                            </div>
-                            <div class="time-block rounded-xl p-3 sm:p-4 flex flex-col items-center justify-center">
-                                <span id="kiss-months" class="number-display text-2xl sm:text-3xl font-semibold mb-1">00</span>
-                                <span class="text-[9px] sm:text-[10px] font-medium uppercase tracking-widest text-zinc-400">Meses</span>
-                            </div>
-                            <div class="time-block rounded-xl p-3 sm:p-4 flex flex-col items-center justify-center">
-                                <span id="kiss-days" class="number-display text-2xl sm:text-3xl font-semibold mb-1">00</span>
-                                <span class="text-[9px] sm:text-[10px] font-medium uppercase tracking-widest text-zinc-400">Dias</span>
-                            </div>
-                            <div class="time-block rounded-xl p-3 sm:p-4 flex flex-col items-center justify-center">
-                                <span id="kiss-hours" class="number-display text-2xl sm:text-3xl font-semibold mb-1">00</span>
-                                <span class="text-[9px] sm:text-[10px] font-medium uppercase tracking-widest text-zinc-400">Horas</span>
-                            </div>
-                            <div class="time-block rounded-xl p-3 sm:p-4 flex flex-col items-center justify-center">
-                                <span id="kiss-minutes" class="number-display text-2xl sm:text-3xl font-semibold mb-1">00</span>
-                                <span class="text-[9px] sm:text-[10px] font-medium uppercase tracking-widest text-zinc-400">Min</span>
-                            </div>
-                            <div class="time-block rounded-xl p-3 sm:p-4 flex flex-col items-center justify-center">
-                                <span id="kiss-seconds" class="number-display text-2xl sm:text-3xl font-semibold mb-1 text-zinc-300">00</span>
-                                <span class="text-[9px] sm:text-[10px] font-medium uppercase tracking-widest text-zinc-500">Seg</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
         </div>
 
-        <!-- ================= BLOCO 2 ================= -->
-        <div class="rounded-2xl border border-zinc-800 bg-zinc-900 overflow-hidden shadow-2xl">
-            <!-- Cabeçalho clicável -->
-            <button onclick="toggleAccordion('acc2', 'icon2')" class="w-full flex justify-between items-center p-5 sm:p-6 cursor-pointer hover:bg-zinc-800/70 transition-colors focus:outline-none">
-                <div class="text-left">
-                    <h2 class="text-lg sm:text-xl md:text-2xl font-medium tracking-wide text-zinc-100">Tempo de namoro</h2>
-                    <p class="text-zinc-500 text-xs sm:text-sm mt-1 font-light">Desde 07 de Maio de 2024</p>
+        <!-- Lista de Abas -->
+        <div class="p-3 flex-1 overflow-y-auto space-y-1.5">
+            <div class="text-[11px] font-semibold text-zinc-500 uppercase tracking-wider px-3 py-2">Contadores</div>
+
+            <!-- Aba 1: Beijo -->
+            <button onclick="switchTab('beijo')" id="btn-beijo" class="tab-btn w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-left text-sm font-medium transition-all bg-zinc-800/90 text-white shadow-sm">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-rose-400 flex-shrink-0">
+                    <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>
+                </svg>
+                <div class="truncate">
+                    <div class="truncate">Tempo beijando sua boca</div>
+                    <div class="text-[11px] text-zinc-400 font-normal">Desde 21/08/2023</div>
                 </div>
-                <!-- Ícone da seta -->
-                <svg id="icon2" class="chevron w-6 h-6 text-zinc-500 flex-shrink-0 ml-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+            </button>
+
+            <!-- Aba 2: Namoro -->
+            <button onclick="switchTab('namoro')" id="btn-namoro" class="tab-btn w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-left text-sm font-medium transition-all text-zinc-400 hover:bg-zinc-800/40 hover:text-zinc-200">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-purple-400 flex-shrink-0">
+                    <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+                </svg>
+                <div class="truncate">
+                    <div class="truncate">Tempo de namoro</div>
+                    <div class="text-[11px] text-zinc-500 font-normal">Desde 07/05/2024</div>
+                </div>
+            </button>
+
+            <div class="pt-4 pb-1">
+                <div class="text-[11px] font-semibold text-zinc-500 uppercase tracking-wider px-3 py-1">Galeria</div>
+            </div>
+
+            <!-- Aba 3: Álbuns do Google Fotos -->
+            <button onclick="switchTab('fotos')" id="btn-fotos" class="tab-btn w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-left text-sm font-medium transition-all text-zinc-400 hover:bg-zinc-800/40 hover:text-zinc-200">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-sky-400 flex-shrink-0">
+                    <rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>
+                </svg>
+                <div class="truncate">
+                    <div class="truncate">Nosso Álbum de Fotos</div>
+                    <div class="text-[11px] text-zinc-500 font-normal">Google Fotos</div>
+                </div>
+            </button>
+        </div>
+
+        <!-- Rodapé da Barra Lateral -->
+        <div class="p-4 border-t border-zinc-800/60 text-xs text-zinc-500 flex items-center justify-between">
+            <span>Nossa Linha do Tempo</span>
+            <span>❤️</span>
+        </div>
+    </aside>
+
+    <!-- Conteúdo Principal -->
+    <div class="flex-1 flex flex-col h-full relative overflow-y-auto">
+        
+        <!-- Barra Superior com botão de abrir/fechar menu -->
+        <header class="p-4 flex items-center gap-3 sticky top-0 bg-[#09090b]/80 backdrop-blur-md z-10">
+            <button onclick="toggleSidebar()" class="p-2.5 rounded-xl bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 text-zinc-300 transition-colors" title="Menu">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/>
                 </svg>
             </button>
-            
-            <!-- Conteúdo Oculto (Contadores) -->
-            <div id="acc2" class="accordion-content">
-                <div class="accordion-inner">
-                    <div class="p-5 sm:p-6 pt-0 sm:pt-0">
-                        <div class="grid grid-cols-3 md:grid-cols-6 gap-3 sm:gap-4 mt-2">
-                            <!-- Blocos individuais -->
-                            <div class="time-block rounded-xl p-3 sm:p-4 flex flex-col items-center justify-center">
-                                <span id="love-years" class="number-display text-2xl sm:text-3xl font-semibold mb-1">00</span>
-                                <span class="text-[9px] sm:text-[10px] font-medium uppercase tracking-widest text-zinc-400">Anos</span>
-                            </div>
-                            <div class="time-block rounded-xl p-3 sm:p-4 flex flex-col items-center justify-center">
-                                <span id="love-months" class="number-display text-2xl sm:text-3xl font-semibold mb-1">00</span>
-                                <span class="text-[9px] sm:text-[10px] font-medium uppercase tracking-widest text-zinc-400">Meses</span>
-                            </div>
-                            <div class="time-block rounded-xl p-3 sm:p-4 flex flex-col items-center justify-center">
-                                <span id="love-days" class="number-display text-2xl sm:text-3xl font-semibold mb-1">00</span>
-                                <span class="text-[9px] sm:text-[10px] font-medium uppercase tracking-widest text-zinc-400">Dias</span>
-                            </div>
-                            <div class="time-block rounded-xl p-3 sm:p-4 flex flex-col items-center justify-center">
-                                <span id="love-hours" class="number-display text-2xl sm:text-3xl font-semibold mb-1">00</span>
-                                <span class="text-[9px] sm:text-[10px] font-medium uppercase tracking-widest text-zinc-400">Horas</span>
-                            </div>
-                            <div class="time-block rounded-xl p-3 sm:p-4 flex flex-col items-center justify-center">
-                                <span id="love-minutes" class="number-display text-2xl sm:text-3xl font-semibold mb-1">00</span>
-                                <span class="text-[9px] sm:text-[10px] font-medium uppercase tracking-widest text-zinc-400">Min</span>
-                            </div>
-                            <div class="time-block rounded-xl p-3 sm:p-4 flex flex-col items-center justify-center">
-                                <span id="love-seconds" class="number-display text-2xl sm:text-3xl font-semibold mb-1 text-zinc-300">00</span>
-                                <span class="text-[9px] sm:text-[10px] font-medium uppercase tracking-widest text-zinc-500">Seg</span>
-                            </div>
-                        </div>
-                    </div>
+            <span id="header-title" class="text-sm font-medium text-zinc-400">Tempo beijando sua boca</span>
+        </header>
+
+        <!-- Área Central das Abas -->
+        <main class="flex-1 flex flex-col items-center justify-center p-6 max-w-4xl mx-auto w-full">
+
+            <!-- CONTEÚDO ABA 1: TEMPO BEIJANDO SUA BOCA -->
+            <div id="view-beijo" class="tab-view w-full text-center space-y-8">
+                <div class="space-y-2">
+                    <span class="inline-block px-3 py-1 rounded-full bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs font-medium mb-2">
+                        Primeiro Beijo
+                    </span>
+                    <h1 class="text-3xl md:text-5xl font-semibold tracking-tight text-white">Tempo beijando sua boca</h1>
+                    <p class="text-zinc-400 text-sm md:text-base">Desde 21 de Agosto de 2023</p>
+                </div>
+
+                <div id="timer-beijo" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 md:gap-4 max-w-3xl mx-auto">
+                    <!-- Preenchido automaticamente -->
                 </div>
             </div>
-        </div>
 
-    </main>
+            <!-- CONTEÚDO ABA 2: TEMPO DE NAMORO -->
+            <div id="view-namoro" class="tab-view w-full text-center space-y-8 hidden">
+                <div class="space-y-2">
+                    <span class="inline-block px-3 py-1 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-300 text-xs font-medium mb-2">
+                        Oficialmente Juntos
+                    </span>
+                    <h1 class="text-3xl md:text-5xl font-semibold tracking-tight text-white">Tempo de namoro</h1>
+                    <p class="text-zinc-400 text-sm md:text-base">Desde 07 de Maio de 2024</p>
+                </div>
+
+                <div id="timer-namoro" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 md:gap-4 max-w-3xl mx-auto">
+                    <!-- Preenchido automaticamente -->
+                </div>
+            </div>
+
+            <!-- CONTEÚDO ABA 3: NOSSO ÁLBUM (GOOGLE FOTOS) -->
+            <div id="view-fotos" class="tab-view w-full max-w-xl mx-auto space-y-8 hidden">
+                <div class="text-center space-y-2">
+                    <span class="inline-block px-3 py-1 rounded-full bg-sky-500/10 border border-sky-500/20 text-sky-300 text-xs font-medium mb-2">
+                        Memórias Fotográficas
+                    </span>
+                    <h1 class="text-3xl md:text-4xl font-semibold tracking-tight text-white">Nosso Álbum de Fotos</h1>
+                    <p class="text-zinc-400 text-sm md:text-base">Clique no cartão abaixo para acessar todas as nossas fotos e momentos juntos</p>
+                </div>
+
+                <!-- Card com o Link do Google Fotos -->
+                <div class="grid gap-4">
+                    <a href="https://photos.app.goo.gl/RFV1UatFvEiweWtLA" target="_blank" rel="noopener noreferrer" 
+                       class="group flex items-center justify-between p-6 rounded-2xl bg-[#141418] border border-zinc-800 hover:border-sky-500/40 hover:bg-zinc-800/50 transition-all shadow-xl">
+                        <div class="flex items-center gap-4">
+                            <div class="w-14 h-14 rounded-2xl bg-sky-500/10 border border-sky-500/20 flex items-center justify-center text-sky-400 group-hover:scale-105 transition-transform">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>
+                                </svg>
+                            </div>
+                            <div class="text-left">
+                                <h3 class="text-lg font-semibold text-white group-hover:text-sky-300 transition-colors">Abrir Álbum no Google Fotos</h3>
+                                <p class="text-xs text-zinc-400 mt-1">Clique para ver nossa galeria compartilhada</p>
+                            </div>
+                        </div>
+                        <div class="text-zinc-500 group-hover:text-white group-hover:translate-x-1 transition-all">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" x2="21" y1="14" y2="3"/>
+                            </svg>
+                        </div>
+                    </a>
+                </div>
+            </div>
+
+        </main>
+    </div>
 
     <script>
-        // ================= INTERATIVIDADE DOS BLOCOS (ACCORDION) =================
-        function toggleAccordion(contentId, iconId) {
-            const content = document.getElementById(contentId);
-            const icon = document.getElementById(iconId);
-            
-            // Alterna a classe 'open' que controla a altura
-            content.classList.toggle('open');
-            // Alterna a rotação do ícone
-            icon.classList.toggle('open-chevron');
-        }
+        // Datas de início (Ano, Mês - 1, Dia)
+        const dateBeijo = new Date(2023, 7, 21, 0, 0, 0); // 21 de Agosto de 2023
+        const dateNamoro = new Date(2024, 4, 7, 0, 0, 0); // 07 de Maio de 2024
 
-        // Abre o primeiro bloco por padrão ao carregar a página
-        window.addEventListener('DOMContentLoaded', () => {
-            toggleAccordion('acc1', 'icon1');
-        });
-
-        // ================= LÓGICA DE CÁLCULO DE DATAS =================
-        const kissDate = new Date('2023-08-21T00:00:00');
-        const loveDate = new Date('2024-05-07T00:00:00');
-
-        function calculateTimePassed(startDate) {
+        // Função que calcula a diferença exata de tempo
+        function calculateElapsedTime(startDate) {
             const now = new Date();
-
+            
             let years = now.getFullYear() - startDate.getFullYear();
             let months = now.getMonth() - startDate.getMonth();
             let days = now.getDate() - startDate.getDate();
@@ -223,31 +222,93 @@
             return { years, months, days, hours, minutes, seconds };
         }
 
-        const pad = (num) => num.toString().padStart(2, '0');
+        // Função para criar os bloquinhos minimalistas
+        function renderTimer(containerId, timeObj) {
+            const items = [
+                { label: 'Anos', value: timeObj.years },
+                { label: 'Meses', value: timeObj.months },
+                { label: 'Dias', value: timeObj.days },
+                { label: 'Horas', value: timeObj.hours },
+                { label: 'Min', value: timeObj.minutes },
+                { label: 'Seg', value: timeObj.seconds }
+            ];
 
-        function updateAllCounters() {
-            // Atualiza Kiss
-            const kissTime = calculateTimePassed(kissDate);
-            document.getElementById('kiss-years').innerText = pad(kissTime.years);
-            document.getElementById('kiss-months').innerText = pad(kissTime.months);
-            document.getElementById('kiss-days').innerText = pad(kissTime.days);
-            document.getElementById('kiss-hours').innerText = pad(kissTime.hours);
-            document.getElementById('kiss-minutes').innerText = pad(kissTime.minutes);
-            document.getElementById('kiss-seconds').innerText = pad(kissTime.seconds);
-
-            // Atualiza Namoro
-            const loveTime = calculateTimePassed(loveDate);
-            document.getElementById('love-years').innerText = pad(loveTime.years);
-            document.getElementById('love-months').innerText = pad(loveTime.months);
-            document.getElementById('love-days').innerText = pad(loveTime.days);
-            document.getElementById('love-hours').innerText = pad(loveTime.hours);
-            document.getElementById('love-minutes').innerText = pad(loveTime.minutes);
-            document.getElementById('love-seconds').innerText = pad(loveTime.seconds);
+            const container = document.getElementById(containerId);
+            container.innerHTML = items.map(item => `
+                <div class="bg-[#18181b] border border-zinc-800/90 rounded-2xl p-5 flex flex-col items-center justify-center shadow-lg">
+                    <span class="text-3xl md:text-4xl font-bold text-white tracking-tight">
+                        ${String(item.value).padStart(2, '0')}
+                    </span>
+                    <span class="text-[11px] font-medium text-zinc-500 uppercase tracking-widest mt-2">
+                        ${item.label}
+                    </span>
+                </div>
+            `).join('');
         }
 
-        // Inicia e mantém rodando a cada 1 segundo
-        updateAllCounters();
-        setInterval(updateAllCounters, 1000);
+        function updateAllTimers() {
+            renderTimer('timer-beijo', calculateElapsedTime(dateBeijo));
+            renderTimer('timer-namoro', calculateElapsedTime(dateNamoro));
+        }
+
+        // Atualiza a cada 1 segundo
+        setInterval(updateAllTimers, 1000);
+        updateAllTimers();
+
+        // Trocar entre as abas da barra lateral
+        function switchTab(tabName) {
+            const views = ['beijo', 'namoro', 'fotos'];
+            const titles = {
+                'beijo': 'Tempo beijando sua boca',
+                'namoro': 'Tempo de namoro',
+                'fotos': 'Nosso Álbum de Fotos'
+            };
+
+            views.forEach(v => {
+                const viewEl = document.getElementById('view-' + v);
+                const btnEl = document.getElementById('btn-' + v);
+                
+                if (v === tabName) {
+                    viewEl.classList.remove('hidden');
+                    btnEl.className = "tab-btn w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-left text-sm font-medium transition-all bg-zinc-800/90 text-white shadow-sm";
+                } else {
+                    viewEl.classList.add('hidden');
+                    btnEl.className = "tab-btn w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-left text-sm font-medium transition-all text-zinc-400 hover:bg-zinc-800/40 hover:text-zinc-200";
+                }
+            });
+
+            document.getElementById('header-title').textContent = titles[tabName];
+
+            // Fecha a barra automaticamente no celular ao clicar em uma aba
+            if (window.innerWidth < 768) {
+                toggleSidebar(false);
+            }
+        }
+
+        // Abrir / Fechar a barra lateral (estilo Gemini)
+        let sidebarOpen = window.innerWidth >= 768;
+        function toggleSidebar(forceState) {
+            const sidebar = document.getElementById('sidebar');
+            const backdrop = document.getElementById('sidebar-backdrop');
+            
+            sidebarOpen = forceState !== undefined ? forceState : !sidebarOpen;
+
+            if (window.innerWidth < 768) {
+                if (sidebarOpen) {
+                    sidebar.classList.remove('-translate-x-full');
+                    backdrop.classList.remove('hidden');
+                } else {
+                    sidebar.classList.add('-translate-x-full');
+                    backdrop.classList.add('hidden');
+                }
+            } else {
+                if (sidebarOpen) {
+                    sidebar.classList.remove('-ml-72');
+                } else {
+                    sidebar.classList.add('-ml-72');
+                }
+            }
+        }
     </script>
 </body>
 </html>
