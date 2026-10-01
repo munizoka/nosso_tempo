@@ -49,17 +49,65 @@
             to { opacity: 1; transform: translateY(0) scale(1); }
         }
 
-        /* Entrada em cascata dos cartões de tempo */
-        .timer-card {
+        /* Entrada em cascata + Estrutura 3D Flip Card */
+        .flip-card {
+            perspective: 1000px;
+            height: 125px;
             opacity: 0;
             animation: cardAppear 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-            transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), border-color 0.3s ease, box-shadow 0.3s ease;
+            cursor: pointer;
         }
-        .timer-card:hover {
-            transform: translateY(-6px) scale(1.03);
-            border-color: rgba(255, 255, 255, 0.22);
-            box-shadow: 0 14px 30px -10px rgba(0, 0, 0, 0.7);
+        @media (min-width: 768px) {
+            .flip-card {
+                height: 140px;
+            }
         }
+
+        .flip-card-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            transition: transform 0.65s cubic-bezier(0.4, 0.2, 0.2, 1);
+            transform-style: preserve-3d;
+        }
+
+        /* Gira ao passar o mouse (PC) ou ao clicar/tocar (Celular e PC) */
+        .flip-card:hover .flip-card-inner,
+        .flip-card.flipped .flip-card-inner {
+            transform: rotateY(180deg);
+        }
+
+        .flip-card-front,
+        .flip-card-back {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
+            border-radius: 1rem;
+            overflow: hidden;
+        }
+
+        .flip-card-front {
+            background-color: rgba(24, 24, 27, 0.9);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(39, 39, 42, 0.9);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+            transition: border-color 0.3s ease;
+        }
+
+        .flip-card-back {
+            transform: rotateY(180deg);
+            border: 1px solid rgba(255, 255, 255, 0.22);
+            box-shadow: 0 14px 30px -10px rgba(0, 0, 0, 0.8);
+            background-color: #18181b;
+        }
+
         @keyframes cardAppear {
             from { opacity: 0; transform: translateY(18px) scale(0.92); }
             to { opacity: 1; transform: translateY(0) scale(1); }
@@ -297,6 +345,10 @@
         const dateBeijo = new Date(2023, 7, 21, 0, 0, 0);
         const dateNamoro = new Date(2024, 4, 7, 0, 0, 0);
 
+        // Fotos de cada aba (6 fotos para a aba de beijo, 6 fotos para a aba de namoro)
+        const photosBeijo = ['1.png', '2.jpeg', '3.jpg', '4.jpg', '5.jpg', '6.jpg'];
+        const photosNamoro = ['7.jpg', '8.jpg', '9.jpg', '10.jpg', '11.jpg', '12.jpg'];
+
         function calculateElapsedTime(startDate) {
             const now = new Date();
             
@@ -320,23 +372,32 @@
             return { years, months, days, hours, minutes, seconds };
         }
 
-        // Cria a estrutura inicial dos cartões com animação em cascata
-        function initTimerCards(containerId) {
+        // Cria a estrutura inicial dos cartões 3D com a foto no verso
+        function initTimerCards(containerId, photosArray) {
             const labels = ['Anos', 'Meses', 'Dias', 'Horas', 'Min', 'Seg'];
             const container = document.getElementById(containerId);
             container.innerHTML = labels.map((label, idx) => `
-                <div style="animation-delay: ${idx * 70}ms" class="timer-card bg-[#18181b]/90 backdrop-blur-md border border-zinc-800/90 rounded-2xl p-5 flex flex-col items-center justify-center shadow-lg cursor-default">
-                    <span id="${containerId}-val-${idx}" class="text-3xl md:text-4xl font-bold text-white tracking-tight ${idx === 5 ? 'sec-pulse text-zinc-100' : ''}">
-                        00
-                    </span>
-                    <span class="text-[11px] font-medium text-zinc-500 uppercase tracking-widest mt-2">
-                        ${label}
-                    </span>
+                <div style="animation-delay: ${idx * 70}ms" class="flip-card" onclick="this.classList.toggle('flipped')" title="Passe o mouse ou clique para virar">
+                    <div class="flip-card-inner">
+                        <!-- Frente: Número e Rótulo -->
+                        <div class="flip-card-front">
+                            <span id="${containerId}-val-${idx}" class="text-3xl md:text-4xl font-bold text-white tracking-tight ${idx === 5 ? 'sec-pulse text-zinc-100' : ''}">
+                                00
+                            </span>
+                            <span class="text-[11px] font-medium text-zinc-500 uppercase tracking-widest mt-2">
+                                ${label}
+                            </span>
+                        </div>
+                        <!-- Verso: Foto -->
+                        <div class="flip-card-back">
+                            <img src="${photosArray[idx]}" alt="Memória ${idx + 1}" class="w-full h-full object-cover">
+                        </div>
+                    </div>
                 </div>
             `).join('');
         }
 
-        // Atualiza apenas os números para não reiniciar a animação de cascata a cada segundo
+        // Atualiza apenas os números para não interromper o giro do cartão
         function updateTimerValues(containerId, timeObj) {
             const values = [timeObj.years, timeObj.months, timeObj.days, timeObj.hours, timeObj.minutes, timeObj.seconds];
             values.forEach((val, idx) => {
@@ -347,8 +408,8 @@
             });
         }
 
-        initTimerCards('timer-beijo');
-        initTimerCards('timer-namoro');
+        initTimerCards('timer-beijo', photosBeijo);
+        initTimerCards('timer-namoro', photosNamoro);
 
         function updateAllTimers() {
             updateTimerValues('timer-beijo', calculateElapsedTime(dateBeijo));
@@ -394,8 +455,8 @@
             });
 
             // Re-dispara a cascata dos cartões ao abrir a aba
-            if (tabName === 'beijo') { initTimerCards('timer-beijo'); updateAllTimers(); }
-            if (tabName === 'namoro') { initTimerCards('timer-namoro'); updateAllTimers(); }
+            if (tabName === 'beijo') { initTimerCards('timer-beijo', photosBeijo); updateAllTimers(); }
+            if (tabName === 'namoro') { initTimerCards('timer-namoro', photosNamoro); updateAllTimers(); }
 
             // Muda a cor da luz de fundo e da bolinha do topo
             const ambient = document.getElementById('ambient-light');
