@@ -20,7 +20,6 @@
         .tab-view { animation: tabIn 0.35s cubic-bezier(0.16, 1, 0.3, 1); }
         @keyframes tabIn { from { opacity: 0; transform: translate3d(0, 12px, 0) scale(0.98); } to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); } }
 
-        /* Cartões 3D (Contadores e Jogo da Memória) */
         .flip-card, .mem-card { perspective: 1000px; cursor: pointer; -webkit-tap-highlight-color: transparent; }
         .flip-card { height: 125px; opacity: 0; animation: cardIn 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
         @media (min-width: 768px) { .flip-card { height: 140px; } }
@@ -99,6 +98,12 @@
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-emerald-400 flex-shrink-0"><rect width="20" height="12" x="2" y="6" rx="2"/><path d="M6 12h4m-2-2v4m7-1h.01m2.99-2h.01"/></svg>
                 <div class="truncate"><div class="truncate">ViMória game</div><div class="text-[11px] text-zinc-500 font-normal">Jogo da Memória</div></div>
             </button>
+
+            <!-- Novo Botão: Talari Bird -->
+            <button onclick="switchTab('talari')" id="btn-talari" class="tab-btn w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-left text-sm font-medium transition-all text-zinc-400 hover:bg-zinc-800/40 hover:text-zinc-200">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-amber-400 flex-shrink-0"><path d="M16 7h.01"/><path d="M3.4 18H12a8 8 0 0 0 8-8V7a4 4 0 0 0-7.28-2.3L2 20"/><path d="m20 7 2 .5-2 .5"/><path d="M10 18v3"/><path d="M14 17.75V21"/><path d="M7 18a6 6 0 0 0 3.84-10.61"/></svg>
+                <div class="truncate"><div class="truncate">Talari Bird</div><div class="text-[11px] text-zinc-500 font-normal">Desvie dos obstáculos</div></div>
+            </button>
         </div>
 
         <div class="p-4 border-t border-zinc-800/60 text-xs text-zinc-500 flex items-center justify-between">
@@ -158,14 +163,13 @@
                 </a>
             </div>
 
-            <!-- ABA 4: VIMÓRIA GAME (JOGO DA MEMÓRIA) -->
+            <!-- ABA 4: VIMÓRIA GAME -->
             <div id="view-jogo" class="tab-view w-full max-w-2xl mx-auto space-y-4 hidden">
                 <div class="text-center space-y-1">
                     <span class="inline-block px-3 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-xs font-medium">🎮 Mini Game</span>
                     <h1 class="text-2xl md:text-4xl font-semibold tracking-tight text-white">ViMória game</h1>
                 </div>
 
-                <!-- Painel de Pontuação e Botão Reiniciar -->
                 <div class="flex items-center justify-between bg-[#141418]/90 border border-zinc-800/90 rounded-2xl px-4 py-2.5 text-xs md:text-sm">
                     <div class="flex gap-4">
                         <span class="text-zinc-400">Jogadas: <strong id="game-moves" class="text-white">0</strong></span>
@@ -176,13 +180,32 @@
                     </button>
                 </div>
 
-                <!-- Mensagem de Vitória Oculta -->
                 <div id="game-win-msg" class="hidden bg-emerald-500/10 border border-emerald-500/30 text-emerald-200 rounded-xl p-3 text-center text-sm font-medium">
-                    além de linda é inteligente!!!! parabéns
+                    🎉 mandou bem, cabeção ❤
                 </div>
 
-                <!-- Tabuleiro: 4 colunas no Celular, 6 colunas no PC (24 cartas) -->
                 <div id="memory-grid" class="grid grid-cols-4 sm:grid-cols-6 gap-2 md:gap-3 w-full"></div>
+            </div>
+
+            <!-- ABA 5: TALARI BIRD -->
+            <div id="view-talari" class="tab-view w-full max-w-md mx-auto space-y-3 hidden">
+                <div class="text-center space-y-1">
+                    <span class="inline-block px-3 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs font-medium">🕹️ Arcade</span>
+                    <h1 class="text-2xl md:text-3xl font-semibold tracking-tight text-white">Talari Bird</h1>
+                </div>
+
+                <div class="flex items-center justify-between bg-[#141418]/90 border border-zinc-800/90 rounded-2xl px-4 py-2 text-xs md:text-sm">
+                    <span class="text-zinc-400">Pontos: <strong id="tb-score" class="text-white">0</strong></span>
+                    <span class="text-zinc-400">Recorde: <strong id="tb-best" class="text-amber-400">0</strong></span>
+                    <button onclick="resetTalari()" class="px-2.5 py-1 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-300 font-medium transition-all active:scale-95">
+                        🔄 Reiniciar
+                    </button>
+                </div>
+
+                <div class="relative rounded-2xl overflow-hidden border border-zinc-800 shadow-2xl bg-[#0c0c10] select-none">
+                    <canvas id="talari-canvas" width="360" height="480" class="w-full h-auto block cursor-pointer touch-manipulation"></canvas>
+                </div>
+                <p class="text-center text-[11px] text-zinc-500">Toque na tela, clique ou aperte Espaço para voar</p>
             </div>
 
         </main>
@@ -194,6 +217,11 @@
         const photosBeijo = ['1.png', '2.jpeg', '3.jpg', '4.jpg', '5.jpg', '6.jpg'];
         const photosNamoro = ['7.jpg', '8.jpg', '9.jpg', '10.jpg', '11.jpg', '12.jpg'];
         const allPhotos = [...photosBeijo, ...photosNamoro];
+
+        // Imagens do Talari Bird
+        const tbHeroImg = new Image(); tbHeroImg.src = '13.jpeg';
+        const tbEnemy1 = new Image(); tbEnemy1.src = '14.jpeg';
+        const tbEnemy2 = new Image(); tbEnemy2.src = '15.jpeg';
 
         window.addEventListener('load', () => {
             allPhotos.forEach(src => { const img = new Image(); img.decoding = 'async'; img.src = src; });
@@ -243,7 +271,7 @@
         setInterval(updateAllTimers, 1000);
         updateAllTimers();
 
-        /* --- LÓGICA DO VIMÓRIA GAME --- */
+        /* --- VIMÓRIA GAME --- */
         let firstCard = null, secondCard = null, lockBoard = false, moves = 0, matchedPairs = 0;
 
         function initMemoryGame() {
@@ -252,45 +280,34 @@
             document.getElementById('game-pairs').textContent = '0/12';
             document.getElementById('game-win-msg').classList.add('hidden');
 
-            // Duplica as 12 fotos (24 cartas) e embaralha de forma aleatória (Fisher-Yates)
             const deck = [...allPhotos, ...allPhotos];
             for (let i = deck.length - 1; i > 0; i--) {
                 const j = Math.floor(Math.random() * (i + 1));
                 [deck[i], deck[j]] = [deck[j], deck[i]];
             }
 
-            const grid = document.getElementById('memory-grid');
-            grid.innerHTML = deck.map((photo, idx) => `
+            document.getElementById('memory-grid').innerHTML = deck.map((photo, idx) => `
                 <div class="mem-card aspect-square" data-photo="${photo}" onclick="flipMemoryCard(this)">
                     <div class="flip-inner">
-                        <div class="flip-front hover:border-zinc-700 transition-colors">
-                            <span class="text-lg md:text-xl opacity-60">❤️</span>
-                        </div>
-                        <div class="flip-back">
-                            <img src="${photo}" alt="Carta ${idx}" decoding="async" class="w-full h-full object-cover">
-                        </div>
+                        <div class="flip-front hover:border-zinc-700 transition-colors"><span class="text-lg md:text-xl opacity-60">❤️</span></div>
+                        <div class="flip-back"><img src="${photo}" alt="Carta ${idx}" decoding="async" class="w-full h-full object-cover"></div>
                     </div>
-                </div>
-            `).join('');
+                </div>`).join('');
         }
 
         function flipMemoryCard(card) {
             if (lockBoard || card === firstCard || card.classList.contains('matched')) return;
             card.classList.add('flipped');
-
             if (!firstCard) { firstCard = card; return; }
 
-            secondCard = card;
-            moves++;
+            secondCard = card; moves++;
             document.getElementById('game-moves').textContent = moves;
 
             if (firstCard.dataset.photo === secondCard.dataset.photo) {
-                firstCard.classList.add('matched');
-                secondCard.classList.add('matched');
+                firstCard.classList.add('matched'); secondCard.classList.add('matched');
                 matchedPairs++;
                 document.getElementById('game-pairs').textContent = `${matchedPairs}/12`;
                 firstCard = null; secondCard = null;
-
                 if (matchedPairs === 12) {
                     document.getElementById('game-win-msg').classList.remove('hidden');
                     spawnHearts({ clientX: window.innerWidth / 2, clientY: window.innerHeight / 2 });
@@ -298,23 +315,194 @@
             } else {
                 lockBoard = true;
                 setTimeout(() => {
-                    firstCard.classList.remove('flipped');
-                    secondCard.classList.remove('flipped');
+                    firstCard.classList.remove('flipped'); secondCard.classList.remove('flipped');
                     firstCard = null; secondCard = null; lockBoard = false;
                 }, 850);
             }
         }
-
-        // Inicializa o jogo já embaralhado ao abrir o site
         initMemoryGame();
 
+        /* --- TALARI BIRD GAME --- */
+        const tCvs = document.getElementById('talari-canvas'), tCtx = tCvs.getContext('2d');
+        let tbState = 'idle', tbScore = 0, tbBest = Number(localStorage.getItem('tbBest') || 0), tbFrame = 0;
+        document.getElementById('tb-best').textContent = tbBest;
+
+        const bird = { x: 68, y: 220, r: 20, vy: 0, g: 0.36, jump: -6.6 };
+        let obstacles = [];
+        const mountains = [{ x: 0, h: 90 }, { x: 140, h: 130 }, { x: 270, h: 80 }];
+
+        function resetTalari() {
+            tbState = 'idle'; tbScore = 0; tbFrame = 0;
+            bird.y = 220; bird.vy = 0; obstacles = [];
+            document.getElementById('tb-score').textContent = '0';
+        }
+
+        function jumpTalari(e) {
+            if (e && e.type === 'keydown' && e.code !== 'Space') return;
+            if (currentTab !== 'talari') return;
+            if (e && e.cancelable) e.preventDefault();
+
+            if (tbState === 'idle') { tbState = 'play'; bird.vy = bird.jump; }
+            else if (tbState === 'play') { bird.vy = bird.jump; }
+            else if (tbState === 'over') { resetTalari(); }
+        }
+
+        tCvs.addEventListener('pointerdown', jumpTalari);
+        window.addEventListener('keydown', jumpTalari);
+
+        function spawnObstacle() {
+            const gap = 132, minTop = 55, maxTop = tCvs.height - gap - 85;
+            const topH = Math.floor(Math.random() * (maxTop - minTop + 1)) + minTop;
+            // 70% de preferência para obstáculos normais (canos/montanhas), 30% para as fotos 14 e 15
+            const isPerson = Math.random() < 0.30;
+            const enemyImg = Math.random() < 0.5 ? tbEnemy1 : tbEnemy2;
+            const personPos = Math.random() < 0.5 ? 'top' : 'bottom';
+            obstacles.push({ x: tCvs.width, w: 54, top: topH, bottom: topH + gap, passed: false, isPerson, enemyImg, personPos });
+        }
+
+        function drawImageCover(ctx, img, x, y, w, h) {
+            if (!img.complete || !img.naturalWidth) {
+                ctx.fillStyle = '#3f3f46'; ctx.fillRect(x, y, w, h); return;
+            }
+            const imgRatio = img.naturalWidth / img.naturalHeight, boxRatio = w / h;
+            let sx = 0, sy = 0, sw = img.naturalWidth, sh = img.naturalHeight;
+            if (imgRatio > boxRatio) { sw = sh * boxRatio; sx = (img.naturalWidth - sw) / 2; }
+            else { sh = sw / boxRatio; sy = (img.naturalHeight - sh) / 2; }
+            ctx.drawImage(img, sx, sy, sw, sh, x, y, w, h);
+        }
+
+        function updateAndDrawTalari() {
+            if (currentTab === 'talari' && !document.hidden) {
+                // Fundo Céu Noturno
+                const grad = tCtx.createLinearGradient(0, 0, 0, tCvs.height);
+                grad.addColorStop(0, '#09090b'); grad.addColorStop(1, '#181824');
+                tCtx.fillStyle = grad; tCtx.fillRect(0, 0, tCvs.width, tCvs.height);
+
+                // Montanhas de fundo (Cenário)
+                tCtx.fillStyle = '#14141d';
+                mountains.forEach(m => {
+                    if (tbState === 'play') m.x -= 0.5;
+                    if (m.x < -180) m.x = tCvs.width;
+                    tCtx.beginPath();
+                    tCtx.moveTo(m.x, tCvs.height - 24);
+                    tCtx.lineTo(m.x + 90, tCvs.height - 24 - m.h);
+                    tCtx.lineTo(m.x + 180, tCvs.height - 24);
+                    tCtx.fill();
+                });
+
+                if (tbState === 'play') {
+                    tbFrame++;
+                    if (tbFrame % 95 === 0) spawnObstacle();
+                    bird.vy += bird.g; bird.y += bird.vy;
+
+                    if (bird.y + bird.r >= tCvs.height - 24 || bird.y - bird.r <= 0) tbState = 'over';
+                }
+
+                // Desenhar Obstáculos
+                for (let i = obstacles.length - 1; i >= 0; i--) {
+                    const o = obstacles[i];
+                    if (tbState === 'play') o.x -= 2.3;
+
+                    // Canos clássicos estilo Flappy
+                    tCtx.fillStyle = '#10b981';
+                    tCtx.strokeStyle = '#059669';
+                    tCtx.lineWidth = 2;
+
+                    // Topo
+                    tCtx.fillRect(o.x, 0, o.w, o.top);
+                    tCtx.strokeRect(o.x, 0, o.w, o.top);
+                    tCtx.fillRect(o.x - 3, o.top - 14, o.w + 6, 14);
+
+                    // Base
+                    const botH = tCvs.height - 24 - o.bottom;
+                    tCtx.fillRect(o.x, o.bottom, o.w, botH);
+                    tCtx.strokeRect(o.x, o.bottom, o.w, botH);
+                    tCtx.fillRect(o.x - 3, o.bottom, o.w + 6, 14);
+
+                    // Se for obstáculo de pessoa (30% das vezes), desenha o card da foto no pilar
+                    if (o.isPerson) {
+                        const cardH = 68;
+                        const py = o.personPos === 'top' ? Math.max(6, o.top - cardH - 4) : o.bottom + 4;
+                        tCtx.save();
+                        tCtx.beginPath();
+                        tCtx.roundRect(o.x - 4, py, o.w + 8, cardH, 10);
+                        tCtx.clip();
+                        drawImageCover(tCtx, o.enemyImg, o.x - 4, py, o.w + 8, cardH);
+                        tCtx.restore();
+
+                        tCtx.strokeStyle = '#ef4444';
+                        tCtx.lineWidth = 2.5;
+                        tCtx.beginPath();
+                        tCtx.roundRect(o.x - 4, py, o.w + 8, cardH, 10);
+                        tCtx.stroke();
+                    }
+
+                    // Colisão
+                    if (tbState === 'play') {
+                        const hitX = bird.x + bird.r - 4 > o.x && bird.x - bird.r + 4 < o.x + o.w;
+                        const hitY = bird.y - bird.r + 4 < o.top || bird.y + bird.r - 4 > o.bottom;
+                        if (hitX && hitY) tbState = 'over';
+
+                        if (!o.passed && o.x + o.w < bird.x) {
+                            o.passed = true; tbScore++;
+                            document.getElementById('tb-score').textContent = tbScore;
+                            if (tbScore > tbBest) {
+                                tbBest = tbScore;
+                                localStorage.setItem('tbBest', tbBest);
+                                document.getElementById('tb-best').textContent = tbBest;
+                            }
+                        }
+                    }
+                    if (o.x + o.w < -20) obstacles.splice(i, 1);
+                }
+
+                // Chão
+                tCtx.fillStyle = '#18181b';
+                tCtx.fillRect(0, tCvs.height - 24, tCvs.width, 24);
+                tCtx.strokeStyle = '#27272a';
+                tCtx.beginPath(); tCtx.moveTo(0, tCvs.height - 24); tCtx.lineTo(tCvs.width, tCvs.height - 24); tCtx.stroke();
+
+                // Desenhar "Passarinho" (Foto do Casal 13.jpeg)
+                tCtx.save();
+                tCtx.translate(bird.x, bird.y);
+                tCtx.rotate(Math.min(Math.PI / 5, Math.max(-Math.PI / 5, bird.vy * 0.06)));
+                tCtx.beginPath();
+                tCtx.arc(0, 0, bird.r, 0, Math.PI * 2);
+                tCtx.clip();
+                drawImageCover(tCtx, tbHeroImg, -bird.r, -bird.r, bird.r * 2, bird.r * 2);
+                tCtx.restore();
+
+                tCtx.strokeStyle = '#fbbf24';
+                tCtx.lineWidth = 2.5;
+                tCtx.beginPath();
+                tCtx.arc(bird.x, bird.y, bird.r, 0, Math.PI * 2);
+                tCtx.stroke();
+
+                // Telas de Início / Fim de Jogo
+                if (tbState !== 'play') {
+                    tCtx.fillStyle = 'rgba(9, 9, 11, 0.65)';
+                    tCtx.fillRect(0, 0, tCvs.width, tCvs.height);
+                    tCtx.fillStyle = '#ffffff';
+                    tCtx.textAlign = 'center';
+                    tCtx.font = 'bold 22px Inter, sans-serif';
+                    tCtx.fillText(tbState === 'idle' ? 'Talari Bird' : 'Fim de Jogo!', tCvs.width / 2, 215);
+                    tCtx.fillStyle = '#a1a1aa';
+                    tCtx.font = '13px Inter, sans-serif';
+                    tCtx.fillText(tbState === 'idle' ? 'Toque ou clique para começar' : `Pontos: ${tbScore} — Toque para jogar de novo`, tCvs.width / 2, 245);
+                }
+            }
+            requestAnimationFrame(updateAndDrawTalari);
+        }
+
         /* --- NAVEGAÇÃO E EFEITOS --- */
+        let currentTab = 'beijo';
         function closePopup(id) { document.getElementById(id).classList.add('hidden'); }
 
         function switchTab(tab) {
-            const views = ['beijo', 'namoro', 'fotos', 'jogo'];
-            const titles = { beijo: 'Tempo beijando sua boca', namoro: 'Tempo de namoro', fotos: 'Nosso Álbum de Fotos', jogo: 'ViMória game' };
-            const glows = { beijo: 'bg-rose-500', namoro: 'bg-purple-500', fotos: 'bg-sky-500', jogo: 'bg-emerald-500' };
+            currentTab = tab;
+            const views = ['beijo', 'namoro', 'fotos', 'jogo', 'talari'];
+            const titles = { beijo: 'Tempo beijando sua boca', namoro: 'Tempo de namoro', fotos: 'Nosso Álbum de Fotos', jogo: 'ViMória game', talari: 'Talari Bird' };
+            const glows = { beijo: 'bg-rose-500', namoro: 'bg-purple-500', fotos: 'bg-sky-500', jogo: 'bg-emerald-500', talari: 'bg-amber-500' };
 
             views.forEach(v => {
                 document.getElementById('view-' + v).classList.toggle('hidden', v !== tab);
@@ -330,6 +518,8 @@
             if (tab === 'fotos') document.getElementById('fotos-popup').classList.remove('hidden');
             if (window.innerWidth < 768) toggleSidebar(false);
         }
+
+        updateAndDrawTalari();
 
         function spawnHearts(e) {
             const emojis = ['❤️', '💖', '✨', '💕'];
