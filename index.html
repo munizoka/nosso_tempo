@@ -54,7 +54,7 @@
             to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
         }
 
-        /* Estrutura 3D Flip Card acelerada por hardware */
+        /* Estrutura 3D Flip Card dos Contadores */
         .flip-card {
             perspective: 1000px;
             height: 125px;
@@ -110,6 +110,62 @@
             border: 1px solid rgba(255, 255, 255, 0.22);
             box-shadow: 0 14px 30px -10px rgba(0, 0, 0, 0.8);
             background-color: #18181b;
+        }
+
+        /* Estrutura 3D das Cartas do ViMória game */
+        .memory-card {
+            perspective: 1000px;
+            aspect-ratio: 1 / 1;
+            cursor: pointer;
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+        }
+        .memory-card-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            transition: transform 0.5s cubic-bezier(0.4, 0.2, 0.2, 1);
+            transform-style: preserve-3d;
+            will-change: transform;
+        }
+        .memory-card.flipped .memory-card-inner,
+        .memory-card.matched .memory-card-inner {
+            transform: rotateY(180deg);
+        }
+        .memory-card-front,
+        .memory-card-back {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
+            border-radius: 0.75rem;
+            overflow: hidden;
+            transform: translateZ(0);
+        }
+        .memory-card-front {
+            background: linear-gradient(135deg, rgba(24, 24, 27, 0.95), rgba(39, 39, 42, 0.6));
+            border: 1px solid rgba(63, 63, 70, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 15px -3px rgba(0, 0, 0, 0.5);
+            transition: border-color 0.2s, transform 0.2s;
+        }
+        .memory-card:hover:not(.flipped):not(.matched) .memory-card-front {
+            border-color: rgba(16, 185, 129, 0.5);
+            transform: scale(1.03);
+        }
+        .memory-card-back {
+            transform: rotateY(180deg) translateZ(0);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            background-color: #18181b;
+            transition: border-color 0.3s, box-shadow 0.3s;
+        }
+        .memory-card.matched .memory-card-back {
+            border-color: #10b981;
+            box-shadow: 0 0 16px rgba(16, 185, 129, 0.45);
         }
 
         @keyframes cardAppear {
@@ -179,7 +235,7 @@
     <!-- Luz Ambiente Dinâmica -->
     <div id="ambient-light" class="ambient-glow top-1/4 left-1/2 bg-rose-500"></div>
 
-    <!-- Fundo escuro no celular quando a barra lateral está aberta -->
+    <!-- Fundo escuro no telemóvel quando a barra lateral está aberta -->
     <div id="sidebar-backdrop" onclick="toggleSidebar(false)" class="fixed inset-0 bg-black/60 z-20 hidden md:hidden backdrop-blur-sm transition-opacity"></div>
 
     <!-- POP-UP DA ABA DE FOTOS -->
@@ -200,6 +256,30 @@
             <p class="text-white font-medium text-base leading-relaxed px-2">
                 Clica na box pra abrir as nossas fotos, tmj
             </p>
+        </div>
+    </div>
+
+    <!-- POP-UP DE VITÓRIA DO JOGO DA MEMÓRIA -->
+    <div id="win-popup" class="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="popup-animate bg-[#141418] border border-emerald-500/30 rounded-2xl max-w-sm w-full p-6 relative shadow-2xl text-center space-y-4">
+            <button onclick="closeWinPopup()" class="absolute top-3.5 right-3.5 p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800/80 hover:rotate-90 transition-all duration-200" title="Fechar">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+            </button>
+
+            <div class="w-14 h-14 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-2xl mx-auto animate-bounce">
+                🏆
+            </div>
+
+            <div class="space-y-1">
+                <h3 class="text-xl font-bold text-white">Parabéns!</h3>
+                <p class="text-zinc-400 text-sm">Você completou o <strong class="text-emerald-400">ViMória game</strong> em <span id="win-moves" class="text-white font-semibold">0</span> jogadas!</p>
+            </div>
+
+            <button onclick="closeWinPopup(); initMemoryGame();" class="w-full py-2.5 px-4 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-semibold text-sm transition-all active:scale-95">
+                Jogar Novamente
+            </button>
         </div>
     </div>
 
@@ -257,6 +337,21 @@
                     <div class="text-[11px] text-zinc-500 font-normal">Google Fotos</div>
                 </div>
             </button>
+
+            <div class="pt-4 pb-1">
+                <div class="text-[11px] font-semibold text-zinc-500 uppercase tracking-wider px-3 py-1">Jogos</div>
+            </div>
+
+            <!-- Aba 4: ViMória game -->
+            <button onclick="switchTab('jogo')" id="btn-jogo" class="tab-btn w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-left text-sm font-medium transition-all duration-200 text-zinc-400 hover:bg-zinc-800/40 hover:text-zinc-200 hover:translate-x-1">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-emerald-400 flex-shrink-0">
+                    <line x1="6" x2="10" y1="12" y2="12"/><line x1="8" x2="8" y1="10" y2="14"/><line x1="15" x2="15.01" y1="13" y2="13"/><line x1="18" x2="18.01" y1="11" y2="11"/><rect width="20" height="12" x="2" y="6" rx="2"/>
+                </svg>
+                <div class="truncate">
+                    <div class="truncate">ViMória game</div>
+                    <div class="text-[11px] text-zinc-500 font-normal">Jogo da Memória</div>
+                </div>
+            </button>
         </div>
 
         <div class="p-4 border-t border-zinc-800/60 text-xs text-zinc-500 flex items-center justify-between">
@@ -277,7 +372,7 @@
             <span id="header-title" class="text-sm font-medium text-zinc-400 transition-all">Tempo beijando sua boca</span>
         </header>
 
-        <main class="flex-1 flex flex-col items-center justify-center p-6 max-w-4xl mx-auto w-full">
+        <main class="flex-1 flex flex-col items-center justify-center p-4 md:p-6 max-w-4xl mx-auto w-full">
 
             <!-- CONTEÚDO ABA 1: TEMPO BEIJANDO SUA BOCA -->
             <div id="view-beijo" class="tab-view w-full text-center space-y-8">
@@ -337,6 +432,39 @@
                 </div>
             </div>
 
+            <!-- CONTEÚDO ABA 4: VIMÓRIA GAME -->
+            <div id="view-jogo" class="tab-view w-full max-w-2xl mx-auto space-y-5 hidden">
+                <div class="text-center space-y-1.5">
+                    <span class="inline-block px-3.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-xs font-medium">
+                        🎮 Mini-Jogo da Memória
+                    </span>
+                    <h1 class="text-2xl md:text-4xl font-semibold tracking-tight text-white">ViMória game</h1>
+                </div>
+
+                <!-- Barra de Status e Reiniciar -->
+                <div class="flex items-center justify-between bg-[#141418]/90 backdrop-blur-md border border-zinc-800/90 rounded-2xl px-4 py-3 shadow-lg">
+                    <div class="flex items-center gap-5 text-xs md:text-sm">
+                        <div>
+                            <span class="text-zinc-400">Jogadas:</span>
+                            <span id="game-moves" class="font-bold text-white ml-1">0</span>
+                        </div>
+                        <div>
+                            <span class="text-zinc-400">Pares:</span>
+                            <span id="game-pairs" class="font-bold text-emerald-400 ml-1">0/12</span>
+                        </div>
+                    </div>
+                    <button onclick="initMemoryGame()" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-medium transition-all active:scale-95">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/>
+                        </svg>
+                        embaralhar
+                    </button>
+                </div>
+
+                <!-- Tabuleiro 24 Cartas (4x6 no telemóvel, 6x4 no PC) -->
+                <div id="memory-board" class="grid grid-cols-4 sm:grid-cols-6 gap-2.5 md:gap-3"></div>
+            </div>
+
         </main>
     </div>
 
@@ -346,10 +474,11 @@
 
         const photosBeijo = ['1.png', '2.jpeg', '3.jpg', '4.jpg', '5.jpg', '6.jpg'];
         const photosNamoro = ['7.jpg', '8.jpg', '9.jpg', '10.jpg', '11.jpg', '12.jpg'];
+        const allPhotos = [...photosBeijo, ...photosNamoro];
 
-        // Pré-carrega as imagens de forma silenciosa para não travar no primeiro giro
+        // Pré-carrega as 12 imagens de forma silenciosa
         function preloadImages() {
-            [...photosBeijo, ...photosNamoro].forEach(src => {
+            allPhotos.forEach(src => {
                 const img = new Image();
                 img.decoding = 'async';
                 img.src = src;
@@ -363,237 +492,489 @@
             let months = now.getMonth() - startDate.getMonth();
             let days = now.getDate() - startDate.getDate();
             let hours = now.getHours() - startDate.getHours();
-            let minutes = now.getMinutes() - startDate.getMinutes();
-            let seconds = now.getSeconds() - startDate.getSeconds();
+            Sim, é totalmente possível e a ideia do nome **ViMória game** ficou genial!
 
-            if (seconds < 0) { seconds += 60; minutes--; }
-            if (minutes < 0) { minutes += 60; hours--; }
-            if (hours < 0) { hours += 24; days--; }
-            if (days < 0) {
-                const prevMonth = new Date(now.getFullYear(), now.getMonth(), 0);
-                days += prevMonth.getDate();
-                months--;
-            }
-            if (months < 0) { months += 12; years--; }
+Adicionei na barra lateral (logo abaixo da secção "Galeria" que aparece na sua imagem) uma nova secção chamada **"JOGOS"** com o botão do **ViMória game**.
 
-            return { years, months, days, hours, minutes, seconds };
+### 🎮 O que o ViMória game tem:
+* **Tabuleiro de 24 cartas (12 pares):** Usa todas as 12 fotos que já carregou no GitHub (`1.png`, `2.jpeg` e de `3.jpg` a `12.jpg`).
+* **Baralhamento 100% Aleatório:** Sempre que atualizar o site, trocar para a aba do jogo ou clicar no botão **"Embaralhar"**, as cartas mudam completamente de posição (usando o algoritmo de baralhamento *Fisher-Yates*).
+* **Contador de Jogadas e Pares:** Mostra quantos pares já encontrou (`0/12`) e quantas tentativas fez.
+* **Efeito de Vitória:** Quando encontra os 12 pares, os cartões ganham um brilho verde esmeralda, aparece uma mensagem de vitória e chovem corações pelo ecrã!
+* **Adaptado para Telemóvel e PC:** Grelha de 4 colunas no telemóvel e 6 colunas no computador.
+
+Para atualizar o seu site, vá ao seu ficheiro `index.html` no GitHub, clique no **ícone do lápis**, apague tudo (`Ctrl + A` e `Delete`), cole o código completo abaixo e clique em **Commit changes...**:
+
+```html
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nossa Linha do Tempo</title>
+    <link rel="preconnect" href="[https://fonts.googleapis.com](https://fonts.googleapis.com)">
+    <link rel="preconnect" href="[https://fonts.gstatic.com](https://fonts.gstatic.com)" crossorigin>
+    <link href="[https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap](https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap)" rel="stylesheet">
+    <script src="[https://cdn.tailwindcss.com](https://cdn.tailwindcss.com)"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #09090b;
+            color: #fafafa;
+            margin: 0;
+            padding: 0;
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
         }
 
-        const domCache = {};
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #09090b; }
+        ::-webkit-scrollbar-thumb { background: #27272a; border-radius: 3px; }
 
-        function initTimerCards(containerId, photosArray) {
-            const labels = ['Anos', 'Meses', 'Dias', 'Horas', 'Min', 'Seg'];
-            const container = document.getElementById(containerId);
-            container.innerHTML = labels.map((label, idx) => `
-                <div style="animation-delay: ${idx * 70}ms" class="flip-card" onclick="this.classList.toggle('flipped')" title="Passe o mouse ou clique para virar">
-                    <div class="flip-card-inner">
-                        <div class="flip-card-front">
-                            <span id="${containerId}-val-${idx}" class="text-3xl md:text-4xl font-bold text-white tracking-tight ${idx === 5 ? 'sec-pulse text-zinc-100' : ''}">
-                                00
-                            </span>
-                            <span class="text-[11px] font-medium text-zinc-500 uppercase tracking-widest mt-2">
-                                ${label}
-                            </span>
+        /* Luz ambiente otimizada para GPU */
+        .ambient-glow {
+            position: fixed;
+            width: 500px;
+            height: 500px;
+            border-radius: 50%;
+            filter: blur(130px);
+            opacity: 0.14;
+            pointer-events: none;
+            z-index: 0;
+            will-change: transform, background-color;
+            transition: background-color 1s ease;
+            animation: floatGlow 10s infinite alternate ease-in-out;
+        }
+        @keyframes floatGlow {
+            0% { transform: translate3d(-55%, -5%, 0) scale(0.95); }
+            100% { transform: translate3d(-45%, 5%, 0) scale(1.08); }
+        }
+
+        /* Animação de entrada da aba */
+        .tab-view {
+            animation: tabFadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            will-change: opacity, transform;
+        }
+        @keyframes tabFadeIn {
+            from { opacity: 0; transform: translate3d(0, 14px, 0) scale(0.98); }
+            to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+        }
+
+        /* Estrutura 3D Flip Card dos Contadores */
+        .flip-card {
+            perspective: 1000px;
+            height: 125px;
+            opacity: 0;
+            animation: cardAppear 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            cursor: pointer;
+            -webkit-tap-highlight-color: transparent;
+        }
+        @media (min-width: 768px) {
+            .flip-card { height: 140px; }
+        }
+
+        .flip-card-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            transition: transform 0.6s cubic-bezier(0.4, 0.2, 0.2, 1);
+            transform-style: preserve-3d;
+            will-change: transform;
+        }
+
+        .flip-card:hover .flip-card-inner,
+        .flip-card.flipped .flip-card-inner {
+            transform: rotateY(180deg);
+        }
+
+        .flip-card-front,
+        .flip-card-back {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
+            border-radius: 1rem;
+            overflow: hidden;
+            transform: translateZ(0);
+        }
+
+        .flip-card-front {
+            background-color: rgba(24, 24, 27, 0.9);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(39, 39, 42, 0.9);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+        }
+
+        .flip-card-back {
+            transform: rotateY(180deg) translateZ(0);
+            border: 1px solid rgba(255, 255, 255, 0.22);
+            box-shadow: 0 14px 30px -10px rgba(0, 0, 0, 0.8);
+            background-color: #18181b;
+        }
+
+        /* Cartas do Jogo da Memória (ViMória game) */
+        .mem-card {
+            perspective: 1000px;
+            aspect-ratio: 1 / 1;
+            cursor: pointer;
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+        }
+        .mem-card-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            transition: transform 0.5s cubic-bezier(0.4, 0.2, 0.2, 1);
+            transform-style: preserve-3d;
+            will-change: transform;
+        }
+        .mem-card.flipped .mem-card-inner,
+        .mem-card.matched .mem-card-inner {
+            transform: rotateY(180deg);
+        }
+        .mem-card-front,
+        .mem-card-back {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
+            border-radius: 0.85rem;
+            overflow: hidden;
+            transform: translateZ(0);
+        }
+        .mem-card-front {
+            background: linear-gradient(135deg, #18181b 0%, #121215 100%);
+            border: 1px solid rgba(63, 63, 70, 0.6);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 15px -3px rgba(0, 0, 0, 0.5);
+            transition: border-color 0.25s ease, transform 0.2s ease;
+        }
+        .mem-card:hover .mem-card-front {
+            border-color: rgba(16, 185, 129, 0.5);
+        }
+        .mem-card-back {
+            transform: rotateY(180deg) translateZ(0);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            background-color: #18181b;
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+        }
+        .mem-card.matched .mem-card-back {
+            border-color: #10b981;
+            box-shadow: 0 0 16px rgba(16, 185, 129, 0.45);
+        }
+
+        @keyframes cardAppear {
+            from { opacity: 0; transform: translate3d(0, 18px, 0) scale(0.92); }
+            to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+        }
+
+        /* Efeito Shimmer na box de fotos */
+        .shimmer-card {
+            position: relative;
+            overflow: hidden;
+        }
+        .shimmer-card::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -150%;
+            width: 70%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.06), transparent);
+            transform: skewX(-20deg);
+            animation: shimmerSwipe 4s infinite;
+            pointer-events: none;
+        }
+        @keyframes shimmerSwipe {
+            0% { left: -150%; }
+            50%, 100% { left: 200%; }
+        }
+
+        .sec-pulse {
+            animation: softPulse 1s infinite ease-in-out;
+        }
+        @keyframes softPulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.06); }
+        }
+
+        .popup-animate {
+            animation: popupBounce 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        @keyframes popupBounce {
+            from { opacity: 0; transform: scale(0.85) translate3d(0, 10px, 0); }
+            to { opacity: 1; transform: scale(1) translate3d(0, 0, 0); }
+        }
+
+        .floating-heart {
+            position: fixed;
+            pointer-events: none;
+            z-index: 60;
+            will-change: transform, opacity;
+            animation: flyUp 1.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        @keyframes flyUp {
+            0% { opacity: 1; transform: translate3d(0, 0, 0) scale(0.6) rotate(0deg); }
+            100% { opacity: 0; transform: translate3d(0, -110px, 0) scale(1.3) rotate(var(--rot)); }
+        }
+    </style>
+</head>
+<body class="flex h-screen overflow-hidden relative">
+
+    <!-- Canvas de Partículas Sutis no Fundo -->
+    <canvas id="bg-particles" class="fixed inset-0 pointer-events-none z-0 opacity-40"></canvas>
+
+    <!-- Luz Ambiente Dinâmica -->
+    <div id="ambient-light" class="ambient-glow top-1/4 left-1/2 bg-rose-500"></div>
+
+    <!-- Fundo escuro no telemóvel quando a barra lateral está aberta -->
+    <div id="sidebar-backdrop" onclick="toggleSidebar(false)" class="fixed inset-0 bg-black/60 z-20 hidden md:hidden backdrop-blur-sm transition-opacity"></div>
+
+    <!-- POP-UP DA ABA DE FOTOS -->
+    <div id="fotos-popup" class="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="popup-animate bg-[#141418] border border-zinc-800 rounded-2xl max-w-sm w-full p-6 relative shadow-2xl text-center">
+            <button onclick="closeFotosPopup()" class="absolute top-3.5 right-3.5 p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800/80 hover:rotate-90 transition-all duration-200" title="Fechar">
+                <svg xmlns="[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+            </button>
+
+            <div class="w-12 h-12 rounded-full bg-sky-500/10 border border-sky-500/20 flex items-center justify-center text-sky-400 mx-auto mb-4 animate-bounce">
+                <svg xmlns="[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>
+                </svg>
+            </div>
+
+            <p class="text-white font-medium text-base leading-relaxed px-2">
+                Clica na box pra abrir as nossas fotos, tmj
+            </p>
+        </div>
+    </div>
+
+    <!-- Barra Lateral -->
+    <aside id="sidebar" class="bg-[#121215]/90 backdrop-blur-xl border-r border-zinc-800/80 w-72 flex-shrink-0 flex flex-col transition-all duration-300 ease-in-out fixed md:relative z-30 h-full -translate-x-full md:translate-x-0">
+        
+        <div class="p-4 flex items-center justify-between border-b border-zinc-800/60">
+            <div class="flex items-center gap-2.5 pl-2">
+                <span id="sidebar-dot" class="w-2.5 h-2.5 rounded-full bg-rose-500 transition-colors duration-500 shadow-[0_0_10px_rgba(244,63,94,0.8)]"></span>
+                <span class="font-semibold text-zinc-200 tracking-wide text-sm">Nossas Memórias</span>
+            </div>
+            <button onclick="toggleSidebar()" class="p-2 rounded-lg hover:bg-zinc-800/80 text-zinc-400 hover:text-white transition-colors" title="Recolher menu">
+                <svg xmlns="[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect width="18" height="18" x="3" y="3" rx="2"/><path d="M9 3v18"/>
+                </svg>
+            </button>
+        </div>
+
+        <div class="p-3 flex-1 overflow-y-auto space-y-1.5">
+            <div class="text-[11px] font-semibold text-zinc-500 uppercase tracking-wider px-3 py-2">Contadores</div>
+
+            <!-- Aba 1: Beijo -->
+            <button onclick="switchTab('beijo')" id="btn-beijo" class="tab-btn w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-left text-sm font-medium transition-all duration-200 bg-zinc-800/90 text-white shadow-sm">
+                <svg xmlns="[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-rose-400 flex-shrink-0">
+                    <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>
+                </svg>
+                <div class="truncate">
+                    <div class="truncate">Tempo beijando sua boca</div>
+                    <div class="text-[11px] text-zinc-400 font-normal">Desde 21/08/2023</div>
+                </div>
+            </button>
+
+            <!-- Aba 2: Namoro -->
+            <button onclick="switchTab('namoro')" id="btn-namoro" class="tab-btn w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-left text-sm font-medium transition-all duration-200 text-zinc-400 hover:bg-zinc-800/40 hover:text-zinc-200 hover:translate-x-1">
+                <svg xmlns="[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-purple-400 flex-shrink-0">
+                    <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+                </svg>
+                <div class="truncate">
+                    <div class="truncate">Tempo de namoro</div>
+                    <div class="text-[11px] text-zinc-500 font-normal">Desde 07/05/2024</div>
+                </div>
+            </button>
+
+            <div class="pt-4 pb-1">
+                <div class="text-[11px] font-semibold text-zinc-500 uppercase tracking-wider px-3 py-1">Galeria</div>
+            </div>
+
+            <!-- Aba 3: Álbuns do Google Fotos -->
+            <button onclick="switchTab('fotos')" id="btn-fotos" class="tab-btn w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-left text-sm font-medium transition-all duration-200 text-zinc-400 hover:bg-zinc-800/40 hover:text-zinc-200 hover:translate-x-1">
+                <svg xmlns="[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-sky-400 flex-shrink-0">
+                    <rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>
+                </svg>
+                <div class="truncate">
+                    <div class="truncate">Nosso Álbum de Fotos</div>
+                    <div class="text-[11px] text-zinc-500 font-normal">Google Fotos</div>
+                </div>
+            </button>
+
+            <div class="pt-4 pb-1">
+                <div class="text-[11px] font-semibold text-zinc-500 uppercase tracking-wider px-3 py-1">Jogos</div>
+            </div>
+
+            <!-- Aba 4: ViMória game -->
+            <button onclick="switchTab('jogo')" id="btn-jogo" class="tab-btn w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-left text-sm font-medium transition-all duration-200 text-zinc-400 hover:bg-zinc-800/40 hover:text-zinc-200 hover:translate-x-1">
+                <svg xmlns="[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-emerald-400 flex-shrink-0">
+                    <line x1="6" x2="10" y1="12" y2="12"/><line x1="8" x2="8" y1="10" y2="14"/><line x1="15" x2="15.01" y1="13" y2="13"/><line x1="18" x2="18.01" y1="11" y2="11"/><rect width="20" height="12" x="2" y="6" rx="2"/>
+                </svg>
+                <div class="truncate">
+                    <div class="truncate">ViMória game</div>
+                    <div class="text-[11px] text-zinc-500 font-normal">Jogo da Memória</div>
+                </div>
+            </button>
+        </div>
+
+        <div class="p-4 border-t border-zinc-800/60 text-xs text-zinc-500 flex items-center justify-between">
+            <span>Nossa Linha do Tempo</span>
+            <button onclick="spawnHearts(event)" class="hover:scale-125 transition-transform cursor-pointer" title="Clique para espalhar amor">❤️</button>
+        </div>
+    </aside>
+
+    <!-- Conteúdo Principal -->
+    <div class="flex-1 flex flex-col h-full relative overflow-y-auto z-10">
+        
+        <header class="p-4 flex items-center gap-3 sticky top-0 bg-[#09090b]/60 backdrop-blur-md z-10">
+            <button onclick="toggleSidebar()" class="p-2.5 rounded-xl bg-zinc-900/90 border border-zinc-800 hover:bg-zinc-800 text-zinc-300 transition-all active:scale-95" title="Menu">
+                <svg xmlns="[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/>
+                </svg>
+            </button>
+            <span id="header-title" class="text-sm font-medium text-zinc-400 transition-all">Tempo beijando sua boca</span>
+        </header>
+
+        <main class="flex-1 flex flex-col items-center justify-center p-4 md:p-6 max-w-4xl mx-auto w-full">
+
+            <!-- CONTEÚDO ABA 1: TEMPO BEIJANDO SUA BOCA -->
+            <div id="view-beijo" class="tab-view w-full text-center space-y-8">
+                <div class="space-y-2">
+                    <button onclick="spawnHearts(event)" class="inline-block px-3.5 py-1 rounded-full bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs font-medium mb-2 hover:bg-rose-500/20 hover:scale-105 active:scale-95 transition-all cursor-pointer">
+                        ✨ Primeiro Beijo
+                    </button>
+                    <h1 onclick="spawnHearts(event)" class="text-3xl md:text-5xl font-semibold tracking-tight text-white cursor-pointer select-none">Tempo beijando sua boca</h1>
+                    <p class="text-zinc-400 text-sm md:text-base">Desde 21 de Agosto de 2023</p>
+                </div>
+
+                <div id="timer-beijo" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 md:gap-4 max-w-3xl mx-auto"></div>
+            </div>
+
+            <!-- CONTEÚDO ABA 2: TEMPO DE NAMORO -->
+            <div id="view-namoro" class="tab-view w-full text-center space-y-8 hidden">
+                <div class="space-y-2">
+                    <button onclick="spawnHearts(event)" class="inline-block px-3.5 py-1 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-300 text-xs font-medium mb-2 hover:bg-purple-500/20 hover:scale-105 active:scale-95 transition-all cursor-pointer">
+                        💍 Oficialmente Juntos
+                    </button>
+                    <h1 onclick="spawnHearts(event)" class="text-3xl md:text-5xl font-semibold tracking-tight text-white cursor-pointer select-none">Tempo de namoro</h1>
+                    <p class="text-zinc-400 text-sm md:text-base">Desde 07 de Maio de 2024</p>
+                </div>
+
+                <div id="timer-namoro" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 md:gap-4 max-w-3xl mx-auto"></div>
+            </div>
+
+            <!-- CONTEÚDO ABA 3: NOSSO ÁLBUM (GOOGLE FOTOS) -->
+            <div id="view-fotos" class="tab-view w-full max-w-xl mx-auto space-y-6 hidden">
+                <div class="text-center">
+                    <span class="inline-block px-3.5 py-1 rounded-full bg-sky-500/10 border border-sky-500/20 text-sky-300 text-xs font-medium mb-3">
+                        📸 Memórias Fotográficas
+                    </span>
+                    <h1 class="text-3xl md:text-4xl font-semibold tracking-tight text-white">Nosso Álbum de Fotos</h1>
+                </div>
+
+                <div class="grid gap-4">
+                    <a href="[https://photos.app.goo.gl/jCWSrNZpgkze3RC66](https://photos.app.goo.gl/jCWSrNZpgkze3RC66)" target="_blank" rel="noopener noreferrer" 
+                       class="shimmer-card group flex items-center justify-between p-6 rounded-2xl bg-[#141418]/90 backdrop-blur-md border border-zinc-800 hover:border-sky-500/50 hover:bg-zinc-800/50 hover:-translate-y-1.5 transition-all duration-300 shadow-xl hover:shadow-sky-500/10">
+                        <div class="flex items-center gap-4">
+                            <div class="w-14 h-14 rounded-2xl bg-sky-500/10 border border-sky-500/20 flex items-center justify-center text-sky-400 group-hover:scale-110 group-hover:rotate-3 transition-transform duration-300">
+                                <svg xmlns="[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>
+                                </svg>
+                            </div>
+                            <div class="text-left">
+                                <h3 class="text-lg font-semibold text-white group-hover:text-sky-300 transition-colors">Abrir Álbum no Google Fotos</h3>
+                                <p class="text-xs text-zinc-400 mt-1">Clique para ver nossa galeria compartilhada</p>
+                            </div>
                         </div>
-                        <div class="flip-card-back">
-                            <img src="${photosArray[idx]}" alt="Memória ${idx + 1}" decoding="async" loading="eager" class="w-full h-full object-cover">
+                        <div class="text-zinc-500 group-hover:text-sky-300 group-hover:translate-x-1 group-hover:-translate-y-1 transition-all duration-300">
+                            <svg xmlns="[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" x2="21" y1="14" y2="3"/>
+                            </svg>
+                        </div>
+                    </a>
+                </div>
+            </div>
+
+            <!-- CONTEÚDO ABA 4: VIMÓRIA GAME (JOGO DA MEMÓRIA) -->
+            <div id="view-jogo" class="tab-view w-full max-w-2xl mx-auto space-y-5 hidden py-2">
+                <div class="text-center space-y-1.5">
+                    <span class="inline-block px-3.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-xs font-medium">
+                        🎮 Mini Game
+                    </span>
+                    <h1 class="text-2xl md:text-4xl font-semibold tracking-tight text-white">ViMória game</h1>
+                    <p class="text-zinc-400 text-xs md:text-sm">Encontre os 12 pares das nossas fotos</p>
+                </div>
+
+                <!-- Painel de Pontuação e Botão de Embaralhar -->
+                <div class="flex items-center justify-between bg-[#141418]/90 border border-zinc-800/90 rounded-2xl px-4 py-3 shadow-lg">
+                    <div class="flex items-center gap-5 text-xs md:text-sm">
+                        <div>
+                            <span class="text-zinc-400">Pares:</span>
+                            <span id="game-matches" class="font-bold text-emerald-400 ml-1">0/12</span>
+                        </div>
+                        <div>
+                            <span class="text-zinc-400">Jogadas:</span>
+                            <span id="game-moves" class="font-bold text-white ml-1">0</span>
                         </div>
                     </div>
+                    <button onclick="initMemoryGame()" class="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-medium transition-all active:scale-95">
+                        <svg xmlns="[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/>
+                        </svg>
+                        Embaralhar
+                    </button>
                 </div>
-            `).join('');
 
-            // Salva referências dos elementos na memória para atualização ultra-rápida
-            domCache[containerId] = labels.map((_, idx) => document.getElementById(`${containerId}-val-${idx}`));
-        }
+                <!-- Mensagem de Vitória -->
+                <div id="game-win-banner" class="hidden bg-emerald-500/10 border border-emerald-500/30 rounded-2xl p-4 text-center space-y-2 popup-animate">
+                    <p class="text-emerald-300 font-semibold text-sm md:text-base">🎉 Parabéns! Vocês completaram o ViMória game!</p>
+                    <p id="game-win-stats" class="text-zinc-400 text-xs"></p>
+                </div>
 
-        // Reinicia suavemente a animação de cascata sem recriar as imagens do zero
-        function replayCardCascade(containerId) {
-            const cards = document.getElementById(containerId).querySelectorAll('.flip-card');
-            cards.forEach((card, idx) => {
-                card.classList.remove('flipped');
-                card.style.animation = 'none';
-                void card.offsetWidth; // Reflow leve
-                card.style.animation = `cardAppear 0.5s cubic-bezier(0.16, 1, 0.3, 1) ${idx * 70}ms forwards`;
+                <!-- Tabuleiro 24 Cartas (4 colunas no telemóvel, 6 no PC) -->
+                <div id="memory-board" class="grid grid-cols-4 sm:grid-cols-6 gap-2.5 md:gap-3"></div>
+            </div>
+
+        </main>
+    </div>
+
+    <script>
+        const dateBeijo = new Date(2023, 7, 21, 0, 0, 0);
+        const dateNamoro = new Date(2024, 4, 7, 0, 0, 0);
+
+        const photosBeijo = ['1.png', '2.jpeg', '3.jpg', '4.jpg', '5.jpg', '6.jpg'];
+        const photosNamoro = ['7.jpg', '8.jpg', '9.jpg', '10.jpg', '11.jpg', '12.jpg'];
+        const allPhotos = [...photosBeijo, ...photosNamoro];
+
+        // Pré-carrega as 12 imagens para giro imediato
+        function preloadImages() {
+            allPhotos.forEach(src => {
+                const img = new Image();
+                img.decoding = 'async';
+                img.src = src;
             });
         }
+        window.addEventListener('load', preloadImages);
 
-        function updateTimerValues(containerId, timeObj) {
-            const values = [timeObj.years, timeObj.months, timeObj.days, timeObj.hours, timeObj.minutes, timeObj.seconds];
-            const els = domCache[containerId];
-            if (!els) return;
-
-            values.forEach((val, idx) => {
-                const formatted = String(val).padStart(2, '0');
-                if (els[idx] && els[idx].textContent !== formatted) {
-                    els[idx].textContent = formatted;
-                }
-            });
-        }
-
-        initTimerCards('timer-beijo', photosBeijo);
-        initTimerCards('timer-namoro', photosNamoro);
-
-        function updateAllTimers() {
-            if (document.hidden) return;
-            updateTimerValues('timer-beijo', calculateElapsedTime(dateBeijo));
-            updateTimerValues('timer-namoro', calculateElapsedTime(dateNamoro));
-        }
-
-        setInterval(updateAllTimers, 1000);
-        document.addEventListener('visibilitychange', () => {
-            if (!document.hidden) updateAllTimers();
-        });
-        updateAllTimers();
-
-        function openFotosPopup() {
-            document.getElementById('fotos-popup').classList.remove('hidden');
-        }
-
-        function closeFotosPopup() {
-            document.getElementById('fotos-popup').classList.add('hidden');
-        }
-
-        let currentTab = 'beijo';
-        function switchTab(tabName) {
-            if (currentTab === tabName && tabName !== 'fotos') return;
-            currentTab = tabName;
-
-            const views = ['beijo', 'namoro', 'fotos'];
-            const titles = {
-                'beijo': 'Tempo beijando sua boca',
-                'namoro': 'Tempo de namoro',
-                'fotos': 'Nosso Álbum de Fotos'
-            };
-            const glowColors = {
-                'beijo': 'bg-rose-500',
-                'namoro': 'bg-purple-500',
-                'fotos': 'bg-sky-500'
-            };
-
-            views.forEach(v => {
-                const viewEl = document.getElementById('view-' + v);
-                const btnEl = document.getElementById('btn-' + v);
-                
-                if (v === tabName) {
-                    viewEl.classList.remove('hidden');
-                    btnEl.className = "tab-btn w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-left text-sm font-medium transition-all duration-200 bg-zinc-800/90 text-white shadow-sm";
-                } else {
-                    viewEl.classList.add('hidden');
-                    btnEl.className = "tab-btn w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-left text-sm font-medium transition-all duration-200 text-zinc-400 hover:bg-zinc-800/40 hover:text-zinc-200 hover:translate-x-1";
-                }
-            });
-
-            if (tabName === 'beijo') { replayCardCascade('timer-beijo'); updateAllTimers(); }
-            if (tabName === 'namoro') { replayCardCascade('timer-namoro'); updateAllTimers(); }
-
-            const ambient = document.getElementById('ambient-light');
-            const dot = document.getElementById('sidebar-dot');
-            ambient.className = `ambient-glow top-1/4 left-1/2 ${glowColors[tabName]}`;
-            dot.className = `w-2.5 h-2.5 rounded-full transition-colors duration-500 ${glowColors[tabName]}`;
-
-            document.getElementById('header-title').textContent = titles[tabName];
-
-            if (tabName === 'fotos') {
-                openFotosPopup();
-            }
-
-            if (window.innerWidth < 768) {
-                toggleSidebar(false);
-            }
-        }
-
-        function spawnHearts(e) {
-            const emojis = ['❤️', '💖', '✨', '💕'];
-            const fragment = document.createDocumentFragment();
-
-            for (let i = 0; i < 7; i++) {
-                const heart = document.createElement('span');
-                heart.className = 'floating-heart text-lg select-none';
-                heart.textContent = emojis[Math.floor(Math.random() * emojis.length)];
-                
-                const offsetX = (Math.random() - 0.5) * 90;
-                const offsetY = (Math.random() - 0.5) * 30;
-                const rot = (Math.random() - 0.5) * 50 + 'deg';
-                
-                heart.style.left = (e.clientX + offsetX) + 'px';
-                heart.style.top = (e.clientY + offsetY) + 'px';
-                heart.style.setProperty('--rot', rot);
-                
-                fragment.appendChild(heart);
-                setTimeout(() => heart.remove(), 1800);
-            }
-            document.body.appendChild(fragment);
-        }
-
-        let sidebarOpen = window.innerWidth >= 768;
-        function toggleSidebar(forceState) {
-            const sidebar = document.getElementById('sidebar');
-            const backdrop = document.getElementById('sidebar-backdrop');
-            
-            sidebarOpen = forceState !== undefined ? forceState : !sidebarOpen;
-
-            if (window.innerWidth < 768) {
-                if (sidebarOpen) {
-                    sidebar.classList.remove('-translate-x-full');
-                    backdrop.classList.remove('hidden');
-                } else {
-                    sidebar.classList.add('-translate-x-full');
-                    backdrop.classList.add('hidden');
-                }
-            } else {
-                if (sidebarOpen) {
-                    sidebar.classList.remove('-ml-72');
-                } else {
-                    sidebar.classList.add('-ml-72');
-                }
-            }
-        }
-
-        // Animação de Partículas Leves no Fundo com pausa inteligente
-        const canvas = document.getElementById('bg-particles');
-        const ctx = canvas.getContext('2d', { alpha: true });
-        let particles = [];
-
-        function resizeCanvas() {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-        }
-        window.addEventListener('resize', resizeCanvas, { passive: true });
-        resizeCanvas();
-
-        for (let i = 0; i < 32; i++) {
-            particles.push({
-                x: Math.random() * canvas.width,
-                y: Math.random() * canvas.height,
-                r: Math.random() * 1.5 + 0.4,
-                dx: (Math.random() - 0.5) * 0.22,
-                dy: (Math.random() - 0.5) * 0.22,
-                alpha: Math.random() * 0.45 + 0.2
-            });
-        }
-
-        function animateParticles() {
-            if (!document.hidden) {
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-                for (let i = 0; i < particles.length; i++) {
-                    const p = particles[i];
-                    p.x += p.dx;
-                    p.y += p.dy;
-
-                    if (p.x < 0) p.x = canvas.width;
-                    else if (p.x > canvas.width) p.x = 0;
-                    if (p.y < 0) p.y = canvas.height;
-                    else if (p.y > canvas.height) p.y = 0;
-
-                    ctx.beginPath();
-                    ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-                    ctx.fillStyle = `rgba(255, 255, 255, ${p.alpha})`;
-                    ctx.fill();
-                }
-            }
-            requestAnimationFrame(animateParticles);
-        }
-        animateParticles();
-    </script>
-</body>
-</html>
+        function calculateElapsedTime(startDate) {
+            const now = new Date();
+            let years = now.getFullYear() - startDate.getFullYear();
+            let months = now.getMonth() - startDate.getMonth();
+            let days = now.getDate() - startDate.getDate();
+            let hours = now.getHours() - startDate.getHours();
+            let minutes = now
