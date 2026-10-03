@@ -99,7 +99,6 @@
                 <div class="truncate"><div class="truncate">ViMória game</div><div class="text-[11px] text-zinc-500 font-normal">Jogo da Memória</div></div>
             </button>
 
-            <!-- Novo Botão: Talari Bird -->
             <button onclick="switchTab('talari')" id="btn-talari" class="tab-btn w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-left text-sm font-medium transition-all text-zinc-400 hover:bg-zinc-800/40 hover:text-zinc-200">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-amber-400 flex-shrink-0"><path d="M16 7h.01"/><path d="M3.4 18H12a8 8 0 0 0 8-8V7a4 4 0 0 0-7.28-2.3L2 20"/><path d="m20 7 2 .5-2 .5"/><path d="M10 18v3"/><path d="M14 17.75V21"/><path d="M7 18a6 6 0 0 0 3.84-10.61"/></svg>
                 <div class="truncate"><div class="truncate">Talari Bird</div><div class="text-[11px] text-zinc-500 font-normal">Desvie dos obstáculos</div></div>
@@ -322,12 +321,13 @@
         }
         initMemoryGame();
 
-        /* --- TALARI BIRD GAME --- */
+        /* --- TALARI BIRD GAME (BALANCEADO / MAIS FÁCIL) --- */
         const tCvs = document.getElementById('talari-canvas'), tCtx = tCvs.getContext('2d');
         let tbState = 'idle', tbScore = 0, tbBest = Number(localStorage.getItem('tbBest') || 0), tbFrame = 0;
         document.getElementById('tb-best').textContent = tbBest;
 
-        const bird = { x: 68, y: 220, r: 20, vy: 0, g: 0.36, jump: -6.6 };
+        // Gravidade e pulo mais suaves para facilitar o controle
+        const bird = { x: 68, y: 220, r: 20, vy: 0, g: 0.28, jump: -5.8 };
         let obstacles = [];
         const mountains = [{ x: 0, h: 90 }, { x: 140, h: 130 }, { x: 270, h: 80 }];
 
@@ -351,9 +351,9 @@
         window.addEventListener('keydown', jumpTalari);
 
         function spawnObstacle() {
-            const gap = 132, minTop = 55, maxTop = tCvs.height - gap - 85;
+            // Vão maior (150px) para passar com mais tranquilidade
+            const gap = 150, minTop = 55, maxTop = tCvs.height - gap - 85;
             const topH = Math.floor(Math.random() * (maxTop - minTop + 1)) + minTop;
-            // 70% de preferência para obstáculos normais (canos/montanhas), 30% para as fotos 14 e 15
             const isPerson = Math.random() < 0.30;
             const enemyImg = Math.random() < 0.5 ? tbEnemy1 : tbEnemy2;
             const personPos = Math.random() < 0.5 ? 'top' : 'bottom';
@@ -373,15 +373,13 @@
 
         function updateAndDrawTalari() {
             if (currentTab === 'talari' && !document.hidden) {
-                // Fundo Céu Noturno
                 const grad = tCtx.createLinearGradient(0, 0, 0, tCvs.height);
                 grad.addColorStop(0, '#09090b'); grad.addColorStop(1, '#181824');
                 tCtx.fillStyle = grad; tCtx.fillRect(0, 0, tCvs.width, tCvs.height);
 
-                // Montanhas de fundo (Cenário)
                 tCtx.fillStyle = '#14141d';
                 mountains.forEach(m => {
-                    if (tbState === 'play') m.x -= 0.5;
+                    if (tbState === 'play') m.x -= 0.45;
                     if (m.x < -180) m.x = tCvs.width;
                     tCtx.beginPath();
                     tCtx.moveTo(m.x, tCvs.height - 24);
@@ -392,34 +390,31 @@
 
                 if (tbState === 'play') {
                     tbFrame++;
-                    if (tbFrame % 95 === 0) spawnObstacle();
+                    // Maior distância entre um obstáculo e outro (a cada 115 frames)
+                    if (tbFrame % 115 === 0) spawnObstacle();
                     bird.vy += bird.g; bird.y += bird.vy;
 
                     if (bird.y + bird.r >= tCvs.height - 24 || bird.y - bird.r <= 0) tbState = 'over';
                 }
 
-                // Desenhar Obstáculos
                 for (let i = obstacles.length - 1; i >= 0; i--) {
                     const o = obstacles[i];
-                    if (tbState === 'play') o.x -= 2.3;
+                    // Velocidade mais tranquila (1.9)
+                    if (tbState === 'play') o.x -= 1.9;
 
-                    // Canos clássicos estilo Flappy
                     tCtx.fillStyle = '#10b981';
                     tCtx.strokeStyle = '#059669';
                     tCtx.lineWidth = 2;
 
-                    // Topo
                     tCtx.fillRect(o.x, 0, o.w, o.top);
                     tCtx.strokeRect(o.x, 0, o.w, o.top);
                     tCtx.fillRect(o.x - 3, o.top - 14, o.w + 6, 14);
 
-                    // Base
                     const botH = tCvs.height - 24 - o.bottom;
                     tCtx.fillRect(o.x, o.bottom, o.w, botH);
                     tCtx.strokeRect(o.x, o.bottom, o.w, botH);
                     tCtx.fillRect(o.x - 3, o.bottom, o.w + 6, 14);
 
-                    // Se for obstáculo de pessoa (30% das vezes), desenha o card da foto no pilar
                     if (o.isPerson) {
                         const cardH = 68;
                         const py = o.personPos === 'top' ? Math.max(6, o.top - cardH - 4) : o.bottom + 4;
@@ -437,10 +432,10 @@
                         tCtx.stroke();
                     }
 
-                    // Colisão
+                    // Colisão com tolerância mais generosa (6px de margem)
                     if (tbState === 'play') {
-                        const hitX = bird.x + bird.r - 4 > o.x && bird.x - bird.r + 4 < o.x + o.w;
-                        const hitY = bird.y - bird.r + 4 < o.top || bird.y + bird.r - 4 > o.bottom;
+                        const hitX = bird.x + bird.r - 6 > o.x && bird.x - bird.r + 6 < o.x + o.w;
+                        const hitY = bird.y - bird.r + 6 < o.top || bird.y + bird.r - 6 > o.bottom;
                         if (hitX && hitY) tbState = 'over';
 
                         if (!o.passed && o.x + o.w < bird.x) {
@@ -456,13 +451,11 @@
                     if (o.x + o.w < -20) obstacles.splice(i, 1);
                 }
 
-                // Chão
                 tCtx.fillStyle = '#18181b';
                 tCtx.fillRect(0, tCvs.height - 24, tCvs.width, 24);
                 tCtx.strokeStyle = '#27272a';
                 tCtx.beginPath(); tCtx.moveTo(0, tCvs.height - 24); tCtx.lineTo(tCvs.width, tCvs.height - 24); tCtx.stroke();
 
-                // Desenhar "Passarinho" (Foto do Casal 13.jpeg)
                 tCtx.save();
                 tCtx.translate(bird.x, bird.y);
                 tCtx.rotate(Math.min(Math.PI / 5, Math.max(-Math.PI / 5, bird.vy * 0.06)));
@@ -478,7 +471,6 @@
                 tCtx.arc(bird.x, bird.y, bird.r, 0, Math.PI * 2);
                 tCtx.stroke();
 
-                // Telas de Início / Fim de Jogo
                 if (tbState !== 'play') {
                     tCtx.fillStyle = 'rgba(9, 9, 11, 0.65)';
                     tCtx.fillRect(0, 0, tCvs.width, tCvs.height);
