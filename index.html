@@ -8,9 +8,13 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Bibliotecas para o Globo 3D e Mapa Interativo -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/globe.gl"></script>
     <style>
         body { font-family: 'Inter', sans-serif; background: #09090b; color: #fafafa; margin: 0; overflow-x: hidden; -webkit-font-smoothing: antialiased; }
-        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: #09090b; }
         ::-webkit-scrollbar-thumb { background: #27272a; border-radius: 3px; }
 
@@ -43,6 +47,15 @@
 
         .floating-heart { position: fixed; pointer-events: none; z-index: 60; animation: flyUp 1.8s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
         @keyframes flyUp { 0% { opacity: 1; transform: translate3d(0,0,0) scale(0.6); } 100% { opacity: 0; transform: translate3d(0,-110px,0) scale(1.3) rotate(var(--rot)); } }
+
+        /* Pinos do Globo 3D e Mapa */
+        .globe-pin { cursor: pointer; pointer-events: auto; display: flex; flex-direction: column; align-items: center; transform: translate(-50%, -100%); transition: transform 0.2s ease; }
+        .globe-pin:hover { transform: translate(-50%, -100%) scale(1.25); z-index: 50; }
+        .pin-dot { width: 12px; height: 12px; border-radius: 50%; background: #f43f5e; border: 2px solid #fff; box-shadow: 0 0 12px #f43f5e; }
+        .pin-tag { background: rgba(15, 15, 20, 0.9); color: #fff; font-size: 10px; font-weight: 600; padding: 2px 6px; border-radius: 6px; border: 1px solid rgba(244, 63, 94, 0.4); white-space: nowrap; margin-bottom: 3px; backdrop-filter: blur(4px); }
+
+        .leaflet-popup-content-wrapper { background: #141418 !important; color: #fff !important; border: 1px solid #27272a; border-radius: 14px !important; }
+        .leaflet-popup-tip { background: #141418 !important; }
     </style>
 </head>
 <body class="flex h-screen overflow-hidden relative">
@@ -85,11 +98,17 @@
                 <div class="truncate"><div class="truncate">Tempo de namoro</div><div class="text-[11px] text-zinc-500 font-normal">Desde 07/05/2024</div></div>
             </button>
 
-            <div class="pt-3 pb-1"><div class="text-[11px] font-semibold text-zinc-500 uppercase tracking-wider px-3 py-1">Galeria</div></div>
+            <div class="pt-3 pb-1"><div class="text-[11px] font-semibold text-zinc-500 uppercase tracking-wider px-3 py-1">Galeria & Viagens</div></div>
 
             <button onclick="switchTab('fotos')" id="btn-fotos" class="tab-btn w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-left text-sm font-medium transition-all text-zinc-400 hover:bg-zinc-800/40 hover:text-zinc-200">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-sky-400 flex-shrink-0"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
                 <div class="truncate"><div class="truncate">Nosso Álbum de Fotos</div><div class="text-[11px] text-zinc-500 font-normal">Google Fotos</div></div>
+            </button>
+
+            <!-- NOVA ABA: LUGARES QUE VISITAMOS -->
+            <button onclick="switchTab('mapa')" id="btn-mapa" class="tab-btn w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-left text-sm font-medium transition-all text-zinc-400 hover:bg-zinc-800/40 hover:text-zinc-200">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-cyan-400 flex-shrink-0"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>
+                <div class="truncate"><div class="truncate">Lugares que Visitamos</div><div class="text-[11px] text-zinc-500 font-normal">Globo 3D Interativo</div></div>
             </button>
 
             <div class="pt-3 pb-1"><div class="text-[11px] font-semibold text-zinc-500 uppercase tracking-wider px-3 py-1">Jogos</div></div>
@@ -162,6 +181,54 @@
                 </a>
             </div>
 
+            <!-- NOVA ABA: LUGARES QUE VISITAMOS (GLOBO 3D + MAPA DETALHADO) -->
+            <div id="view-mapa" class="tab-view w-full max-w-4xl mx-auto space-y-4 hidden">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div>
+                        <span class="inline-block px-3 py-0.5 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-cyan-300 text-xs font-medium">🌍 Nossas Viagens</span>
+                        <h1 class="text-2xl md:text-3xl font-semibold tracking-tight text-white mt-1">Lugares que Visitamos</h1>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button onclick="resetGlobeCamera()" class="px-3 py-1.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 text-xs font-medium transition-all">
+                            🎯 Visão Geral
+                        </button>
+                        <button onclick="toggleMapMode()" id="btn-map-mode" class="px-3 py-1.5 rounded-xl bg-cyan-500/15 hover:bg-cyan-500/25 border border-cyan-500/30 text-cyan-300 text-xs font-medium transition-all">
+                            🗺️ Ver Mapa 2D (Ruas)
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Container do Globo 3D e Mapa -->
+                <div class="relative w-full h-[380px] md:h-[440px] rounded-2xl overflow-hidden border border-zinc-800 bg-[#060609] shadow-2xl">
+                    <!-- Globo 3D -->
+                    <div id="globe-box" class="w-full h-full cursor-grab active:cursor-grabbing"></div>
+                    <!-- Mapa 2D Interativo para alto zoom -->
+                    <div id="leaflet-box" class="w-full h-full hidden z-10"></div>
+
+                    <!-- Card Flutuante do Pino Selecionado -->
+                    <div id="place-card" class="hidden absolute bottom-3 left-3 right-3 sm:left-auto sm:right-3 sm:w-72 bg-[#141418]/95 backdrop-blur-md border border-zinc-700/80 rounded-xl p-3.5 shadow-2xl z-20">
+                        <button onclick="document.getElementById('place-card').classList.add('hidden')" class="absolute top-2.5 right-2.5 text-zinc-400 hover:text-white text-xs">✕</button>
+                        <div class="flex items-center gap-2.5">
+                            <div class="w-9 h-9 rounded-lg bg-rose-500/15 border border-rose-500/30 flex items-center justify-center text-base">📍</div>
+                            <div>
+                                <h4 id="pc-name" class="text-sm font-semibold text-white">Nome do Lugar</h4>
+                                <p id="pc-state" class="text-xs text-zinc-400">Estado</p>
+                            </div>
+                        </div>
+                        <div class="mt-2.5 pt-2 border-t border-zinc-800/80 flex justify-between items-center text-[11px]">
+                            <span class="text-emerald-400 font-medium">✓ Visitado juntos ❤️</span>
+                            <a id="pc-gmaps" href="#" target="_blank" rel="noopener noreferrer" class="text-cyan-400 hover:underline">Abrir no Google Maps ↗</a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Lista de Atalhos dos 13 Lugares -->
+                <div class="bg-[#141418]/80 border border-zinc-800/80 rounded-2xl p-3">
+                    <div class="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider mb-2 px-1">Clique em um lugar para voar até ele (13 locais):</div>
+                    <div id="places-chips" class="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto pr-1"></div>
+                </div>
+            </div>
+
             <!-- ABA 4: VIMÓRIA GAME -->
             <div id="view-jogo" class="tab-view w-full max-w-2xl mx-auto space-y-4 hidden">
                 <div class="text-center space-y-1">
@@ -217,7 +284,6 @@
         const photosNamoro = ['7.jpg', '8.jpg', '9.jpg', '10.jpg', '11.jpg', '12.jpg'];
         const allPhotos = [...photosBeijo, ...photosNamoro];
 
-        // Imagens do Talari Bird
         const tbHeroImg = new Image(); tbHeroImg.src = '13.jpeg';
         const tbEnemy1 = new Image(); tbEnemy1.src = '14.jpeg';
         const tbEnemy2 = new Image(); tbEnemy2.src = '15.jpeg';
@@ -270,6 +336,122 @@
         setInterval(updateAllTimers, 1000);
         updateAllTimers();
 
+        /* --- LUGARES QUE VISITAMOS (GLOBO 3D + MAPA) --- */
+        const visitedPlaces = [
+            { name: 'Xerém', state: 'Rio de Janeiro', lat: -22.5481, lng: -43.3056 },
+            { name: 'Petrópolis', state: 'Rio de Janeiro', lat: -22.5050, lng: -43.1786 },
+            { name: 'Itaipava', state: 'Rio de Janeiro', lat: -22.3883, lng: -43.1336 },
+            { name: 'Centro do Rio', state: 'Rio de Janeiro', lat: -22.9035, lng: -43.1769 },
+            { name: 'Jaconé', state: 'Rio de Janeiro', lat: -22.9365, lng: -42.6392 },
+            { name: 'Maricá', state: 'Rio de Janeiro', lat: -22.9194, lng: -42.8186 },
+            { name: 'Saquarema', state: 'Rio de Janeiro', lat: -22.9200, lng: -42.5103 },
+            { name: 'Guarulhos', state: 'São Paulo', lat: -23.4543, lng: -46.5337 },
+            { name: 'Navegantes', state: 'Santa Catarina', lat: -26.8986, lng: -48.6542 },
+            { name: 'Penha', state: 'Santa Catarina', lat: -26.7719, lng: -48.6458 },
+            { name: 'Beto Carrero', state: 'Santa Catarina', lat: -26.8011, lng: -48.6175 },
+            { name: 'Balneário Camboriú', state: 'Santa Catarina', lat: -26.9906, lng: -48.6347 },
+            { name: 'Pomerode', state: 'Santa Catarina', lat: -26.7406, lng: -49.1764 }
+        ];
+
+        let globeInstance = null, leafletMap = null, is2DMode = false;
+
+        // Renderiza os botões de atalho dos lugares
+        document.getElementById('places-chips').innerHTML = visitedPlaces.map((p, i) => `
+            <button onclick="focusPlace(${i})" class="px-2.5 py-1 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 hover:border-cyan-500/40 text-xs text-zinc-300 hover:text-white transition-all flex items-center gap-1">
+                <span class="text-rose-400">📍</span> ${p.name}
+            </button>
+        `).join('');
+
+        function initGlobeAndMap() {
+            const box = document.getElementById('globe-box');
+            if (!globeInstance && window.Globe) {
+                globeInstance = Globe()(box)
+                    .width(box.clientWidth)
+                    .height(box.clientHeight)
+                    .backgroundColor('#060609')
+                    .globeImageUrl('https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg')
+                    .bumpImageUrl('https://unpkg.com/three-globe/example/img/earth-topology.png')
+                    .showAtmosphere(true)
+                    .atmosphereColor('#38bdf8')
+                    .atmosphereAltitude(0.18)
+                    .htmlElementsData(visitedPlaces)
+                    .htmlLat(d => d.lat)
+                    .htmlLng(d => d.lng)
+                    .htmlElement(d => {
+                        const el = document.createElement('div');
+                        el.className = 'globe-pin';
+                        el.innerHTML = `<div class="pin-tag">${d.name}</div><div class="pin-dot"></div>`;
+                        el.onclick = () => showPlaceCard(d);
+                        return el;
+                    });
+
+                // Posição inicial focada no Sudeste/Sul do Brasil
+                globeInstance.pointOfView({ lat: -24.5, lng: -45.5, altitude: 0.75 }, 0);
+            }
+
+            if (!leafletMap && window.L) {
+                leafletMap = L.map('leaflet-box').setView([-24.5, -45.5], 6);
+                L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                    attribution: '&copy; OpenStreetMap',
+                    maxZoom: 19
+                }).addTo(leafletMap);
+
+                visitedPlaces.forEach(p => {
+                    const icon = L.divIcon({
+                        className: '',
+                        html: `<div style="width:14px;height:14px;background:#f43f5e;border:2px solid #fff;border-radius:50%;box-shadow:0 0 10px #f43f5e;"></div>`,
+                        iconSize: [14, 14],
+                        iconAnchor: [7, 7]
+                    });
+                    const m = L.marker([p.lat, p.lng], { icon }).addTo(leafletMap);
+                    m.on('click', () => showPlaceCard(p));
+                });
+            }
+        }
+
+        function showPlaceCard(p) {
+            document.getElementById('pc-name').textContent = p.name;
+            document.getElementById('pc-state').textContent = p.state;
+            document.getElementById('pc-gmaps').href = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(p.name + ', ' + p.state)}`;
+            document.getElementById('place-card').classList.remove('hidden');
+        }
+
+        function focusPlace(index) {
+            const p = visitedPlaces[index];
+            showPlaceCard(p);
+            if (!is2DMode && globeInstance) {
+                globeInstance.pointOfView({ lat: p.lat, lng: p.lng, altitude: 0.14 }, 1200);
+            } else if (is2DMode && leafletMap) {
+                leafletMap.flyTo([p.lat, p.lng], 13, { duration: 1.2 });
+            }
+        }
+
+        function resetGlobeCamera() {
+            document.getElementById('place-card').classList.add('hidden');
+            if (!is2DMode && globeInstance) {
+                globeInstance.pointOfView({ lat: -24.5, lng: -45.5, altitude: 0.75 }, 1200);
+            } else if (is2DMode && leafletMap) {
+                leafletMap.flyTo([-24.5, -45.5], 6, { duration: 1.2 });
+            }
+        }
+
+        function toggleMapMode() {
+            is2DMode = !is2DMode;
+            document.getElementById('globe-box').classList.toggle('hidden', is2DMode);
+            document.getElementById('leaflet-box').classList.toggle('hidden', !is2DMode);
+            document.getElementById('btn-map-mode').innerHTML = is2DMode ? '🌍 Voltar ao Globo 3D' : '🗺️ Ver Mapa 2D (Ruas)';
+            if (is2DMode && leafletMap) {
+                setTimeout(() => leafletMap.invalidateSize(), 100);
+            }
+        }
+
+        window.addEventListener('resize', () => {
+            if (globeInstance && currentTab === 'mapa') {
+                const box = document.getElementById('globe-box');
+                globeInstance.width(box.clientWidth).height(box.clientHeight);
+            }
+        });
+
         /* --- VIMÓRIA GAME --- */
         let firstCard = null, secondCard = null, lockBoard = false, moves = 0, matchedPairs = 0;
 
@@ -321,12 +503,11 @@
         }
         initMemoryGame();
 
-        /* --- TALARI BIRD GAME (BALANCEADO / MAIS FÁCIL) --- */
+        /* --- TALARI BIRD GAME --- */
         const tCvs = document.getElementById('talari-canvas'), tCtx = tCvs.getContext('2d');
         let tbState = 'idle', tbScore = 0, tbBest = Number(localStorage.getItem('tbBest') || 0), tbFrame = 0;
         document.getElementById('tb-best').textContent = tbBest;
 
-        // Gravidade e pulo mais suaves para facilitar o controle
         const bird = { x: 68, y: 220, r: 20, vy: 0, g: 0.28, jump: -5.8 };
         let obstacles = [];
         const mountains = [{ x: 0, h: 90 }, { x: 140, h: 130 }, { x: 270, h: 80 }];
@@ -351,7 +532,6 @@
         window.addEventListener('keydown', jumpTalari);
 
         function spawnObstacle() {
-            // Vão maior (150px) para passar com mais tranquilidade
             const gap = 150, minTop = 55, maxTop = tCvs.height - gap - 85;
             const topH = Math.floor(Math.random() * (maxTop - minTop + 1)) + minTop;
             const isPerson = Math.random() < 0.30;
@@ -390,7 +570,6 @@
 
                 if (tbState === 'play') {
                     tbFrame++;
-                    // Maior distância entre um obstáculo e outro (a cada 115 frames)
                     if (tbFrame % 115 === 0) spawnObstacle();
                     bird.vy += bird.g; bird.y += bird.vy;
 
@@ -399,7 +578,6 @@
 
                 for (let i = obstacles.length - 1; i >= 0; i--) {
                     const o = obstacles[i];
-                    // Velocidade mais tranquila (1.9)
                     if (tbState === 'play') o.x -= 1.9;
 
                     tCtx.fillStyle = '#10b981';
@@ -432,7 +610,6 @@
                         tCtx.stroke();
                     }
 
-                    // Colisão com tolerância mais generosa (6px de margem)
                     if (tbState === 'play') {
                         const hitX = bird.x + bird.r - 6 > o.x && bird.x - bird.r + 6 < o.x + o.w;
                         const hitY = bird.y - bird.r + 6 < o.top || bird.y + bird.r - 6 > o.bottom;
@@ -492,9 +669,23 @@
 
         function switchTab(tab) {
             currentTab = tab;
-            const views = ['beijo', 'namoro', 'fotos', 'jogo', 'talari'];
-            const titles = { beijo: 'Tempo beijando sua boca', namoro: 'Tempo de namoro', fotos: 'Nosso Álbum de Fotos', jogo: 'ViMória game', talari: 'Talari Bird' };
-            const glows = { beijo: 'bg-rose-500', namoro: 'bg-purple-500', fotos: 'bg-sky-500', jogo: 'bg-emerald-500', talari: 'bg-amber-500' };
+            const views = ['beijo', 'namoro', 'fotos', 'mapa', 'jogo', 'talari'];
+            const titles = {
+                beijo: 'Tempo beijando sua boca',
+                namoro: 'Tempo de namoro',
+                fotos: 'Nosso Álbum de Fotos',
+                mapa: 'Lugares que Visitamos',
+                jogo: 'ViMória game',
+                talari: 'Talari Bird'
+            };
+            const glows = {
+                beijo: 'bg-rose-500',
+                namoro: 'bg-purple-500',
+                fotos: 'bg-sky-500',
+                mapa: 'bg-cyan-500',
+                jogo: 'bg-emerald-500',
+                talari: 'bg-amber-500'
+            };
 
             views.forEach(v => {
                 document.getElementById('view-' + v).classList.toggle('hidden', v !== tab);
@@ -508,13 +699,14 @@
             document.getElementById('header-title').textContent = titles[tab];
 
             if (tab === 'fotos') document.getElementById('fotos-popup').classList.remove('hidden');
+            if (tab === 'mapa') setTimeout(initGlobeAndMap, 60);
             if (window.innerWidth < 768) toggleSidebar(false);
         }
 
         updateAndDrawTalari();
 
         function spawnHearts(e) {
-            const emojis = ['❤️', '💖', '✨', '💕'];
+            const emojis = ['❤️️', '💖', '✨', '💕'];
             const frag = document.createDocumentFragment();
             for (let i = 0; i < 7; i++) {
                 const h = document.createElement('span');
