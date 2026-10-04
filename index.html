@@ -8,7 +8,6 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- MapLibre GL JS (Globo 3D + Satélite Alta Resolução sem API Key) -->
     <link href="https://unpkg.com/maplibre-gl@5.1.0/dist/maplibre-gl.css" rel="stylesheet" />
     <script src="https://unpkg.com/maplibre-gl@5.1.0/dist/maplibre-gl.js"></script>
     <style>
@@ -47,14 +46,11 @@
         .floating-heart { position: fixed; pointer-events: none; z-index: 60; animation: flyUp 1.8s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
         @keyframes flyUp { 0% { opacity: 1; transform: translate3d(0,0,0) scale(0.6); } 100% { opacity: 0; transform: translate3d(0,-110px,0) scale(1.3) rotate(var(--rot)); } }
 
-        /* Marcadores Personalizados no Globo HD */
         .map-pin-wrap { display: flex; flex-direction: column; align-items: center; cursor: pointer; transition: transform 0.2s ease; }
         .map-pin-wrap:hover { transform: scale(1.2); z-index: 40 !important; }
         .map-pin-label { background: rgba(15, 15, 20, 0.92); color: #fff; font-size: 11px; font-weight: 600; padding: 2px 7px; border-radius: 6px; border: 1px solid rgba(244, 63, 94, 0.5); white-space: nowrap; margin-bottom: 4px; box-shadow: 0 4px 10px rgba(0,0,0,0.6); pointer-events: none; }
         .map-pin-dot { width: 14px; height: 14px; border-radius: 50%; background: #f43f5e; border: 2.5px solid #fff; box-shadow: 0 0 14px #f43f5e; }
 
-        /* Filtro escuro elegante para o modo de ruas */
-        .street-dark-layer { filter: invert(100%) hue-rotate(180deg) brightness(92%) contrast(90%); }
         .maplibregl-ctrl-attrib { display: none !important; }
     </style>
 </head>
@@ -73,7 +69,7 @@
         </div>
     </div>
 
-    <!-- Barra Lateral -->
+    <!-- Barra Lateral (Sem sublegendas) -->
     <aside id="sidebar" class="bg-[#121215]/90 backdrop-blur-xl border-r border-zinc-800/80 w-72 flex-shrink-0 flex flex-col transition-all duration-300 fixed md:relative z-30 h-full -translate-x-full md:translate-x-0">
         <div class="p-4 flex items-center justify-between border-b border-zinc-800/60">
             <div class="flex items-center gap-2.5 pl-2">
@@ -90,36 +86,36 @@
 
             <button onclick="switchTab('beijo')" id="btn-beijo" class="tab-btn w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-left text-sm font-medium transition-all bg-zinc-800/90 text-white shadow-sm">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-rose-400 flex-shrink-0"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
-                <div class="truncate"><div class="truncate">Tempo beijando sua boca</div><div class="text-[11px] text-zinc-400 font-normal">Desde 21/08/2023</div></div>
+                <span class="truncate">Tempo beijando sua boca</span>
             </button>
 
             <button onclick="switchTab('namoro')" id="btn-namoro" class="tab-btn w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-left text-sm font-medium transition-all text-zinc-400 hover:bg-zinc-800/40 hover:text-zinc-200">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-purple-400 flex-shrink-0"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                <div class="truncate"><div class="truncate">Tempo de namoro</div><div class="text-[11px] text-zinc-500 font-normal">Desde 07/05/2024</div></div>
+                <span class="truncate">Tempo de namoro</span>
             </button>
 
             <div class="pt-3 pb-1"><div class="text-[11px] font-semibold text-zinc-500 uppercase tracking-wider px-3 py-1">Galeria & Viagens</div></div>
 
             <button onclick="switchTab('fotos')" id="btn-fotos" class="tab-btn w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-left text-sm font-medium transition-all text-zinc-400 hover:bg-zinc-800/40 hover:text-zinc-200">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-sky-400 flex-shrink-0"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
-                <div class="truncate"><div class="truncate">Nosso Álbum de Fotos</div><div class="text-[11px] text-zinc-500 font-normal">Google Fotos</div></div>
+                <span class="truncate">Nosso Álbum de Fotos</span>
             </button>
 
             <button onclick="switchTab('mapa')" id="btn-mapa" class="tab-btn w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-left text-sm font-medium transition-all text-zinc-400 hover:bg-zinc-800/40 hover:text-zinc-200">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-cyan-400 flex-shrink-0"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>
-                <div class="truncate"><div class="truncate">Lugares que Visitamos</div><div class="text-[11px] text-zinc-500 font-normal">Globo 3D em Alta Resolução</div></div>
+                <span class="truncate">Lugares que Visitamos</span>
             </button>
 
             <div class="pt-3 pb-1"><div class="text-[11px] font-semibold text-zinc-500 uppercase tracking-wider px-3 py-1">Jogos</div></div>
 
             <button onclick="switchTab('jogo')" id="btn-jogo" class="tab-btn w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-left text-sm font-medium transition-all text-zinc-400 hover:bg-zinc-800/40 hover:text-zinc-200">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-emerald-400 flex-shrink-0"><rect width="20" height="12" x="2" y="6" rx="2"/><path d="M6 12h4m-2-2v4m7-1h.01m2.99-2h.01"/></svg>
-                <div class="truncate"><div class="truncate">ViMória game</div><div class="text-[11px] text-zinc-500 font-normal">Jogo da Memória</div></div>
+                <span class="truncate">ViMória game</span>
             </button>
 
             <button onclick="switchTab('talari')" id="btn-talari" class="tab-btn w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-left text-sm font-medium transition-all text-zinc-400 hover:bg-zinc-800/40 hover:text-zinc-200">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-amber-400 flex-shrink-0"><path d="M16 7h.01"/><path d="M3.4 18H12a8 8 0 0 0 8-8V7a4 4 0 0 0-7.28-2.3L2 20"/><path d="m20 7 2 .5-2 .5"/><path d="M10 18v3"/><path d="M14 17.75V21"/><path d="M7 18a6 6 0 0 0 3.84-10.61"/></svg>
-                <div class="truncate"><div class="truncate">Talari Bird</div><div class="text-[11px] text-zinc-500 font-normal">Desvie dos obstáculos</div></div>
+                <span class="truncate">Talari Bird</span>
             </button>
         </div>
 
@@ -180,7 +176,7 @@
                 </a>
             </div>
 
-            <!-- ABA: LUGARES QUE VISITAMOS (GLOBO 3D ALTA RESOLUÇÃO) -->
+            <!-- ABA: LUGARES QUE VISITAMOS -->
             <div id="view-mapa" class="tab-view w-full max-w-4xl mx-auto space-y-4 hidden">
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                     <div>
@@ -203,11 +199,9 @@
                     </div>
                 </div>
 
-                <!-- Container do Globo 3D HD -->
                 <div class="relative w-full h-[380px] md:h-[450px] rounded-2xl overflow-hidden border border-zinc-800 bg-[#050508] shadow-2xl">
                     <div id="hd-globe-map" class="w-full h-full"></div>
 
-                    <!-- Card Flutuante do Pino Selecionado -->
                     <div id="place-card" class="hidden absolute bottom-3 left-3 right-3 sm:left-auto sm:right-3 sm:w-72 bg-[#141418]/95 backdrop-blur-md border border-zinc-700/80 rounded-xl p-3.5 shadow-2xl z-20">
                         <button onclick="document.getElementById('place-card').classList.add('hidden')" class="absolute top-2.5 right-2.5 text-zinc-400 hover:text-white text-xs">✕</button>
                         <div class="flex items-center gap-2.5">
@@ -224,7 +218,6 @@
                     </div>
                 </div>
 
-                <!-- Lista de Atalhos dos 13 Lugares -->
                 <div class="bg-[#141418]/80 border border-zinc-800/80 rounded-2xl p-3">
                     <div class="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider mb-2 px-1">Clique em um lugar para dar Super Zoom até ele (13 locais):</div>
                     <div id="places-chips" class="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto pr-1"></div>
@@ -338,7 +331,7 @@
         setInterval(updateAllTimers, 1000);
         updateAllTimers();
 
-        /* --- GLOBO 3D EM ALTA RESOLUÇÃO (MAPLIBRE + SATÉLITE HD + OSM SEM API KEY) --- */
+        /* --- GLOBO 3D EM ALTA RESOLUÇÃO --- */
         const visitedPlaces = [
             { name: 'Xerém', state: 'Rio de Janeiro', lat: -22.5481, lng: -43.3056, zoom: 13.5 },
             { name: 'Petrópolis', state: 'Rio de Janeiro', lat: -22.5050, lng: -43.1786, zoom: 13 },
@@ -407,7 +400,6 @@
 
             hdMap.addControl(new maplibregl.NavigationControl({ showCompass: true }), 'top-left');
 
-            // Adiciona os 13 pinos interativos no Globo HD
             visitedPlaces.forEach((p, idx) => {
                 const wrap = document.createElement('div');
                 wrap.className = 'map-pin-wrap';
