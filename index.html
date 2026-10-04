@@ -8,10 +8,9 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Bibliotecas para o Globo 3D e Mapa Interativo -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="https://unpkg.com/globe.gl"></script>
+    <!-- MapLibre GL JS (Globo 3D + Satélite Alta Resolução sem API Key) -->
+    <link href="https://unpkg.com/maplibre-gl@5.1.0/dist/maplibre-gl.css" rel="stylesheet" />
+    <script src="https://unpkg.com/maplibre-gl@5.1.0/dist/maplibre-gl.js"></script>
     <style>
         body { font-family: 'Inter', sans-serif; background: #09090b; color: #fafafa; margin: 0; overflow-x: hidden; -webkit-font-smoothing: antialiased; }
         ::-webkit-scrollbar { width: 6px; height: 6px; }
@@ -48,14 +47,15 @@
         .floating-heart { position: fixed; pointer-events: none; z-index: 60; animation: flyUp 1.8s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
         @keyframes flyUp { 0% { opacity: 1; transform: translate3d(0,0,0) scale(0.6); } 100% { opacity: 0; transform: translate3d(0,-110px,0) scale(1.3) rotate(var(--rot)); } }
 
-        /* Pinos do Globo 3D e Mapa */
-        .globe-pin { cursor: pointer; pointer-events: auto; display: flex; flex-direction: column; align-items: center; transform: translate(-50%, -100%); transition: transform 0.2s ease; }
-        .globe-pin:hover { transform: translate(-50%, -100%) scale(1.25); z-index: 50; }
-        .pin-dot { width: 12px; height: 12px; border-radius: 50%; background: #f43f5e; border: 2px solid #fff; box-shadow: 0 0 12px #f43f5e; }
-        .pin-tag { background: rgba(15, 15, 20, 0.9); color: #fff; font-size: 10px; font-weight: 600; padding: 2px 6px; border-radius: 6px; border: 1px solid rgba(244, 63, 94, 0.4); white-space: nowrap; margin-bottom: 3px; backdrop-filter: blur(4px); }
+        /* Marcadores Personalizados no Globo HD */
+        .map-pin-wrap { display: flex; flex-direction: column; align-items: center; cursor: pointer; transition: transform 0.2s ease; }
+        .map-pin-wrap:hover { transform: scale(1.2); z-index: 40 !important; }
+        .map-pin-label { background: rgba(15, 15, 20, 0.92); color: #fff; font-size: 11px; font-weight: 600; padding: 2px 7px; border-radius: 6px; border: 1px solid rgba(244, 63, 94, 0.5); white-space: nowrap; margin-bottom: 4px; box-shadow: 0 4px 10px rgba(0,0,0,0.6); pointer-events: none; }
+        .map-pin-dot { width: 14px; height: 14px; border-radius: 50%; background: #f43f5e; border: 2.5px solid #fff; box-shadow: 0 0 14px #f43f5e; }
 
-        .leaflet-popup-content-wrapper { background: #141418 !important; color: #fff !important; border: 1px solid #27272a; border-radius: 14px !important; }
-        .leaflet-popup-tip { background: #141418 !important; }
+        /* Filtro escuro elegante para o modo de ruas */
+        .street-dark-layer { filter: invert(100%) hue-rotate(180deg) brightness(92%) contrast(90%); }
+        .maplibregl-ctrl-attrib { display: none !important; }
     </style>
 </head>
 <body class="flex h-screen overflow-hidden relative">
@@ -105,10 +105,9 @@
                 <div class="truncate"><div class="truncate">Nosso Álbum de Fotos</div><div class="text-[11px] text-zinc-500 font-normal">Google Fotos</div></div>
             </button>
 
-            <!-- NOVA ABA: LUGARES QUE VISITAMOS -->
             <button onclick="switchTab('mapa')" id="btn-mapa" class="tab-btn w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-left text-sm font-medium transition-all text-zinc-400 hover:bg-zinc-800/40 hover:text-zinc-200">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-cyan-400 flex-shrink-0"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>
-                <div class="truncate"><div class="truncate">Lugares que Visitamos</div><div class="text-[11px] text-zinc-500 font-normal">Globo 3D Interativo</div></div>
+                <div class="truncate"><div class="truncate">Lugares que Visitamos</div><div class="text-[11px] text-zinc-500 font-normal">Globo 3D em Alta Resolução</div></div>
             </button>
 
             <div class="pt-3 pb-1"><div class="text-[11px] font-semibold text-zinc-500 uppercase tracking-wider px-3 py-1">Jogos</div></div>
@@ -181,29 +180,32 @@
                 </a>
             </div>
 
-            <!-- NOVA ABA: LUGARES QUE VISITAMOS (GLOBO 3D + MAPA DETALHADO) -->
+            <!-- ABA: LUGARES QUE VISITAMOS (GLOBO 3D ALTA RESOLUÇÃO) -->
             <div id="view-mapa" class="tab-view w-full max-w-4xl mx-auto space-y-4 hidden">
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                     <div>
                         <span class="inline-block px-3 py-0.5 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-cyan-300 text-xs font-medium">🌍 Nossas Viagens</span>
                         <h1 class="text-2xl md:text-3xl font-semibold tracking-tight text-white mt-1">Lugares que Visitamos</h1>
                     </div>
-                    <div class="flex items-center gap-2">
+                    <div class="flex flex-wrap items-center gap-2">
                         <button onclick="resetGlobeCamera()" class="px-3 py-1.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 text-xs font-medium transition-all">
                             🎯 Visão Geral
                         </button>
-                        <button onclick="toggleMapMode()" id="btn-map-mode" class="px-3 py-1.5 rounded-xl bg-cyan-500/15 hover:bg-cyan-500/25 border border-cyan-500/30 text-cyan-300 text-xs font-medium transition-all">
-                            🗺️ Ver Mapa 2D (Ruas)
+                        <button onclick="flyToRegion('rj')" class="px-3 py-1.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 text-xs font-medium transition-all">
+                            🏖️ Ver RJ
+                        </button>
+                        <button onclick="flyToRegion('sc')" class="px-3 py-1.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 text-xs font-medium transition-all">
+                            🎢 Ver SC
+                        </button>
+                        <button onclick="toggleMapStyle()" id="btn-map-style" class="px-3 py-1.5 rounded-xl bg-cyan-500/15 hover:bg-cyan-500/25 border border-cyan-500/30 text-cyan-300 text-xs font-medium transition-all">
+                            🗺️ Modo Mapa de Ruas
                         </button>
                     </div>
                 </div>
 
-                <!-- Container do Globo 3D e Mapa -->
-                <div class="relative w-full h-[380px] md:h-[440px] rounded-2xl overflow-hidden border border-zinc-800 bg-[#060609] shadow-2xl">
-                    <!-- Globo 3D -->
-                    <div id="globe-box" class="w-full h-full cursor-grab active:cursor-grabbing"></div>
-                    <!-- Mapa 2D Interativo para alto zoom -->
-                    <div id="leaflet-box" class="w-full h-full hidden z-10"></div>
+                <!-- Container do Globo 3D HD -->
+                <div class="relative w-full h-[380px] md:h-[450px] rounded-2xl overflow-hidden border border-zinc-800 bg-[#050508] shadow-2xl">
+                    <div id="hd-globe-map" class="w-full h-full"></div>
 
                     <!-- Card Flutuante do Pino Selecionado -->
                     <div id="place-card" class="hidden absolute bottom-3 left-3 right-3 sm:left-auto sm:right-3 sm:w-72 bg-[#141418]/95 backdrop-blur-md border border-zinc-700/80 rounded-xl p-3.5 shadow-2xl z-20">
@@ -224,7 +226,7 @@
 
                 <!-- Lista de Atalhos dos 13 Lugares -->
                 <div class="bg-[#141418]/80 border border-zinc-800/80 rounded-2xl p-3">
-                    <div class="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider mb-2 px-1">Clique em um lugar para voar até ele (13 locais):</div>
+                    <div class="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider mb-2 px-1">Clique em um lugar para dar Super Zoom até ele (13 locais):</div>
                     <div id="places-chips" class="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto pr-1"></div>
                 </div>
             </div>
@@ -336,77 +338,89 @@
         setInterval(updateAllTimers, 1000);
         updateAllTimers();
 
-        /* --- LUGARES QUE VISITAMOS (GLOBO 3D + MAPA) --- */
+        /* --- GLOBO 3D EM ALTA RESOLUÇÃO (MAPLIBRE + SATÉLITE HD + OSM SEM API KEY) --- */
         const visitedPlaces = [
-            { name: 'Xerém', state: 'Rio de Janeiro', lat: -22.5481, lng: -43.3056 },
-            { name: 'Petrópolis', state: 'Rio de Janeiro', lat: -22.5050, lng: -43.1786 },
-            { name: 'Itaipava', state: 'Rio de Janeiro', lat: -22.3883, lng: -43.1336 },
-            { name: 'Centro do Rio', state: 'Rio de Janeiro', lat: -22.9035, lng: -43.1769 },
-            { name: 'Jaconé', state: 'Rio de Janeiro', lat: -22.9365, lng: -42.6392 },
-            { name: 'Maricá', state: 'Rio de Janeiro', lat: -22.9194, lng: -42.8186 },
-            { name: 'Saquarema', state: 'Rio de Janeiro', lat: -22.9200, lng: -42.5103 },
-            { name: 'Guarulhos', state: 'São Paulo', lat: -23.4543, lng: -46.5337 },
-            { name: 'Navegantes', state: 'Santa Catarina', lat: -26.8986, lng: -48.6542 },
-            { name: 'Penha', state: 'Santa Catarina', lat: -26.7719, lng: -48.6458 },
-            { name: 'Beto Carrero', state: 'Santa Catarina', lat: -26.8011, lng: -48.6175 },
-            { name: 'Balneário Camboriú', state: 'Santa Catarina', lat: -26.9906, lng: -48.6347 },
-            { name: 'Pomerode', state: 'Santa Catarina', lat: -26.7406, lng: -49.1764 }
+            { name: 'Xerém', state: 'Rio de Janeiro', lat: -22.5481, lng: -43.3056, zoom: 13.5 },
+            { name: 'Petrópolis', state: 'Rio de Janeiro', lat: -22.5050, lng: -43.1786, zoom: 13 },
+            { name: 'Itaipava', state: 'Rio de Janeiro', lat: -22.3883, lng: -43.1336, zoom: 13.5 },
+            { name: 'Centro do Rio', state: 'Rio de Janeiro', lat: -22.9035, lng: -43.1769, zoom: 13.5 },
+            { name: 'Jaconé', state: 'Rio de Janeiro', lat: -22.9365, lng: -42.6392, zoom: 13.5 },
+            { name: 'Maricá', state: 'Rio de Janeiro', lat: -22.9194, lng: -42.8186, zoom: 13 },
+            { name: 'Saquarema', state: 'Rio de Janeiro', lat: -22.9200, lng: -42.5103, zoom: 13 },
+            { name: 'Guarulhos', state: 'São Paulo', lat: -23.4543, lng: -46.5337, zoom: 12.5 },
+            { name: 'Navegantes', state: 'Santa Catarina', lat: -26.8986, lng: -48.6542, zoom: 13 },
+            { name: 'Penha', state: 'Santa Catarina', lat: -26.7719, lng: -48.6458, zoom: 13.5 },
+            { name: 'Beto Carrero', state: 'Santa Catarina', lat: -26.8011, lng: -48.6175, zoom: 15 },
+            { name: 'Balneário Camboriú', state: 'Santa Catarina', lat: -26.9906, lng: -48.6347, zoom: 13.5 },
+            { name: 'Pomerode', state: 'Santa Catarina', lat: -26.7406, lng: -49.1764, zoom: 13 }
         ];
 
-        let globeInstance = null, leafletMap = null, is2DMode = false;
+        let hdMap = null, isStreetStyle = false;
 
-        // Renderiza os botões de atalho dos lugares
         document.getElementById('places-chips').innerHTML = visitedPlaces.map((p, i) => `
             <button onclick="focusPlace(${i})" class="px-2.5 py-1 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 hover:border-cyan-500/40 text-xs text-zinc-300 hover:text-white transition-all flex items-center gap-1">
                 <span class="text-rose-400">📍</span> ${p.name}
             </button>
         `).join('');
 
-        function initGlobeAndMap() {
-            const box = document.getElementById('globe-box');
-            if (!globeInstance && window.Globe) {
-                globeInstance = Globe()(box)
-                    .width(box.clientWidth)
-                    .height(box.clientHeight)
-                    .backgroundColor('#060609')
-                    .globeImageUrl('https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg')
-                    .bumpImageUrl('https://unpkg.com/three-globe/example/img/earth-topology.png')
-                    .showAtmosphere(true)
-                    .atmosphereColor('#38bdf8')
-                    .atmosphereAltitude(0.18)
-                    .htmlElementsData(visitedPlaces)
-                    .htmlLat(d => d.lat)
-                    .htmlLng(d => d.lng)
-                    .htmlElement(d => {
-                        const el = document.createElement('div');
-                        el.className = 'globe-pin';
-                        el.innerHTML = `<div class="pin-tag">${d.name}</div><div class="pin-dot"></div>`;
-                        el.onclick = () => showPlaceCard(d);
-                        return el;
-                    });
-
-                // Posição inicial focada no Sudeste/Sul do Brasil
-                globeInstance.pointOfView({ lat: -24.5, lng: -45.5, altitude: 0.75 }, 0);
+        function initHDGlobe() {
+            if (hdMap) {
+                hdMap.resize();
+                return;
             }
 
-            if (!leafletMap && window.L) {
-                leafletMap = L.map('leaflet-box').setView([-24.5, -45.5], 6);
-                L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-                    attribution: '&copy; OpenStreetMap',
-                    maxZoom: 19
-                }).addTo(leafletMap);
+            hdMap = new maplibregl.Map({
+                container: 'hd-globe-map',
+                center: [-45.5, -24.8],
+                zoom: 4.2,
+                pitch: 25,
+                style: {
+                    version: 8,
+                    projection: { type: 'globe' },
+                    sources: {
+                        'sat-tiles': {
+                            type: 'raster',
+                            tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
+                            tileSize: 256,
+                            maxzoom: 19
+                        },
+                        'labels-tiles': {
+                            type: 'raster',
+                            tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}'],
+                            tileSize: 256,
+                            maxzoom: 19
+                        },
+                        'osm-streets': {
+                            type: 'raster',
+                            tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
+                            tileSize: 256,
+                            maxzoom: 19
+                        }
+                    },
+                    layers: [
+                        { id: 'sat-layer', type: 'raster', source: 'sat-tiles' },
+                        { id: 'labels-layer', type: 'raster', source: 'labels-tiles' },
+                        { id: 'osm-layer', type: 'raster', source: 'osm-streets', layout: { visibility: 'none' } }
+                    ]
+                }
+            });
 
-                visitedPlaces.forEach(p => {
-                    const icon = L.divIcon({
-                        className: '',
-                        html: `<div style="width:14px;height:14px;background:#f43f5e;border:2px solid #fff;border-radius:50%;box-shadow:0 0 10px #f43f5e;"></div>`,
-                        iconSize: [14, 14],
-                        iconAnchor: [7, 7]
-                    });
-                    const m = L.marker([p.lat, p.lng], { icon }).addTo(leafletMap);
-                    m.on('click', () => showPlaceCard(p));
-                });
-            }
+            hdMap.addControl(new maplibregl.NavigationControl({ showCompass: true }), 'top-left');
+
+            // Adiciona os 13 pinos interativos no Globo HD
+            visitedPlaces.forEach((p, idx) => {
+                const wrap = document.createElement('div');
+                wrap.className = 'map-pin-wrap';
+                wrap.innerHTML = `<div class="map-pin-label">${p.name}</div><div class="map-pin-dot"></div>`;
+                wrap.onclick = (e) => {
+                    e.stopPropagation();
+                    focusPlace(idx);
+                };
+
+                new maplibregl.Marker({ element: wrap, anchor: 'bottom' })
+                    .setLngLat([p.lng, p.lat])
+                    .addTo(hdMap);
+            });
         }
 
         function showPlaceCard(p) {
@@ -419,38 +433,33 @@
         function focusPlace(index) {
             const p = visitedPlaces[index];
             showPlaceCard(p);
-            if (!is2DMode && globeInstance) {
-                globeInstance.pointOfView({ lat: p.lat, lng: p.lng, altitude: 0.14 }, 1200);
-            } else if (is2DMode && leafletMap) {
-                leafletMap.flyTo([p.lat, p.lng], 13, { duration: 1.2 });
+            if (hdMap) {
+                hdMap.flyTo({ center: [p.lng, p.lat], zoom: p.zoom, pitch: 40, duration: 1800, essential: true });
             }
+        }
+
+        function flyToRegion(region) {
+            document.getElementById('place-card').classList.add('hidden');
+            if (!hdMap) return;
+            if (region === 'rj') hdMap.flyTo({ center: [-42.95, -22.72], zoom: 8.8, pitch: 30, duration: 1600 });
+            if (region === 'sc') hdMap.flyTo({ center: [-48.80, -26.86], zoom: 9.5, pitch: 30, duration: 1600 });
         }
 
         function resetGlobeCamera() {
             document.getElementById('place-card').classList.add('hidden');
-            if (!is2DMode && globeInstance) {
-                globeInstance.pointOfView({ lat: -24.5, lng: -45.5, altitude: 0.75 }, 1200);
-            } else if (is2DMode && leafletMap) {
-                leafletMap.flyTo([-24.5, -45.5], 6, { duration: 1.2 });
+            if (hdMap) {
+                hdMap.flyTo({ center: [-45.5, -24.8], zoom: 4.2, pitch: 20, bearing: 0, duration: 1600 });
             }
         }
 
-        function toggleMapMode() {
-            is2DMode = !is2DMode;
-            document.getElementById('globe-box').classList.toggle('hidden', is2DMode);
-            document.getElementById('leaflet-box').classList.toggle('hidden', !is2DMode);
-            document.getElementById('btn-map-mode').innerHTML = is2DMode ? '🌍 Voltar ao Globo 3D' : '🗺️ Ver Mapa 2D (Ruas)';
-            if (is2DMode && leafletMap) {
-                setTimeout(() => leafletMap.invalidateSize(), 100);
-            }
+        function toggleMapStyle() {
+            if (!hdMap) return;
+            isStreetStyle = !isStreetStyle;
+            hdMap.setLayoutProperty('sat-layer', 'visibility', isStreetStyle ? 'none' : 'visible');
+            hdMap.setLayoutProperty('labels-layer', 'visibility', isStreetStyle ? 'none' : 'visible');
+            hdMap.setLayoutProperty('osm-layer', 'visibility', isStreetStyle ? 'visible' : 'none');
+            document.getElementById('btn-map-style').innerHTML = isStreetStyle ? '🛰️ Modo Satélite HD' : '🗺️ Modo Mapa de Ruas';
         }
-
-        window.addEventListener('resize', () => {
-            if (globeInstance && currentTab === 'mapa') {
-                const box = document.getElementById('globe-box');
-                globeInstance.width(box.clientWidth).height(box.clientHeight);
-            }
-        });
 
         /* --- VIMÓRIA GAME --- */
         let firstCard = null, secondCard = null, lockBoard = false, moves = 0, matchedPairs = 0;
@@ -699,14 +708,14 @@
             document.getElementById('header-title').textContent = titles[tab];
 
             if (tab === 'fotos') document.getElementById('fotos-popup').classList.remove('hidden');
-            if (tab === 'mapa') setTimeout(initGlobeAndMap, 60);
+            if (tab === 'mapa') setTimeout(initHDGlobe, 60);
             if (window.innerWidth < 768) toggleSidebar(false);
         }
 
         updateAndDrawTalari();
 
         function spawnHearts(e) {
-            const emojis = ['❤️️', '💖', '✨', '💕'];
+            const emojis = ['❤', '💖', '✨', '💕'];
             const frag = document.createDocumentFragment();
             for (let i = 0; i < 7; i++) {
                 const h = document.createElement('span');
