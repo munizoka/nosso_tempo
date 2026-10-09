@@ -1,1 +1,756 @@
+finalizado 
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nossa Linha do Tempo</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://unpkg.com/maplibre-gl@5.1.0/dist/maplibre-gl.css" rel="stylesheet" />
+    <script src="https://unpkg.com/maplibre-gl@5.1.0/dist/maplibre-gl.js"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background: #09090b; color: #fafafa; margin: 0; overflow-x: hidden; -webkit-font-smoothing: antialiased; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #09090b; }
+        ::-webkit-scrollbar-thumb { background: #27272a; border-radius: 3px; }
 
+        .ambient-glow { position: fixed; width: 500px; height: 500px; border-radius: 50%; filter: blur(130px); opacity: 0.14; pointer-events: none; z-index: 0; will-change: transform, background-color; transition: background-color 0.8s ease; animation: floatGlow 10s infinite alternate ease-in-out; }
+        @keyframes floatGlow { 0% { transform: translate3d(-55%, -5%, 0) scale(0.95); } 100% { transform: translate3d(-45%, 5%, 0) scale(1.08); } }
+
+        .tab-view { animation: tabIn 0.35s cubic-bezier(0.16, 1, 0.3, 1); }
+        @keyframes tabIn { from { opacity: 0; transform: translate3d(0, 12px, 0) scale(0.98); } to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); } }
+
+        .flip-card, .mem-card { perspective: 1000px; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+        .flip-card { height: 125px; opacity: 0; animation: cardIn 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        @media (min-width: 768px) { .flip-card { height: 140px; } }
+
+        .flip-inner { position: relative; width: 100%; height: 100%; transition: transform 0.55s cubic-bezier(0.4, 0.2, 0.2, 1); transform-style: preserve-3d; will-change: transform; }
+        .flip-card:hover .flip-inner, .flip-card.flipped .flip-inner, .mem-card.flipped .flip-inner, .mem-card.matched .flip-inner { transform: rotateY(180deg); }
+
+        .flip-front, .flip-back { position: absolute; inset: 0; width: 100%; height: 100%; -webkit-backface-visibility: hidden; backface-visibility: hidden; border-radius: 0.85rem; overflow: hidden; transform: translateZ(0); }
+        .flip-front { background: rgba(24, 24, 27, 0.9); backdrop-filter: blur(10px); border: 1px solid rgba(39, 39, 42, 0.9); display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 8px 20px -5px rgba(0,0,0,0.5); }
+        .flip-back { transform: rotateY(180deg) translateZ(0); border: 1px solid rgba(255, 255, 255, 0.22); background: #18181b; }
+        .mem-card.matched .flip-back { border-color: #10b981; box-shadow: 0 0 15px rgba(16, 185, 129, 0.35); }
+
+        @keyframes cardIn { from { opacity: 0; transform: translate3d(0, 16px, 0) scale(0.92); } to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); } }
+
+        .shimmer-card { position: relative; overflow: hidden; }
+        .shimmer-card::after { content: ''; position: absolute; top: 0; left: -150%; width: 70%; height: 100%; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.06), transparent); transform: skewX(-20deg); animation: shimmer 4s infinite; pointer-events: none; }
+        @keyframes shimmer { 0% { left: -150%; } 50%, 100% { left: 200%; } }
+
+        .sec-pulse { animation: pulse 1s infinite ease-in-out; }
+        @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.06); } }
+
+        .floating-heart { position: fixed; pointer-events: none; z-index: 60; animation: flyUp 1.8s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        @keyframes flyUp { 0% { opacity: 1; transform: translate3d(0,0,0) scale(0.6); } 100% { opacity: 0; transform: translate3d(0,-110px,0) scale(1.3) rotate(var(--rot)); } }
+
+        .map-pin-wrap { display: flex; flex-direction: column; align-items: center; cursor: pointer; transition: transform 0.2s ease; }
+        .map-pin-wrap:hover { transform: scale(1.2); z-index: 40 !important; }
+        .map-pin-label { background: rgba(15, 15, 20, 0.92); color: #fff; font-size: 11px; font-weight: 600; padding: 2px 7px; border-radius: 6px; border: 1px solid rgba(244, 63, 94, 0.5); white-space: nowrap; margin-bottom: 4px; box-shadow: 0 4px 10px rgba(0,0,0,0.6); pointer-events: none; }
+        .map-pin-dot { width: 14px; height: 14px; border-radius: 50%; background: #f43f5e; border: 2.5px solid #fff; box-shadow: 0 0 14px #f43f5e; }
+
+        .maplibregl-ctrl-attrib { display: none !important; }
+    </style>
+</head>
+<body class="flex h-screen overflow-hidden relative">
+
+    <canvas id="bg-particles" class="fixed inset-0 pointer-events-none z-0 opacity-40"></canvas>
+    <div id="ambient-light" class="ambient-glow top-1/4 left-1/2 bg-rose-500"></div>
+    <div id="sidebar-backdrop" onclick="toggleSidebar(false)" class="fixed inset-0 bg-black/60 z-20 hidden md:hidden backdrop-blur-sm"></div>
+
+    <!-- POP-UP FOTOS -->
+    <div id="fotos-popup" class="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-[#141418] border border-zinc-800 rounded-2xl max-w-sm w-full p-6 relative shadow-2xl text-center">
+            <button onclick="closePopup('fotos-popup')" class="absolute top-3.5 right-3.5 p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800/80 transition-all">✕</button>
+            <div class="w-12 h-12 rounded-full bg-sky-500/10 border border-sky-500/20 flex items-center justify-center text-sky-400 mx-auto mb-4 animate-bounce">📸</div>
+            <p class="text-white font-medium text-base px-2">Clica na box pra abrir as nossas fotos, tmj</p>
+        </div>
+    </div>
+
+    <!-- Barra Lateral (Sem sublegendas) -->
+    <aside id="sidebar" class="bg-[#121215]/90 backdrop-blur-xl border-r border-zinc-800/80 w-72 flex-shrink-0 flex flex-col transition-all duration-300 fixed md:relative z-30 h-full -translate-x-full md:translate-x-0">
+        <div class="p-4 flex items-center justify-between border-b border-zinc-800/60">
+            <div class="flex items-center gap-2.5 pl-2">
+                <span id="sidebar-dot" class="w-2.5 h-2.5 rounded-full bg-rose-500 transition-colors duration-500 shadow-[0_0_10px_rgba(244,63,94,0.8)]"></span>
+                <span class="font-semibold text-zinc-200 text-sm">Nossas Memórias</span>
+            </div>
+            <button onclick="toggleSidebar()" class="p-2 rounded-lg hover:bg-zinc-800/80 text-zinc-400 hover:text-white transition-colors">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M9 3v18"/></svg>
+            </button>
+        </div>
+
+        <div class="p-3 flex-1 overflow-y-auto space-y-1">
+            <div class="text-[11px] font-semibold text-zinc-500 uppercase tracking-wider px-3 py-2">Contadores</div>
+
+            <button onclick="switchTab('beijo')" id="btn-beijo" class="tab-btn w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-left text-sm font-medium transition-all bg-zinc-800/90 text-white shadow-sm">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-rose-400 flex-shrink-0"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
+                <span class="truncate">Tempo beijando sua boca</span>
+            </button>
+
+            <button onclick="switchTab('namoro')" id="btn-namoro" class="tab-btn w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-left text-sm font-medium transition-all text-zinc-400 hover:bg-zinc-800/40 hover:text-zinc-200">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-purple-400 flex-shrink-0"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                <span class="truncate">Tempo de namoro</span>
+            </button>
+
+            <div class="pt-3 pb-1"><div class="text-[11px] font-semibold text-zinc-500 uppercase tracking-wider px-3 py-1">Galeria & Viagens</div></div>
+
+            <button onclick="switchTab('fotos')" id="btn-fotos" class="tab-btn w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-left text-sm font-medium transition-all text-zinc-400 hover:bg-zinc-800/40 hover:text-zinc-200">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-sky-400 flex-shrink-0"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
+                <span class="truncate">Nosso Álbum de Fotos</span>
+            </button>
+
+            <button onclick="switchTab('mapa')" id="btn-mapa" class="tab-btn w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-left text-sm font-medium transition-all text-zinc-400 hover:bg-zinc-800/40 hover:text-zinc-200">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-cyan-400 flex-shrink-0"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>
+                <span class="truncate">Lugares que Visitamos</span>
+            </button>
+
+            <div class="pt-3 pb-1"><div class="text-[11px] font-semibold text-zinc-500 uppercase tracking-wider px-3 py-1">Jogos</div></div>
+
+            <button onclick="switchTab('jogo')" id="btn-jogo" class="tab-btn w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-left text-sm font-medium transition-all text-zinc-400 hover:bg-zinc-800/40 hover:text-zinc-200">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-emerald-400 flex-shrink-0"><rect width="20" height="12" x="2" y="6" rx="2"/><path d="M6 12h4m-2-2v4m7-1h.01m2.99-2h.01"/></svg>
+                <span class="truncate">ViMória game</span>
+            </button>
+
+            <button onclick="switchTab('talari')" id="btn-talari" class="tab-btn w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-left text-sm font-medium transition-all text-zinc-400 hover:bg-zinc-800/40 hover:text-zinc-200">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-amber-400 flex-shrink-0"><path d="M16 7h.01"/><path d="M3.4 18H12a8 8 0 0 0 8-8V7a4 4 0 0 0-7.28-2.3L2 20"/><path d="m20 7 2 .5-2 .5"/><path d="M10 18v3"/><path d="M14 17.75V21"/><path d="M7 18a6 6 0 0 0 3.84-10.61"/></svg>
+                <span class="truncate">Talari Bird</span>
+            </button>
+        </div>
+
+        <div class="p-4 border-t border-zinc-800/60 text-xs text-zinc-500 flex items-center justify-between">
+            <span>Nossa Linha do Tempo</span>
+            <button onclick="spawnHearts(event)" class="hover:scale-125 transition-transform">❤️</button>
+        </div>
+    </aside>
+
+    <!-- Conteúdo Principal -->
+    <div class="flex-1 flex flex-col h-full relative overflow-y-auto z-10">
+        <header class="p-4 flex items-center gap-3 sticky top-0 bg-[#09090b]/70 backdrop-blur-md z-20">
+            <button onclick="toggleSidebar()" class="p-2.5 rounded-xl bg-zinc-900/90 border border-zinc-800 hover:bg-zinc-800 text-zinc-300 active:scale-95 transition-all">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></svg>
+            </button>
+            <span id="header-title" class="text-sm font-medium text-zinc-400">Tempo beijando sua boca</span>
+        </header>
+
+        <main class="flex-1 flex flex-col items-center justify-center p-4 md:p-6 max-w-4xl mx-auto w-full">
+
+            <!-- ABA 1: BEIJO -->
+            <div id="view-beijo" class="tab-view w-full text-center space-y-8">
+                <div class="space-y-2">
+                    <button onclick="spawnHearts(event)" class="inline-block px-3.5 py-1 rounded-full bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs font-medium mb-2 hover:scale-105 transition-all">✨ Primeiro Beijo</button>
+                    <h1 onclick="spawnHearts(event)" class="text-3xl md:text-5xl font-semibold tracking-tight text-white cursor-pointer select-none">Tempo beijando sua boca</h1>
+                    <p class="text-zinc-400 text-sm md:text-base">Desde 21 de Agosto de 2023</p>
+                </div>
+                <div id="timer-beijo" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 md:gap-4 max-w-3xl mx-auto"></div>
+            </div>
+
+            <!-- ABA 2: NAMORO -->
+            <div id="view-namoro" class="tab-view w-full text-center space-y-8 hidden">
+                <div class="space-y-2">
+                    <button onclick="spawnHearts(event)" class="inline-block px-3.5 py-1 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-300 text-xs font-medium mb-2 hover:scale-105 transition-all">💍 Oficialmente Juntos</button>
+                    <h1 onclick="spawnHearts(event)" class="text-3xl md:text-5xl font-semibold tracking-tight text-white cursor-pointer select-none">Tempo de namoro</h1>
+                    <p class="text-zinc-400 text-sm md:text-base">Desde 07 de Maio de 2024</p>
+                </div>
+                <div id="timer-namoro" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 md:gap-4 max-w-3xl mx-auto"></div>
+            </div>
+
+            <!-- ABA 3: FOTOS -->
+            <div id="view-fotos" class="tab-view w-full max-w-xl mx-auto space-y-6 hidden">
+                <div class="text-center">
+                    <span class="inline-block px-3.5 py-1 rounded-full bg-sky-500/10 border border-sky-500/20 text-sky-300 text-xs font-medium mb-3">📸 Memórias Fotográficas</span>
+                    <h1 class="text-3xl md:text-4xl font-semibold tracking-tight text-white">Nosso Álbum de Fotos</h1>
+                </div>
+                <a href="https://photos.app.goo.gl/jCWSrNZpgkze3RC66" target="_blank" rel="noopener noreferrer" class="shimmer-card group flex items-center justify-between p-6 rounded-2xl bg-[#141418]/90 border border-zinc-800 hover:border-sky-500/50 hover:-translate-y-1 transition-all shadow-xl">
+                    <div class="flex items-center gap-4">
+                        <div class="w-14 h-14 rounded-2xl bg-sky-500/10 border border-sky-500/20 flex items-center justify-center text-sky-400 group-hover:scale-110 transition-transform">
+                            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
+                        </div>
+                        <div class="text-left">
+                            <h3 class="text-lg font-semibold text-white group-hover:text-sky-300 transition-colors">Abrir Álbum no Google Fotos</h3>
+                            <p class="text-xs text-zinc-400 mt-1">Clique para ver nossa galeria compartilhada</p>
+                        </div>
+                    </div>
+                    <span class="text-zinc-500 group-hover:text-sky-300 text-xl">↗</span>
+                </a>
+            </div>
+
+            <!-- ABA: LUGARES QUE VISITAMOS -->
+            <div id="view-mapa" class="tab-view w-full max-w-4xl mx-auto space-y-4 hidden">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div>
+                        <span class="inline-block px-3 py-0.5 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-cyan-300 text-xs font-medium">🌍 Nossas Viagens</span>
+                        <h1 class="text-2xl md:text-3xl font-semibold tracking-tight text-white mt-1">Lugares que Visitamos</h1>
+                    </div>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <button onclick="resetGlobeCamera()" class="px-3 py-1.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 text-xs font-medium transition-all">
+                            🎯 Visão Geral
+                        </button>
+                        <button onclick="flyToRegion('rj')" class="px-3 py-1.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 text-xs font-medium transition-all">
+                            🏖️ Ver RJ
+                        </button>
+                        <button onclick="flyToRegion('sc')" class="px-3 py-1.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 text-xs font-medium transition-all">
+                            🎢 Ver SC
+                        </button>
+                        <button onclick="toggleMapStyle()" id="btn-map-style" class="px-3 py-1.5 rounded-xl bg-cyan-500/15 hover:bg-cyan-500/25 border border-cyan-500/30 text-cyan-300 text-xs font-medium transition-all">
+                            🗺️ Modo Mapa de Ruas
+                        </button>
+                    </div>
+                </div>
+
+                <div class="relative w-full h-[380px] md:h-[450px] rounded-2xl overflow-hidden border border-zinc-800 bg-[#050508] shadow-2xl">
+                    <div id="hd-globe-map" class="w-full h-full"></div>
+
+                    <div id="place-card" class="hidden absolute bottom-3 left-3 right-3 sm:left-auto sm:right-3 sm:w-72 bg-[#141418]/95 backdrop-blur-md border border-zinc-700/80 rounded-xl p-3.5 shadow-2xl z-20">
+                        <button onclick="document.getElementById('place-card').classList.add('hidden')" class="absolute top-2.5 right-2.5 text-zinc-400 hover:text-white text-xs">✕</button>
+                        <div class="flex items-center gap-2.5">
+                            <div class="w-9 h-9 rounded-lg bg-rose-500/15 border border-rose-500/30 flex items-center justify-center text-base">📍</div>
+                            <div>
+                                <h4 id="pc-name" class="text-sm font-semibold text-white">Nome do Lugar</h4>
+                                <p id="pc-state" class="text-xs text-zinc-400">Estado</p>
+                            </div>
+                        </div>
+                        <div class="mt-2.5 pt-2 border-t border-zinc-800/80 flex justify-between items-center text-[11px]">
+                            <span class="text-emerald-400 font-medium">✓ Visitado juntos ❤️</span>
+                            <a id="pc-gmaps" href="#" target="_blank" rel="noopener noreferrer" class="text-cyan-400 hover:underline">Abrir no Google Maps ↗</a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-[#141418]/80 border border-zinc-800/80 rounded-2xl p-3">
+                    <div class="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider mb-2 px-1">Clique em um lugar para dar Super Zoom até ele (13 locais):</div>
+                    <div id="places-chips" class="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto pr-1"></div>
+                </div>
+            </div>
+
+            <!-- ABA 4: VIMÓRIA GAME -->
+            <div id="view-jogo" class="tab-view w-full max-w-2xl mx-auto space-y-4 hidden">
+                <div class="text-center space-y-1">
+                    <span class="inline-block px-3 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-xs font-medium">🎮 Mini Game</span>
+                    <h1 class="text-2xl md:text-4xl font-semibold tracking-tight text-white">ViMória game</h1>
+                </div>
+
+                <div class="flex items-center justify-between bg-[#141418]/90 border border-zinc-800/90 rounded-2xl px-4 py-2.5 text-xs md:text-sm">
+                    <div class="flex gap-4">
+                        <span class="text-zinc-400">Jogadas: <strong id="game-moves" class="text-white">0</strong></span>
+                        <span class="text-zinc-400">Pares: <strong id="game-pairs" class="text-emerald-400">0/12</strong></span>
+                    </div>
+                    <button onclick="initMemoryGame()" class="px-3 py-1.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 font-medium transition-all active:scale-95">
+                        🔄 Embaralhar
+                    </button>
+                </div>
+
+                <div id="game-win-msg" class="hidden bg-emerald-500/10 border border-emerald-500/30 text-emerald-200 rounded-xl p-3 text-center text-sm font-medium">
+                    🎉 mandou bem, cabeção ❤
+                </div>
+
+                <div id="memory-grid" class="grid grid-cols-4 sm:grid-cols-6 gap-2 md:gap-3 w-full"></div>
+            </div>
+
+            <!-- ABA 5: TALARI BIRD -->
+            <div id="view-talari" class="tab-view w-full max-w-md mx-auto space-y-3 hidden">
+                <div class="text-center space-y-1">
+                    <span class="inline-block px-3 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs font-medium">🕹️ Arcade</span>
+                    <h1 class="text-2xl md:text-3xl font-semibold tracking-tight text-white">Talari Bird</h1>
+                </div>
+
+                <div class="flex items-center justify-between bg-[#141418]/90 border border-zinc-800/90 rounded-2xl px-4 py-2 text-xs md:text-sm">
+                    <span class="text-zinc-400">Pontos: <strong id="tb-score" class="text-white">0</strong></span>
+                    <span class="text-zinc-400">Recorde: <strong id="tb-best" class="text-amber-400">0</strong></span>
+                    <button onclick="resetTalari()" class="px-2.5 py-1 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-300 font-medium transition-all active:scale-95">
+                        🔄 Reiniciar
+                    </button>
+                </div>
+
+                <div class="relative rounded-2xl overflow-hidden border border-zinc-800 shadow-2xl bg-[#0c0c10] select-none">
+                    <canvas id="talari-canvas" width="360" height="480" class="w-full h-auto block cursor-pointer touch-manipulation"></canvas>
+                </div>
+                <p class="text-center text-[11px] text-zinc-500">Toque na tela, clique ou aperte Espaço para voar</p>
+            </div>
+
+        </main>
+    </div>
+
+    <script>
+        const dateBeijo = new Date(2023, 7, 21, 0, 0, 0);
+        const dateNamoro = new Date(2024, 4, 7, 0, 0, 0);
+        const photosBeijo = ['1.png', '2.jpeg', '3.jpg', '4.jpg', '5.jpg', '6.jpg'];
+        const photosNamoro = ['7.jpg', '8.jpg', '9.jpg', '10.jpg', '11.jpg', '12.jpg'];
+        const allPhotos = [...photosBeijo, ...photosNamoro];
+
+        const tbHeroImg = new Image(); tbHeroImg.src = '13.jpeg';
+        const tbEnemy1 = new Image(); tbEnemy1.src = '14.jpeg';
+        const tbEnemy2 = new Image(); tbEnemy2.src = '15.jpeg';
+
+        window.addEventListener('load', () => {
+            allPhotos.forEach(src => { const img = new Image(); img.decoding = 'async'; img.src = src; });
+        });
+
+        function calculateElapsedTime(start) {
+            const now = new Date();
+            let y = now.getFullYear() - start.getFullYear(), m = now.getMonth() - start.getMonth(), d = now.getDate() - start.getDate(),
+                h = now.getHours() - start.getHours(), min = now.getMinutes() - start.getMinutes(), s = now.getSeconds() - start.getSeconds();
+            if (s < 0) { s += 60; min--; }
+            if (min < 0) { min += 60; h--; }
+            if (h < 0) { h += 24; d--; }
+            if (d < 0) { d += new Date(now.getFullYear(), now.getMonth(), 0).getDate(); m--; }
+            if (m < 0) { m += 12; y--; }
+            return [y, m, d, h, min, s];
+        }
+
+        const domCache = {};
+        function initTimerCards(id, photos) {
+            const labels = ['Anos', 'Meses', 'Dias', 'Horas', 'Min', 'Seg'];
+            document.getElementById(id).innerHTML = labels.map((l, i) => `
+                <div style="animation-delay:${i*65}ms" class="flip-card" onclick="this.classList.toggle('flipped')">
+                    <div class="flip-inner">
+                        <div class="flip-front">
+                            <span id="${id}-v-${i}" class="text-3xl md:text-4xl font-bold text-white ${i===5?'sec-pulse':''}">00</span>
+                            <span class="text-[11px] font-medium text-zinc-500 uppercase tracking-widest mt-2">${l}</span>
+                        </div>
+                        <div class="flip-back"><img src="${photos[i]}" alt="Foto" decoding="async" class="w-full h-full object-cover"></div>
+                    </div>
+                </div>`).join('');
+            domCache[id] = labels.map((_, i) => document.getElementById(`${id}-v-${i}`));
+        }
+
+        function updateAllTimers() {
+            if (document.hidden) return;
+            [['timer-beijo', dateBeijo], ['timer-namoro', dateNamoro]].forEach(([id, dt]) => {
+                const vals = calculateElapsedTime(dt);
+                vals.forEach((v, i) => {
+                    const str = String(v).padStart(2, '0');
+                    if (domCache[id][i].textContent !== str) domCache[id][i].textContent = str;
+                });
+            });
+        }
+
+        initTimerCards('timer-beijo', photosBeijo);
+        initTimerCards('timer-namoro', photosNamoro);
+        setInterval(updateAllTimers, 1000);
+        updateAllTimers();
+
+        /* --- GLOBO 3D EM ALTA RESOLUÇÃO --- */
+        const visitedPlaces = [
+            { name: 'Xerém', state: 'Rio de Janeiro', lat: -22.5481, lng: -43.3056, zoom: 13.5 },
+            { name: 'Petrópolis', state: 'Rio de Janeiro', lat: -22.5050, lng: -43.1786, zoom: 13 },
+            { name: 'Itaipava', state: 'Rio de Janeiro', lat: -22.3883, lng: -43.1336, zoom: 13.5 },
+            { name: 'Centro do Rio', state: 'Rio de Janeiro', lat: -22.9035, lng: -43.1769, zoom: 13.5 },
+            { name: 'Jaconé', state: 'Rio de Janeiro', lat: -22.9365, lng: -42.6392, zoom: 13.5 },
+            { name: 'Maricá', state: 'Rio de Janeiro', lat: -22.9194, lng: -42.8186, zoom: 13 },
+            { name: 'Saquarema', state: 'Rio de Janeiro', lat: -22.9200, lng: -42.5103, zoom: 13 },
+            { name: 'Guarulhos', state: 'São Paulo', lat: -23.4543, lng: -46.5337, zoom: 12.5 },
+            { name: 'Navegantes', state: 'Santa Catarina', lat: -26.8986, lng: -48.6542, zoom: 13 },
+            { name: 'Penha', state: 'Santa Catarina', lat: -26.7719, lng: -48.6458, zoom: 13.5 },
+            { name: 'Beto Carrero', state: 'Santa Catarina', lat: -26.8011, lng: -48.6175, zoom: 15 },
+            { name: 'Balneário Camboriú', state: 'Santa Catarina', lat: -26.9906, lng: -48.6347, zoom: 13.5 },
+            { name: 'Pomerode', state: 'Santa Catarina', lat: -26.7406, lng: -49.1764, zoom: 13 }
+        ];
+
+        let hdMap = null, isStreetStyle = false;
+
+        document.getElementById('places-chips').innerHTML = visitedPlaces.map((p, i) => `
+            <button onclick="focusPlace(${i})" class="px-2.5 py-1 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 hover:border-cyan-500/40 text-xs text-zinc-300 hover:text-white transition-all flex items-center gap-1">
+                <span class="text-rose-400">📍</span> ${p.name}
+            </button>
+        `).join('');
+
+        function initHDGlobe() {
+            if (hdMap) {
+                hdMap.resize();
+                return;
+            }
+
+            hdMap = new maplibregl.Map({
+                container: 'hd-globe-map',
+                center: [-45.5, -24.8],
+                zoom: 4.2,
+                pitch: 25,
+                style: {
+                    version: 8,
+                    projection: { type: 'globe' },
+                    sources: {
+                        'sat-tiles': {
+                            type: 'raster',
+                            tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
+                            tileSize: 256,
+                            maxzoom: 19
+                        },
+                        'labels-tiles': {
+                            type: 'raster',
+                            tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}'],
+                            tileSize: 256,
+                            maxzoom: 19
+                        },
+                        'osm-streets': {
+                            type: 'raster',
+                            tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
+                            tileSize: 256,
+                            maxzoom: 19
+                        }
+                    },
+                    layers: [
+                        { id: 'sat-layer', type: 'raster', source: 'sat-tiles' },
+                        { id: 'labels-layer', type: 'raster', source: 'labels-tiles' },
+                        { id: 'osm-layer', type: 'raster', source: 'osm-streets', layout: { visibility: 'none' } }
+                    ]
+                }
+            });
+
+            hdMap.addControl(new maplibregl.NavigationControl({ showCompass: true }), 'top-left');
+
+            visitedPlaces.forEach((p, idx) => {
+                const wrap = document.createElement('div');
+                wrap.className = 'map-pin-wrap';
+                wrap.innerHTML = `<div class="map-pin-label">${p.name}</div><div class="map-pin-dot"></div>`;
+                wrap.onclick = (e) => {
+                    e.stopPropagation();
+                    focusPlace(idx);
+                };
+
+                new maplibregl.Marker({ element: wrap, anchor: 'bottom' })
+                    .setLngLat([p.lng, p.lat])
+                    .addTo(hdMap);
+            });
+        }
+
+        function showPlaceCard(p) {
+            document.getElementById('pc-name').textContent = p.name;
+            document.getElementById('pc-state').textContent = p.state;
+            document.getElementById('pc-gmaps').href = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(p.name + ', ' + p.state)}`;
+            document.getElementById('place-card').classList.remove('hidden');
+        }
+
+        function focusPlace(index) {
+            const p = visitedPlaces[index];
+            showPlaceCard(p);
+            if (hdMap) {
+                hdMap.flyTo({ center: [p.lng, p.lat], zoom: p.zoom, pitch: 40, duration: 1800, essential: true });
+            }
+        }
+
+        function flyToRegion(region) {
+            document.getElementById('place-card').classList.add('hidden');
+            if (!hdMap) return;
+            if (region === 'rj') hdMap.flyTo({ center: [-42.95, -22.72], zoom: 8.8, pitch: 30, duration: 1600 });
+            if (region === 'sc') hdMap.flyTo({ center: [-48.80, -26.86], zoom: 9.5, pitch: 30, duration: 1600 });
+        }
+
+        function resetGlobeCamera() {
+            document.getElementById('place-card').classList.add('hidden');
+            if (hdMap) {
+                hdMap.flyTo({ center: [-45.5, -24.8], zoom: 4.2, pitch: 20, bearing: 0, duration: 1600 });
+            }
+        }
+
+        function toggleMapStyle() {
+            if (!hdMap) return;
+            isStreetStyle = !isStreetStyle;
+            hdMap.setLayoutProperty('sat-layer', 'visibility', isStreetStyle ? 'none' : 'visible');
+            hdMap.setLayoutProperty('labels-layer', 'visibility', isStreetStyle ? 'none' : 'visible');
+            hdMap.setLayoutProperty('osm-layer', 'visibility', isStreetStyle ? 'visible' : 'none');
+            document.getElementById('btn-map-style').innerHTML = isStreetStyle ? '🛰️ Modo Satélite HD' : '🗺️ Modo Mapa de Ruas';
+        }
+
+        /* --- VIMÓRIA GAME --- */
+        let firstCard = null, secondCard = null, lockBoard = false, moves = 0, matchedPairs = 0;
+
+        function initMemoryGame() {
+            firstCard = null; secondCard = null; lockBoard = false; moves = 0; matchedPairs = 0;
+            document.getElementById('game-moves').textContent = '0';
+            document.getElementById('game-pairs').textContent = '0/12';
+            document.getElementById('game-win-msg').classList.add('hidden');
+
+            const deck = [...allPhotos, ...allPhotos];
+            for (let i = deck.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [deck[i], deck[j]] = [deck[j], deck[i]];
+            }
+
+            document.getElementById('memory-grid').innerHTML = deck.map((photo, idx) => `
+                <div class="mem-card aspect-square" data-photo="${photo}" onclick="flipMemoryCard(this)">
+                    <div class="flip-inner">
+                        <div class="flip-front hover:border-zinc-700 transition-colors"><span class="text-lg md:text-xl opacity-60">❤️</span></div>
+                        <div class="flip-back"><img src="${photo}" alt="Carta ${idx}" decoding="async" class="w-full h-full object-cover"></div>
+                    </div>
+                </div>`).join('');
+        }
+
+        function flipMemoryCard(card) {
+            if (lockBoard || card === firstCard || card.classList.contains('matched')) return;
+            card.classList.add('flipped');
+            if (!firstCard) { firstCard = card; return; }
+
+            secondCard = card; moves++;
+            document.getElementById('game-moves').textContent = moves;
+
+            if (firstCard.dataset.photo === secondCard.dataset.photo) {
+                firstCard.classList.add('matched'); secondCard.classList.add('matched');
+                matchedPairs++;
+                document.getElementById('game-pairs').textContent = `${matchedPairs}/12`;
+                firstCard = null; secondCard = null;
+                if (matchedPairs === 12) {
+                    document.getElementById('game-win-msg').classList.remove('hidden');
+                    spawnHearts({ clientX: window.innerWidth / 2, clientY: window.innerHeight / 2 });
+                }
+            } else {
+                lockBoard = true;
+                setTimeout(() => {
+                    firstCard.classList.remove('flipped'); secondCard.classList.remove('flipped');
+                    firstCard = null; secondCard = null; lockBoard = false;
+                }, 850);
+            }
+        }
+        initMemoryGame();
+
+        /* --- TALARI BIRD GAME --- */
+        const tCvs = document.getElementById('talari-canvas'), tCtx = tCvs.getContext('2d');
+        let tbState = 'idle', tbScore = 0, tbBest = Number(localStorage.getItem('tbBest') || 0), tbFrame = 0;
+        document.getElementById('tb-best').textContent = tbBest;
+
+        const bird = { x: 68, y: 220, r: 20, vy: 0, g: 0.28, jump: -5.8 };
+        let obstacles = [];
+        const mountains = [{ x: 0, h: 90 }, { x: 140, h: 130 }, { x: 270, h: 80 }];
+
+        function resetTalari() {
+            tbState = 'idle'; tbScore = 0; tbFrame = 0;
+            bird.y = 220; bird.vy = 0; obstacles = [];
+            document.getElementById('tb-score').textContent = '0';
+        }
+
+        function jumpTalari(e) {
+            if (e && e.type === 'keydown' && e.code !== 'Space') return;
+            if (currentTab !== 'talari') return;
+            if (e && e.cancelable) e.preventDefault();
+
+            if (tbState === 'idle') { tbState = 'play'; bird.vy = bird.jump; }
+            else if (tbState === 'play') { bird.vy = bird.jump; }
+            else if (tbState === 'over') { resetTalari(); }
+        }
+
+        tCvs.addEventListener('pointerdown', jumpTalari);
+        window.addEventListener('keydown', jumpTalari);
+
+        function spawnObstacle() {
+            const gap = 150, minTop = 55, maxTop = tCvs.height - gap - 85;
+            const topH = Math.floor(Math.random() * (maxTop - minTop + 1)) + minTop;
+            const isPerson = Math.random() < 0.30;
+            const enemyImg = Math.random() < 0.5 ? tbEnemy1 : tbEnemy2;
+            const personPos = Math.random() < 0.5 ? 'top' : 'bottom';
+            obstacles.push({ x: tCvs.width, w: 54, top: topH, bottom: topH + gap, passed: false, isPerson, enemyImg, personPos });
+        }
+
+        function drawImageCover(ctx, img, x, y, w, h) {
+            if (!img.complete || !img.naturalWidth) {
+                ctx.fillStyle = '#3f3f46'; ctx.fillRect(x, y, w, h); return;
+            }
+            const imgRatio = img.naturalWidth / img.naturalHeight, boxRatio = w / h;
+            let sx = 0, sy = 0, sw = img.naturalWidth, sh = img.naturalHeight;
+            if (imgRatio > boxRatio) { sw = sh * boxRatio; sx = (img.naturalWidth - sw) / 2; }
+            else { sh = sw / boxRatio; sy = (img.naturalHeight - sh) / 2; }
+            ctx.drawImage(img, sx, sy, sw, sh, x, y, w, h);
+        }
+
+        function updateAndDrawTalari() {
+            if (currentTab === 'talari' && !document.hidden) {
+                const grad = tCtx.createLinearGradient(0, 0, 0, tCvs.height);
+                grad.addColorStop(0, '#09090b'); grad.addColorStop(1, '#181824');
+                tCtx.fillStyle = grad; tCtx.fillRect(0, 0, tCvs.width, tCvs.height);
+
+                tCtx.fillStyle = '#14141d';
+                mountains.forEach(m => {
+                    if (tbState === 'play') m.x -= 0.45;
+                    if (m.x < -180) m.x = tCvs.width;
+                    tCtx.beginPath();
+                    tCtx.moveTo(m.x, tCvs.height - 24);
+                    tCtx.lineTo(m.x + 90, tCvs.height - 24 - m.h);
+                    tCtx.lineTo(m.x + 180, tCvs.height - 24);
+                    tCtx.fill();
+                });
+
+                if (tbState === 'play') {
+                    tbFrame++;
+                    if (tbFrame % 115 === 0) spawnObstacle();
+                    bird.vy += bird.g; bird.y += bird.vy;
+
+                    if (bird.y + bird.r >= tCvs.height - 24 || bird.y - bird.r <= 0) tbState = 'over';
+                }
+
+                for (let i = obstacles.length - 1; i >= 0; i--) {
+                    const o = obstacles[i];
+                    if (tbState === 'play') o.x -= 1.9;
+
+                    tCtx.fillStyle = '#10b981';
+                    tCtx.strokeStyle = '#059669';
+                    tCtx.lineWidth = 2;
+
+                    tCtx.fillRect(o.x, 0, o.w, o.top);
+                    tCtx.strokeRect(o.x, 0, o.w, o.top);
+                    tCtx.fillRect(o.x - 3, o.top - 14, o.w + 6, 14);
+
+                    const botH = tCvs.height - 24 - o.bottom;
+                    tCtx.fillRect(o.x, o.bottom, o.w, botH);
+                    tCtx.strokeRect(o.x, o.bottom, o.w, botH);
+                    tCtx.fillRect(o.x - 3, o.bottom, o.w + 6, 14);
+
+                    if (o.isPerson) {
+                        const cardH = 68;
+                        const py = o.personPos === 'top' ? Math.max(6, o.top - cardH - 4) : o.bottom + 4;
+                        tCtx.save();
+                        tCtx.beginPath();
+                        tCtx.roundRect(o.x - 4, py, o.w + 8, cardH, 10);
+                        tCtx.clip();
+                        drawImageCover(tCtx, o.enemyImg, o.x - 4, py, o.w + 8, cardH);
+                        tCtx.restore();
+
+                        tCtx.strokeStyle = '#ef4444';
+                        tCtx.lineWidth = 2.5;
+                        tCtx.beginPath();
+                        tCtx.roundRect(o.x - 4, py, o.w + 8, cardH, 10);
+                        tCtx.stroke();
+                    }
+
+                    if (tbState === 'play') {
+                        const hitX = bird.x + bird.r - 6 > o.x && bird.x - bird.r + 6 < o.x + o.w;
+                        const hitY = bird.y - bird.r + 6 < o.top || bird.y + bird.r - 6 > o.bottom;
+                        if (hitX && hitY) tbState = 'over';
+
+                        if (!o.passed && o.x + o.w < bird.x) {
+                            o.passed = true; tbScore++;
+                            document.getElementById('tb-score').textContent = tbScore;
+                            if (tbScore > tbBest) {
+                                tbBest = tbScore;
+                                localStorage.setItem('tbBest', tbBest);
+                                document.getElementById('tb-best').textContent = tbBest;
+                            }
+                        }
+                    }
+                    if (o.x + o.w < -20) obstacles.splice(i, 1);
+                }
+
+                tCtx.fillStyle = '#18181b';
+                tCtx.fillRect(0, tCvs.height - 24, tCvs.width, 24);
+                tCtx.strokeStyle = '#27272a';
+                tCtx.beginPath(); tCtx.moveTo(0, tCvs.height - 24); tCtx.lineTo(tCvs.width, tCvs.height - 24); tCtx.stroke();
+
+                tCtx.save();
+                tCtx.translate(bird.x, bird.y);
+                tCtx.rotate(Math.min(Math.PI / 5, Math.max(-Math.PI / 5, bird.vy * 0.06)));
+                tCtx.beginPath();
+                tCtx.arc(0, 0, bird.r, 0, Math.PI * 2);
+                tCtx.clip();
+                drawImageCover(tCtx, tbHeroImg, -bird.r, -bird.r, bird.r * 2, bird.r * 2);
+                tCtx.restore();
+
+                tCtx.strokeStyle = '#fbbf24';
+                tCtx.lineWidth = 2.5;
+                tCtx.beginPath();
+                tCtx.arc(bird.x, bird.y, bird.r, 0, Math.PI * 2);
+                tCtx.stroke();
+
+                if (tbState !== 'play') {
+                    tCtx.fillStyle = 'rgba(9, 9, 11, 0.65)';
+                    tCtx.fillRect(0, 0, tCvs.width, tCvs.height);
+                    tCtx.fillStyle = '#ffffff';
+                    tCtx.textAlign = 'center';
+                    tCtx.font = 'bold 22px Inter, sans-serif';
+                    tCtx.fillText(tbState === 'idle' ? 'Talari Bird' : 'Fim de Jogo!', tCvs.width / 2, 215);
+                    tCtx.fillStyle = '#a1a1aa';
+                    tCtx.font = '13px Inter, sans-serif';
+                    tCtx.fillText(tbState === 'idle' ? 'Toque ou clique para começar' : `Pontos: ${tbScore} — Toque para jogar de novo`, tCvs.width / 2, 245);
+                }
+            }
+            requestAnimationFrame(updateAndDrawTalari);
+        }
+
+        /* --- NAVEGAÇÃO E EFEITOS --- */
+        let currentTab = 'beijo';
+        function closePopup(id) { document.getElementById(id).classList.add('hidden'); }
+
+        function switchTab(tab) {
+            currentTab = tab;
+            const views = ['beijo', 'namoro', 'fotos', 'mapa', 'jogo', 'talari'];
+            const titles = {
+                beijo: 'Tempo beijando sua boca',
+                namoro: 'Tempo de namoro',
+                fotos: 'Nosso Álbum de Fotos',
+                mapa: 'Lugares que Visitamos',
+                jogo: 'ViMória game',
+                talari: 'Talari Bird'
+            };
+            const glows = {
+                beijo: 'bg-rose-500',
+                namoro: 'bg-purple-500',
+                fotos: 'bg-sky-500',
+                mapa: 'bg-cyan-500',
+                jogo: 'bg-emerald-500',
+                talari: 'bg-amber-500'
+            };
+
+            views.forEach(v => {
+                document.getElementById('view-' + v).classList.toggle('hidden', v !== tab);
+                document.getElementById('btn-' + v).className = v === tab
+                    ? "tab-btn w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-left text-sm font-medium transition-all bg-zinc-800/90 text-white shadow-sm"
+                    : "tab-btn w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-left text-sm font-medium transition-all text-zinc-400 hover:bg-zinc-800/40 hover:text-zinc-200";
+            });
+
+            document.getElementById('ambient-light').className = `ambient-glow top-1/4 left-1/2 ${glows[tab]}`;
+            document.getElementById('sidebar-dot').className = `w-2.5 h-2.5 rounded-full transition-colors duration-500 ${glows[tab]}`;
+            document.getElementById('header-title').textContent = titles[tab];
+
+            if (tab === 'fotos') document.getElementById('fotos-popup').classList.remove('hidden');
+            if (tab === 'mapa') setTimeout(initHDGlobe, 60);
+            if (window.innerWidth < 768) toggleSidebar(false);
+        }
+
+        updateAndDrawTalari();
+
+        function spawnHearts(e) {
+            const emojis = ['❤', '💖', '✨', '💕'];
+            const frag = document.createDocumentFragment();
+            for (let i = 0; i < 7; i++) {
+                const h = document.createElement('span');
+                h.className = 'floating-heart text-lg select-none';
+                h.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+                h.style.left = (e.clientX + (Math.random() - 0.5) * 90) + 'px';
+                h.style.top = (e.clientY + (Math.random() - 0.5) * 30) + 'px';
+                h.style.setProperty('--rot', ((Math.random() - 0.5) * 50) + 'deg');
+                frag.appendChild(h);
+                setTimeout(() => h.remove(), 1800);
+            }
+            document.body.appendChild(frag);
+        }
+
+        let sidebarOpen = window.innerWidth >= 768;
+        function toggleSidebar(force) {
+            sidebarOpen = force !== undefined ? force : !sidebarOpen;
+            const sb = document.getElementById('sidebar'), bd = document.getElementById('sidebar-backdrop');
+            if (window.innerWidth < 768) {
+                sb.classList.toggle('-translate-x-full', !sidebarOpen);
+                bd.classList.toggle('hidden', !sidebarOpen);
+            } else {
+                sb.classList.toggle('-ml-72', !sidebarOpen);
+            }
+        }
+
+        const cvs = document.getElementById('bg-particles'), ctx = cvs.getContext('2d');
+        const resize = () => { cvs.width = innerWidth; cvs.height = innerHeight; };
+        addEventListener('resize', resize, { passive: true }); resize();
+        const pts = Array.from({ length: 28 }, () => ({ x: Math.random()*cvs.width, y: Math.random()*cvs.height, r: Math.random()*1.4+0.4, dx: (Math.random()-0.5)*0.2, dy: (Math.random()-0.5)*0.2, a: Math.random()*0.4+0.2 }));
+        (function loop() {
+            if (!document.hidden) {
+                ctx.clearRect(0, 0, cvs.width, cvs.height);
+                pts.forEach(p => {
+                    p.x = (p.x + p.dx + cvs.width) % cvs.width;
+                    p.y = (p.y + p.dy + cvs.height) % cvs.height;
+                    ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, 6.28);
+                    ctx.fillStyle = `rgba(255,255,255,${p.a})`; ctx.fill();
+                });
+            }
+            requestAnimationFrame(loop);
+        })();
+    </script>
+</body>
+</html>
