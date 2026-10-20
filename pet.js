@@ -113,7 +113,6 @@ function salvarBancoDeDados() {
 // ==========================================
 
 function obterImagemEstadoAtual() {
-    // Imagens atualizadas com a nova numeração:
     if (status.banheiro <= 30) return '30.png'; // Muito aflita (Banheiro)
     if (status.fome <= 30) return '28.png';     // Irritada (Fome)
     if (status.energia <= 30) return '29.png';  // Com sono (Energia)
@@ -161,37 +160,3 @@ function pararJogo() {
     clearInterval(gameLoop);
     clearInterval(saveLoop);
 }
-
-// ==========================================
-// 4. INTERAÇÕES E ANIMAÇÃO
-// ==========================================
-let timeoutAnimacao;
-
-function animarAcao(novaImagem) {
-    isAnimating = true; 
-    bruxaImg.src = novaImagem;
-    bruxaImg.classList.remove('breathe-anim'); 
-    bruxaImg.style.transition = 'transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
-    bruxaImg.style.transform = 'scale(1.1) translateY(-15px)';
-    
-    clearTimeout(timeoutAnimacao);
-    
-    timeoutAnimacao = setTimeout(() => {
-        bruxaImg.src = obterImagemEstadoAtual(); 
-        bruxaImg.style.transform = 'scale(1) translateY(0)';
-        
-        setTimeout(() => { 
-            bruxaImg.classList.add('breathe-anim'); 
-            isAnimating = false; 
-        }, 300);
-    }, 1500);
-}
-
-btnFood.addEventListener('click', () => {
-    status.fome = Math.min(100, status.fome + 20);
-    atualizarBarrasNaTela();
-    salvarBancoDeDados();
-    animarAcao('32.png'); // Atualizado para a nova foto da espetada
-});
-
-btnSleep.addEventListener('click', () => {
