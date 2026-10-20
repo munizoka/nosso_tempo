@@ -14,7 +14,7 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
 
-// Elementos de Login
+// Elementos da Tela
 const loginScreen = document.getElementById('login-screen');
 const gameScreen = document.getElementById('game-screen');
 const emailInput = document.getElementById('email-input');
@@ -23,7 +23,6 @@ const loginBtn = document.getElementById('login-btn');
 const logoutBtn = document.getElementById('logout-btn');
 const loginError = document.getElementById('login-error');
 
-// Elementos do Jogo
 const bruxaImg = document.getElementById('bruxa-img');
 const barFome = document.getElementById('bar-fome');
 const barEnergia = document.getElementById('bar-energia');
@@ -31,7 +30,6 @@ const barBanheiro = document.getElementById('bar-banheiro');
 const barAlegria = document.getElementById('bar-alegria');
 const ageDisplay = document.getElementById('age-display');
 
-// Botões
 const btnFood = document.getElementById('btn-food');
 const btnSleep = document.getElementById('btn-sleep');
 const btnBath = document.getElementById('btn-bath');
@@ -41,6 +39,7 @@ let status = { fome: 100, energia: 100, banheiro: 100, alegria: 100 };
 let petDocRef;
 let gameLoop;
 let saveLoop;
+let isAnimating = false; // Evita cortar a animação de pulo
 
 // ==========================================
 // 2. SISTEMA DE LOGIN E BANCO DE DADOS
@@ -71,37 +70,30 @@ auth.onAuthStateChanged((user) => {
 });
 
 function carregarBancoDeDados(uid) {
-    // Procura o arquivo deste usuário específico no Firebase
     petDocRef = db.collection('pets').doc(uid);
-    
     petDocRef.get().then((doc) => {
         if (doc.exists) {
-            // A Bruxinha já existe! Recupera a memória
             let dados = doc.data();
             status.fome = dados.fome;
             status.energia = dados.energia;
             status.banheiro = dados.banheiro;
             status.alegria = dados.alegria;
             
-            // Calcula a idade
             if (dados.nascimento) {
                 let dias = Math.floor((Date.now() - dados.nascimento.toDate().getTime()) / (1000 * 60 * 60 * 24));
                 ageDisplay.innerText = dias;
             }
-            
             iniciarJogo();
             atualizarBarrasNaTela();
+            atualizarExpressao(); // Mostra o rosto certo logo ao logar
         } else {
-            // Primeiro login de sempre! Cria o perfil dela na nuvem
             petDocRef.set({
-                fome: 100,
-                energia: 100,
-                banheiro: 100,
-                alegria: 100,
+                fome: 100, energia: 100, banheiro: 100, alegria: 100,
                 nascimento: firebase.firestore.FieldValue.serverTimestamp()
             }).then(() => {
                 iniciarJogo();
                 atualizarBarrasNaTela();
+                atualizarExpressao();
             });
         }
     });
@@ -110,18 +102,37 @@ function carregarBancoDeDados(uid) {
 function salvarBancoDeDados() {
     if (petDocRef) {
         petDocRef.update({
-            fome: status.fome,
-            energia: status.energia,
-            banheiro: status.banheiro,
-            alegria: status.alegria,
+            fome: status.fome, energia: status.energia, banheiro: status.banheiro, alegria: status.alegria,
             ultimaAtualizacao: firebase.firestore.FieldValue.serverTimestamp()
         });
     }
 }
 
 // ==========================================
-// 3. MOTOR DO JOGO
+// 3. MOTOR DO JOGO E EXPRESSÕES FACIAIS
 // ==========================================
+
+// Descobre qual rosto ela deve fazer dependendo das barras
+function obterImagemEstadoAtual() {
+    // A ordem aqui define a prioridade! Se ela estiver apertada, é o mais urgente.
+    if (status.banheiro <= 30) return '21.png'; // Rosto apertada para o banheiro
+    if (status.fome <= 30) return '22.png';     // Rosto faminta/brava
+    if (status.energia <= 30) return '23.png';  // Rosto cansada/com sono
+    if (status.alegria <= 30) return '24.png';  // Rosto triste/entediada
+    
+    return '16.png'; // Se nada estiver abaixo de 30%, ela fica feliz e normal!
+}
+
+function atualizarExpressao() {
+    // Só muda o rosto se ela não estiver no meio de um pulo de ação
+    if (!isAnimating) {
+        let imagemCorreta = obterImagemEstadoAtual();
+        if (bruxaImg.src.indexOf(imagemCorreta) === -1) {
+            bruxaImg.src = imagemCorreta;
+        }
+    }
+}
+
 function atualizarBarrasNaTela() {
     barFome.style.width = status.fome + '%';
     barEnergia.style.width = status.energia + '%';
@@ -135,19 +146,17 @@ function atualizarBarrasNaTela() {
 }
 
 function iniciarJogo() {
-    // Consome os status localmente a cada 3 segundos
     gameLoop = setInterval(() => {
         status.fome = Math.max(0, status.fome - 1);
         status.energia = Math.max(0, status.energia - 0.5);
         status.banheiro = Math.max(0, status.banheiro - 0.8);
         status.alegria = Math.max(0, status.alegria - 1.2);
+        
         atualizarBarrasNaTela();
+        atualizarExpressao(); // Checa se precisa mudar de rosto
     }, 3000);
     
-    // Salva na nuvem silenciosamente a cada 15 segundos
-    saveLoop = setInterval(() => {
-        salvarBancoDeDados();
-    }, 15000);
+    saveLoop = setInterval(() => { salvarBancoDeDados(); }, 15000);
 }
 
 function pararJogo() {
@@ -161,6 +170,7 @@ function pararJogo() {
 let timeoutAnimacao;
 
 function animarAcao(novaImagem) {
+    isAnimating = true; // Avisa que ela está dando o pulo
     bruxaImg.src = novaImagem;
     bruxaImg.classList.remove('breathe-anim'); 
     bruxaImg.style.transition = 'transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
@@ -169,36 +179,41 @@ function animarAcao(novaImagem) {
     clearTimeout(timeoutAnimacao);
     
     timeoutAnimacao = setTimeout(() => {
-        bruxaImg.src = '16.png';
+        // Quando a ação termina, ela volta pro rosto de acordo com a necessidade atual
+        bruxaImg.src = obterImagemEstadoAtual(); 
         bruxaImg.style.transform = 'scale(1) translateY(0)';
-        setTimeout(() => { bruxaImg.classList.add('breathe-anim'); }, 300);
+        
+        setTimeout(() => { 
+            bruxaImg.classList.add('breathe-anim'); 
+            isAnimating = false; // Pulo terminou, motor volta ao normal
+        }, 300);
     }, 1500);
 }
 
 btnFood.addEventListener('click', () => {
     status.fome = Math.min(100, status.fome + 20);
     atualizarBarrasNaTela();
-    salvarBancoDeDados(); // Salva na hora que clica
-    animarAcao('17.png');
+    salvarBancoDeDados();
+    animarAcao('17.png'); // Foto Comendo
 });
 
 btnSleep.addEventListener('click', () => {
     status.energia = Math.min(100, status.energia + 30);
     atualizarBarrasNaTela();
     salvarBancoDeDados();
-    animarAcao('18.png');
+    animarAcao('18.png'); // Foto Dormindo
 });
 
 btnBath.addEventListener('click', () => {
     status.banheiro = 100;
     atualizarBarrasNaTela();
     salvarBancoDeDados();
-    animarAcao('19.png');
+    animarAcao('19.png'); // Foto no Banheiro
 });
 
 btnFun.addEventListener('click', () => {
     status.alegria = Math.min(100, status.alegria + 25);
     atualizarBarrasNaTela();
     salvarBancoDeDados();
-    animarAcao('20.png');
+    animarAcao('20.png'); // Foto Brincando
 });
