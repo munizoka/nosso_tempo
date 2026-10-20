@@ -152,3 +152,9 @@ body, html {
 .yellow { background-color: #ffeb3b; }
 .blue { background-color: #2196f3; }
 .pink { background-color: #e91e63; }
+/* Garante que a zona das barras e botões fica na camada da frente e é clicável */
+.status-container, .controls, [id^="btn-"], [id^="bar-"] {
+    position: relative !important;
+    z-index: 9999 !important;
+    pointer-events: auto !important;
+}
