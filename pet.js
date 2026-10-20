@@ -39,7 +39,7 @@ let status = { fome: 100, energia: 100, banheiro: 100, alegria: 100 };
 let petDocRef;
 let gameLoop;
 let saveLoop;
-let isAnimating = false; // Evita cortar a animação de pulo
+let isAnimating = false; 
 
 // ==========================================
 // 2. SISTEMA DE LOGIN E BANCO DE DADOS
@@ -113,12 +113,11 @@ function salvarBancoDeDados() {
 // ==========================================
 
 function obterImagemEstadoAtual() {
-    if (status.banheiro <= 30) return '30.png'; // Muito aflita (Banheiro)
-    if (status.fome <= 30) return '28.png';     // Irritada (Fome)
-    if (status.energia <= 30) return '29.png';  // Com sono (Energia)
-    if (status.alegria <= 30) return '31.png';  // Triste (Alegria)
-    
-    return '16.png'; // Feliz e normal!
+    if (status.banheiro <= 30) return '30.png'; 
+    if (status.fome <= 30) return '28.png';     
+    if (status.energia <= 30) return '29.png';  
+    if (status.alegria <= 30) return '31.png';  
+    return '16.png'; 
 }
 
 function atualizarExpressao() {
@@ -160,3 +159,68 @@ function pararJogo() {
     clearInterval(gameLoop);
     clearInterval(saveLoop);
 }
+
+// ==========================================
+// 4. INTERAÇÕES COM CLIQUES TURBINADOS
+// ==========================================
+let timeoutAnimacao;
+
+function animarAcao(novaImagem) {
+    isAnimating = true; 
+    bruxaImg.src = novaImagem;
+    bruxaImg.classList.remove('breathe-anim'); 
+    bruxaImg.style.transition = 'transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+    bruxaImg.style.transform = 'scale(1.1) translateY(-15px)';
+    
+    clearTimeout(timeoutAnimacao);
+    
+    timeoutAnimacao = setTimeout(() => {
+        bruxaImg.src = obterImagemEstadoAtual(); 
+        bruxaImg.style.transform = 'scale(1) translateY(0)';
+        
+        setTimeout(() => { 
+            bruxaImg.classList.add('breathe-anim'); 
+            isAnimating = false; 
+        }, 300);
+    }, 1500);
+}
+
+// Ação de Comer (Espetada)
+function acaoComer() {
+    status.fome = Math.min(100, status.fome + 20);
+    atualizarBarrasNaTela();
+    salvarBancoDeDados();
+    animarAcao('32.png');
+}
+if(btnFood) btnFood.addEventListener('click', acaoComer);
+if(barFome && barFome.parentElement) barFome.parentElement.addEventListener('click', acaoComer);
+
+// Ação de Dormir
+function acaoDormir() {
+    status.energia = Math.min(100, status.energia + 30);
+    atualizarBarrasNaTela();
+    salvarBancoDeDados();
+    animarAcao('18.png'); 
+}
+if(btnSleep) btnSleep.addEventListener('click', acaoDormir);
+if(barEnergia && barEnergia.parentElement) barEnergia.parentElement.addEventListener('click', acaoDormir);
+
+// Ação de Banheiro
+function acaoBanheiro() {
+    status.banheiro = 100;
+    atualizarBarrasNaTela();
+    salvarBancoDeDados();
+    animarAcao('19.png'); 
+}
+if(btnBath) btnBath.addEventListener('click', acaoBanheiro);
+if(barBanheiro && barBanheiro.parentElement) barBanheiro.parentElement.addEventListener('click', acaoBanheiro);
+
+// Ação de Brincar
+function acaoBrincar() {
+    status.alegria = Math.min(100, status.alegria + 25);
+    atualizarBarrasNaTela();
+    salvarBancoDeDados();
+    animarAcao('20.png'); 
+}
+if(btnFun) btnFun.addEventListener('click', acaoBrincar);
+if(barAlegria && barAlegria.parentElement) barAlegria.parentElement.addEventListener('click', acaoBrincar);
