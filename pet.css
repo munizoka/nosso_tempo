@@ -87,7 +87,7 @@ body, html {
     align-items: center;
     position: relative;
     /* Imagem de fundo da masmorra (vamos adicionar depois) */
-    background-image: url('parede-masmorra.jpg');
+    background-image: url('parede-masmorra.png');
     background-size: cover;
     background-position: center;
 }
