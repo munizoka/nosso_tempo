@@ -195,32 +195,32 @@ function acaoComer() {
 if(btnFood) btnFood.addEventListener('click', acaoComer);
 if(barFome && barFome.parentElement) barFome.parentElement.addEventListener('click', acaoComer);
 
-// Ação de Dormir
+// Ação de Dormir (Agora puxa a imagem de sono)
 function acaoDormir() {
     status.energia = Math.min(100, status.energia + 30);
     atualizarBarrasNaTela();
     salvarBancoDeDados();
-    animarAcao('18.png'); 
+    animarAcao('20.png'); 
 }
 if(btnSleep) btnSleep.addEventListener('click', acaoDormir);
 if(barEnergia && barEnergia.parentElement) barEnergia.parentElement.addEventListener('click', acaoDormir);
 
-// Ação de Banheiro
+// Ação de Banheiro (Agora puxa a imagem das bochechas/banho)
 function acaoBanheiro() {
     status.banheiro = 100;
     atualizarBarrasNaTela();
     salvarBancoDeDados();
-    animarAcao('19.png'); 
+    animarAcao('18.png'); 
 }
 if(btnBath) btnBath.addEventListener('click', acaoBanheiro);
 if(barBanheiro && barBanheiro.parentElement) barBanheiro.parentElement.addEventListener('click', acaoBanheiro);
 
-// Ação de Brincar
+// Ação de Brincar (Agora puxa a imagem de alegria)
 function acaoBrincar() {
     status.alegria = Math.min(100, status.alegria + 25);
     atualizarBarrasNaTela();
     salvarBancoDeDados();
-    animarAcao('20.png'); 
+    animarAcao('19.png'); 
 }
 if(btnFun) btnFun.addEventListener('click', acaoBrincar);
 if(barAlegria && barAlegria.parentElement) barAlegria.parentElement.addEventListener('click', acaoBrincar);
