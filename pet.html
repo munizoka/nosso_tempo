@@ -20,13 +20,23 @@
         </div>
     </div>
 
+    <!-- TELA DE NOME (Fica entre o login e o jogo) -->
+    <div id="name-screen" style="display: none;">
+        <div class="name-modal">
+            <img src="16.png" alt="Sua Bruxinha" style="width: 150px; margin-bottom: 15px;">
+            <h2>Qual será o nome da sua Bruxinha?</h2>
+            <input type="text" id="pet-name-input" placeholder="Digite um nome mágico..." maxlength="15">
+            <button id="btn-save-name">Começar Aventura</button>
+        </div>
+    </div>
+
     <!-- TELA DO JOGO (MASMORRA) - Fica escondida até fazer login -->
     <div id="game-screen" style="display: none;">
         
         <!-- Cabeçalho: Nome e Dias -->
         <div class="hud-top">
             <div class="pet-name">
-                <span id="name-display">Elfie</span>
+                <span id="pet-name-display">Elfie</span>
                 <button id="edit-name-btn">✏️</button>
             </div>
             <div class="pet-age">Idade: <span id="age-display">0</span> dias</div>
