@@ -85,7 +85,7 @@ function carregarBancoDeDados(uid) {
             }
             iniciarJogo();
             atualizarBarrasNaTela();
-            atualizarExpressao(); // Mostra o rosto certo logo ao logar
+            atualizarExpressao(); 
         } else {
             petDocRef.set({
                 fome: 100, energia: 100, banheiro: 100, alegria: 100,
@@ -112,19 +112,17 @@ function salvarBancoDeDados() {
 // 3. MOTOR DO JOGO E EXPRESSÕES FACIAIS
 // ==========================================
 
-// Descobre qual rosto ela deve fazer dependendo das barras
 function obterImagemEstadoAtual() {
-    // A ordem aqui define a prioridade! Se ela estiver apertada, é o mais urgente.
-    if (status.banheiro <= 30) return '21.png'; // Rosto apertada para o banheiro
-    if (status.fome <= 30) return '22.png';     // Rosto faminta/brava
-    if (status.energia <= 30) return '23.png';  // Rosto cansada/com sono
-    if (status.alegria <= 30) return '24.png';  // Rosto triste/entediada
+    // Imagens atualizadas com a nova numeração:
+    if (status.banheiro <= 30) return '30.png'; // Muito aflita (Banheiro)
+    if (status.fome <= 30) return '28.png';     // Irritada (Fome)
+    if (status.energia <= 30) return '29.png';  // Com sono (Energia)
+    if (status.alegria <= 30) return '31.png';  // Triste (Alegria)
     
-    return '16.png'; // Se nada estiver abaixo de 30%, ela fica feliz e normal!
+    return '16.png'; // Feliz e normal!
 }
 
 function atualizarExpressao() {
-    // Só muda o rosto se ela não estiver no meio de um pulo de ação
     if (!isAnimating) {
         let imagemCorreta = obterImagemEstadoAtual();
         if (bruxaImg.src.indexOf(imagemCorreta) === -1) {
@@ -153,7 +151,7 @@ function iniciarJogo() {
         status.alegria = Math.max(0, status.alegria - 1.2);
         
         atualizarBarrasNaTela();
-        atualizarExpressao(); // Checa se precisa mudar de rosto
+        atualizarExpressao(); 
     }, 3000);
     
     saveLoop = setInterval(() => { salvarBancoDeDados(); }, 15000);
@@ -170,7 +168,7 @@ function pararJogo() {
 let timeoutAnimacao;
 
 function animarAcao(novaImagem) {
-    isAnimating = true; // Avisa que ela está dando o pulo
+    isAnimating = true; 
     bruxaImg.src = novaImagem;
     bruxaImg.classList.remove('breathe-anim'); 
     bruxaImg.style.transition = 'transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
@@ -179,13 +177,12 @@ function animarAcao(novaImagem) {
     clearTimeout(timeoutAnimacao);
     
     timeoutAnimacao = setTimeout(() => {
-        // Quando a ação termina, ela volta pro rosto de acordo com a necessidade atual
         bruxaImg.src = obterImagemEstadoAtual(); 
         bruxaImg.style.transform = 'scale(1) translateY(0)';
         
         setTimeout(() => { 
             bruxaImg.classList.add('breathe-anim'); 
-            isAnimating = false; // Pulo terminou, motor volta ao normal
+            isAnimating = false; 
         }, 300);
     }, 1500);
 }
@@ -194,26 +191,7 @@ btnFood.addEventListener('click', () => {
     status.fome = Math.min(100, status.fome + 20);
     atualizarBarrasNaTela();
     salvarBancoDeDados();
-    animarAcao('17.png'); // Foto Comendo
+    animarAcao('32.png'); // Atualizado para a nova foto da espetada
 });
 
 btnSleep.addEventListener('click', () => {
-    status.energia = Math.min(100, status.energia + 30);
-    atualizarBarrasNaTela();
-    salvarBancoDeDados();
-    animarAcao('18.png'); // Foto Dormindo
-});
-
-btnBath.addEventListener('click', () => {
-    status.banheiro = 100;
-    atualizarBarrasNaTela();
-    salvarBancoDeDados();
-    animarAcao('19.png'); // Foto no Banheiro
-});
-
-btnFun.addEventListener('click', () => {
-    status.alegria = Math.min(100, status.alegria + 25);
-    atualizarBarrasNaTela();
-    salvarBancoDeDados();
-    animarAcao('20.png'); // Foto Brincando
-});
