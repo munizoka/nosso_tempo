@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Masmorra da Bruxinha</title>
+    <link rel="stylesheet" href="pet.css">
+</head>
+<body>
+
+    <!-- TELA DE LOGIN -->
+    <div id="login-screen">
+        <div class="login-box">
+            <h2>🔮 O Cofre da Masmorra</h2>
+            <p>Identifique-se para ver sua Bruxinha</p>
+            <input type="email" id="email-input" placeholder="Seu e-mail mágico">
+            <input type="password" id="password-input" placeholder="Sua senha">
+            <button id="login-btn">Entrar</button>
+            <p id="login-error" style="color: red; display: none;">Email ou senha incorretos!</p>
+        </div>
+    </div>
+
+    <!-- TELA DO JOGO (MASMORRA) - Fica escondida até fazer login -->
+    <div id="game-screen" style="display: none;">
+        
+        <!-- Cabeçalho: Nome e Dias -->
+        <div class="hud-top">
+            <div class="pet-name">
+                <span id="name-display">Elfie</span>
+                <button id="edit-name-btn">✏️</button>
+            </div>
+            <div class="pet-age">Idade: <span id="age-display">0</span> dias</div>
+            <button id="logout-btn">Sair</button>
+        </div>
+
+        <!-- Janela de Fundo (Dia/Noite via CSS) -->
+        <div id="window-view" class="day-time"></div>
+
+        <!-- Masmorra e a Bruxinha -->
+        <div class="dungeon-room">
+            <!-- A imagem principal que vai ficar trocando -->
+            <img id="bruxa-img" src="16.png" alt="Bruxinha" class="breathe-anim">
+            
+            <!-- Cortina do Banheiro (Escondida) -->
+            <div id="bathroom-curtain"></div>
+        </div>
+
+        <!-- Barras de Necessidade (Rodapé) -->
+        <div class="hud-bottom">
+            <div class="bar-container" id="btn-food">
+                <span>🍖 Fome</span>
+                <div class="bar"><div id="bar-fome" class="fill green"></div></div>
+            </div>
+            <div class="bar-container" id="btn-sleep">
+                <span>⚡ Energia</span>
+                <div class="bar"><div id="bar-energia" class="fill yellow"></div></div>
+            </div>
+            <div class="bar-container" id="btn-bath">
+                <span>🚽 Banheiro</span>
+                <div class="bar"><div id="bar-banheiro" class="fill blue"></div></div>
+            </div>
+            <div class="bar-container" id="btn-fun">
+                <span>😂 Alegria</span>
+                <div class="bar"><div id="bar-alegria" class="fill pink"></div></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase SDK (Versão 8 Compat para facilitar a integração direta) -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    
+    <!-- Nosso código de lógica -->
+    <script src="pet.js"></script>
+</body>
+</html>
