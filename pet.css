@@ -1,0 +1,154 @@
+/* Reset Básico para parecer um App Nativo */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    user-select: none; /* Evita selecionar texto sem querer ao clicar rápido */
+}
+
+body, html {
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden; /* Trava a rolagem da tela */
+    background-color: #1a1a2e; /* Cor da parede da masmorra escurecida */
+}
+
+/* ================= TELA DE LOGIN ================= */
+#login-screen {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: radial-gradient(circle, #2d1b4e, #110920);
+    position: absolute;
+    z-index: 100;
+}
+
+.login-box {
+    background: rgba(0, 0, 0, 0.6);
+    padding: 30px;
+    border-radius: 15px;
+    text-align: center;
+    color: white;
+    border: 2px solid #6b40a6;
+}
+
+.login-box input {
+    width: 100%;
+    padding: 10px;
+    margin: 10px 0;
+    border-radius: 8px;
+    border: none;
+    outline: none;
+}
+
+.login-box button {
+    width: 100%;
+    padding: 12px;
+    background-color: #8c52ff;
+    color: white;
+    font-weight: bold;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    margin-top: 10px;
+}
+
+/* ================= TELA DO JOGO ================= */
+#game-screen {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+}
+
+/* HUD Topo (Nomes e Idade) */
+.hud-top {
+    position: absolute;
+    top: 0;
+    width: 100%;
+    padding: 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(0, 0, 0, 0.5);
+    color: white;
+    z-index: 10;
+}
+
+/* A Masmorra e a Bruxinha */
+.dungeon-room {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    /* Imagem de fundo da masmorra (vamos adicionar depois) */
+    background-image: url('parede-masmorra.jpg');
+    background-size: cover;
+    background-position: center;
+}
+
+/* A Mágica da Respiração Fluida */
+#bruxa-img {
+    height: 45vh; /* Ocupa quase metade da tela em altura */
+    max-height: 400px;
+    transition: transform 0.1s ease-out; /* Para as cócegas suaves */
+    z-index: 5;
+}
+
+.breathe-anim {
+    animation: breathe 3s infinite ease-in-out;
+}
+
+@keyframes breathe {
+    0%   { transform: scale(1); }
+    50%  { transform: scale(1.02, 0.98); } /* Estica um pouquinho pros lados e achata */
+    100% { transform: scale(1); }
+}
+
+/* HUD Base (Barrinhas) */
+.hud-bottom {
+    position: absolute;
+    bottom: 0;
+    width: 100%;
+    padding: 15px;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    z-index: 10;
+}
+
+.bar-container {
+    width: 22%;
+    text-align: center;
+    color: white;
+    font-size: 12px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.bar {
+    width: 100%;
+    height: 12px;
+    background: #333;
+    border-radius: 6px;
+    margin-top: 5px;
+    overflow: hidden;
+    border: 1px solid #fff;
+}
+
+.fill {
+    height: 100%;
+    width: 100%; /* Começa cheia */
+    transition: width 0.3s ease;
+}
+
+.green { background-color: #4caf50; }
+.yellow { background-color: #ffeb3b; }
+.blue { background-color: #2196f3; }
+.pink { background-color: #e91e63; }
