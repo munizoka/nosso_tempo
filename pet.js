@@ -1,15 +1,13 @@
 // ==========================================
-// 1. COLE AQUI SUAS CHAVES DO FIREBASE
-// Vá no painel do Firebase > Configurações (engrenagem) > Configurações do projeto
-// Desça a tela até "Seus aplicativos" e copie o bloco de código firebaseConfig
+// 1. CHAVES DO FIREBASE (ATUALIZADAS)
 // ==========================================
 const firebaseConfig = {
-    apiKey: "SUA_API_KEY_AQUI",
-    authDomain: "seu-projeto.firebaseapp.com",
-    projectId: "seu-projeto",
-    storageBucket: "seu-projeto.appspot.com",
-    messagingSenderId: "123456789",
-    appId: "SUA_APP_ID"
+    apiKey: "AIzaSyCbkO3-M-Ulz0Yg_ZuN-jpWVcD1EHmcUm0",
+    authDomain: "nosso-tempo-cd9c8.firebaseapp.com",
+    projectId: "nosso-tempo-cd9c8",
+    storageBucket: "nosso-tempo-cd9c8.firebasestorage.app",
+    messagingSenderId: "812792210449",
+    appId: "1:812792210449:web:df98d32608446979ae7db0"
 };
 
 // Inicializa o Firebase
