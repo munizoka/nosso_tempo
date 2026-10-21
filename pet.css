@@ -181,36 +181,34 @@ body, html {
     100% { transform: scale(1); }
 }
 
-/* ================= NOVOS BOTÕES / BARRAS ================= */
+/* ================= PAINEL DE BOTÕES UNIFICADO ================= */
 .hud-bottom {
     position: absolute;
-    bottom: 30px; 
+    bottom: 0; /* Colado ao fundo da tela */
     width: 100%;
-    padding: 20px;
-    background: rgba(0, 0, 0, 0.8);
+    padding: 0; /* Sem fundo preto extra */
+    background: transparent; 
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 15px;
+    gap: 0; /* Cores encostam-se totalmente */
     z-index: 10;
-    border-top-left-radius: 20px;
-    border-top-right-radius: 20px;
 }
 
 .bar-container {
     position: relative;
     width: 100%;
-    height: 60px; 
+    height: 85px; /* Mais alto para facilitar o clique na parte inferior */
     background: #1a1a2e; 
-    border-radius: 12px;
+    border-radius: 0; /* Retângulo perfeito */
     cursor: pointer;
     overflow: hidden; 
-    border: 2px solid rgba(255, 255, 255, 0.2);
-    box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-    transition: transform 0.1s ease;
+    border: none; /* Sem contornos */
+    transition: filter 0.1s ease;
 }
 
+/* Nova animação de clique: escurece ligeiramente em vez de encolher, para não revelar buracos na grelha */
 .bar-container:active {
-    transform: scale(0.92);
+    filter: brightness(0.7);
 }
 
 .fill {
@@ -223,17 +221,30 @@ body, html {
     transition: width 0.3s ease, background-color 0.3s ease;
 }
 
-/* A CORREÇÃO MÁXIMA ESTÁ AQUI */
 .btn-emoji {
     display: block;
     position: absolute;
     top: 50%;
     left: 15px; 
     transform: translateY(-50%); 
-    z-index: 99999 !important; /* Camada suprema, nada fica na frente disto */
+    z-index: 99999 !important;
     font-size: 28px; 
     pointer-events: none; 
     filter: drop-shadow(2px 2px 4px rgba(0,0,0,0.5)); 
+}
+
+/* NOVO: Estilo para a percentagem */
+.btn-percent {
+    display: block;
+    position: absolute;
+    bottom: 10px; /* Canto inferior */
+    right: 15px; /* Canto direito */
+    z-index: 99999 !important;
+    font-size: 16px; 
+    color: white;
+    font-weight: 800;
+    pointer-events: none; 
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.8); /* Sombra para leitura mesmo quando a barra está vazia */
 }
 
 /* Cores das Barras */
@@ -242,7 +253,6 @@ body, html {
 .blue { background-color: #2196f3; }
 .red { background-color: #f44336; }
 
-/* O problema vinha daqui. Removi os botões e barras desta regra que os empurrava para cima de tudo */
 .status-container, .controls {
     position: relative !important;
     z-index: 9999 !important;
