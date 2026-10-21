@@ -17,11 +17,17 @@ const db = firebase.firestore();
 // Elementos da Tela
 const loginScreen = document.getElementById('login-screen');
 const gameScreen = document.getElementById('game-screen');
+const nameScreen = document.getElementById('name-screen');
+
 const emailInput = document.getElementById('email-input');
 const passwordInput = document.getElementById('password-input');
 const loginBtn = document.getElementById('login-btn');
 const logoutBtn = document.getElementById('logout-btn');
 const loginError = document.getElementById('login-error');
+
+const petNameInput = document.getElementById('pet-name-input');
+const btnSaveName = document.getElementById('btn-save-name');
+const petNameDisplay = document.getElementById('pet-name-display');
 
 const bruxaImg = document.getElementById('bruxa-img');
 const barFome = document.getElementById('bar-fome');
@@ -60,11 +66,12 @@ logoutBtn.addEventListener('click', () => { auth.signOut(); });
 auth.onAuthStateChanged((user) => {
     if (user) {
         loginScreen.style.display = 'none';
-        gameScreen.style.display = 'flex';
+        gameScreen.style.display = 'none'; // Esconde a masmorra enquanto carrega o banco
         carregarBancoDeDados(user.uid);
     } else {
         loginScreen.style.display = 'flex';
         gameScreen.style.display = 'none';
+        if(nameScreen) nameScreen.style.display = 'none';
         pararJogo();
     }
 });
@@ -83,17 +90,30 @@ function carregarBancoDeDados(uid) {
                 let dias = Math.floor((Date.now() - dados.nascimento.toDate().getTime()) / (1000 * 60 * 60 * 24));
                 ageDisplay.innerText = dias;
             }
-            iniciarJogo();
+            
             atualizarBarrasNaTela();
             atualizarExpressao(); 
+            
+            // Verifica se a bruxinha já tem um nome gravado
+            if (dados.nome) {
+                if (petNameDisplay) petNameDisplay.innerText = dados.nome;
+                nameScreen.style.display = 'none';
+                gameScreen.style.display = 'flex';
+                iniciarJogo();
+            } else {
+                // Perfil antigo sem nome ou algo faltante: mostra a tela de nome
+                nameScreen.style.display = 'flex';
+            }
         } else {
+            // Criação do novo pet no banco de dados, ainda sem nome
             petDocRef.set({
                 fome: 100, energia: 100, banheiro: 100, alegria: 100,
-                nascimento: firebase.firestore.FieldValue.serverTimestamp()
+                nascimento: firebase.firestore.FieldValue.serverTimestamp(),
+                nome: ""
             }).then(() => {
-                iniciarJogo();
                 atualizarBarrasNaTela();
                 atualizarExpressao();
+                nameScreen.style.display = 'flex'; // Chama a tela de batismo
             });
         }
     });
@@ -109,7 +129,31 @@ function salvarBancoDeDados() {
 }
 
 // ==========================================
-// 3. MOTOR DO JOGO E EXPRESSÕES FACIAIS
+// 3. EVENTO DA ESCOLHA DE NOME
+// ==========================================
+if (btnSaveName) {
+    btnSaveName.addEventListener('click', () => {
+        const novoNome = petNameInput.value.trim() || "Bruxinha"; // Se não digitar nada, assume Bruxinha
+        
+        // 1. Atualiza no banco de dados e na tela
+        petDocRef.update({ nome: novoNome });
+        if (petNameDisplay) petNameDisplay.innerText = novoNome;
+        
+        // 2. Inicia a transição: apaga a tela de nome suavemente
+        nameScreen.classList.add('fade-out');
+        
+        // 3. Espera 1 segundo pela animação e carrega a masmorra com fade-in
+        setTimeout(() => {
+            nameScreen.style.display = 'none';
+            gameScreen.style.display = 'flex';
+            gameScreen.classList.add('fade-in'); 
+            iniciarJogo();
+        }, 1000); 
+    });
+}
+
+// ==========================================
+// 4. MOTOR DO JOGO E EXPRESSÕES FACIAIS
 // ==========================================
 
 function obterImagemEstadoAtual() {
@@ -161,7 +205,7 @@ function pararJogo() {
 }
 
 // ==========================================
-// 4. INTERAÇÕES COM CLIQUES TURBINADOS
+// 5. INTERAÇÕES COM CLIQUES TURBINADOS
 // ==========================================
 let timeoutAnimacao;
 
@@ -195,7 +239,7 @@ function acaoComer() {
 if(btnFood) btnFood.addEventListener('click', acaoComer);
 if(barFome && barFome.parentElement) barFome.parentElement.addEventListener('click', acaoComer);
 
-// Ação de Dormir (Agora puxa a imagem de sono)
+// Ação de Dormir
 function acaoDormir() {
     status.energia = Math.min(100, status.energia + 30);
     atualizarBarrasNaTela();
@@ -205,7 +249,7 @@ function acaoDormir() {
 if(btnSleep) btnSleep.addEventListener('click', acaoDormir);
 if(barEnergia && barEnergia.parentElement) barEnergia.parentElement.addEventListener('click', acaoDormir);
 
-// Ação de Banheiro (Agora puxa a imagem das bochechas/banho)
+// Ação de Banheiro
 function acaoBanheiro() {
     status.banheiro = 100;
     atualizarBarrasNaTela();
@@ -215,7 +259,7 @@ function acaoBanheiro() {
 if(btnBath) btnBath.addEventListener('click', acaoBanheiro);
 if(barBanheiro && barBanheiro.parentElement) barBanheiro.parentElement.addEventListener('click', acaoBanheiro);
 
-// Ação de Brincar (Agora puxa a imagem de alegria)
+// Ação de Brincar
 function acaoBrincar() {
     status.alegria = Math.min(100, status.alegria + 25);
     atualizarBarrasNaTela();
