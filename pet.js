@@ -193,10 +193,10 @@ function atualizarBarrasNaTela() {
     barBanheiro.style.width = status.banheiro + '%';
     barAlegria.style.width = status.alegria + '%';
 
-    barFome.style.backgroundColor = status.fome > 30 ? '#4caf50' : '#f44336';
-    barEnergia.style.backgroundColor = status.energia > 30 ? '#ffeb3b' : '#f44336';
-    barBanheiro.style.backgroundColor = status.banheiro > 30 ? '#2196f3' : '#f44336';
-    barAlegria.style.backgroundColor = status.alegria > 30 ? '#e91e63' : '#f44336';
+    barFome.style.backgroundColor = status.fome > 30 ? '#4caf50' : '#8b0000'; // Verde normal, vermelho escuro quando baixo
+    barEnergia.style.backgroundColor = status.energia > 30 ? '#ffeb3b' : '#8b0000';
+    barBanheiro.style.backgroundColor = status.banheiro > 30 ? '#2196f3' : '#8b0000';
+    barAlegria.style.backgroundColor = status.alegria > 30 ? '#f44336' : '#8b0000'; // Vermelho normal, vermelho escuro quando baixo
 }
 
 function iniciarJogo() {
