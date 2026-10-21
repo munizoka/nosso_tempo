@@ -136,7 +136,7 @@ body, html {
 /* HUD Topo (Nomes e Idade) */
 .hud-top {
     position: absolute;
-    top: 0;
+    top: 40px; /* Desce 40px para evitar o notch do iPhone */
     width: 100%;
     padding: 15px;
     display: flex;
