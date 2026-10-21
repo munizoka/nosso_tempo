@@ -260,7 +260,7 @@ function acaoBanheiro() {
     status.banheiro = 100;
     atualizarBarrasNaTela();
     salvarBancoDeDados();
-    animarAcao('18.png'); 
+    animarAcao('33.png'); 
 }
 if(btnBath) btnBath.addEventListener('click', acaoBanheiro);
 if(barBanheiro && barBanheiro.parentElement) barBanheiro.parentElement.addEventListener('click', acaoBanheiro);
