@@ -258,3 +258,26 @@ body, html {
     z-index: 9999 !important;
     pointer-events: auto !important;
 }
+
+/* ================= BOTÃO DE VOLTAR ================= */
+.btn-voltar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 35px;
+    height: 35px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+    color: white;
+    text-decoration: none;
+    font-size: 20px;
+    font-weight: bold;
+    margin-right: 10px;
+    transition: background 0.2s;
+    backdrop-filter: blur(5px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.btn-voltar:hover {
+    background: rgba(255, 255, 255, 0.4);
+}
