@@ -4,14 +4,14 @@
     padding: 0;
     box-sizing: border-box;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    user-select: none; /* Evita selecionar texto sem querer ao clicar rápido */
+    user-select: none;
 }
 
 body, html {
     width: 100vw;
     height: 100vh;
-    overflow: hidden; /* Trava a rolagem da tela */
-    background-color: #1a1a2e; /* Cor da parede da masmorra escurecida */
+    overflow: hidden;
+    background-color: #1a1a2e;
 }
 
 /* ================= TELA DE LOGIN ================= */
@@ -60,7 +60,7 @@ body, html {
 #name-screen {
     position: fixed;
     top: 0; left: 0; width: 100vw; height: 100vh;
-    background-color: #151522; /* Fundo escuro da masmorra */
+    background-color: #151522;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -109,7 +109,6 @@ body, html {
     background-color: #ba68c8;
 }
 
-/* Animações de desaparecer (fade out) e aparecer (fade in) */
 .fade-out {
     opacity: 0 !important;
     pointer-events: none;
@@ -133,10 +132,9 @@ body, html {
     flex-direction: column;
 }
 
-/* HUD Topo (Nomes e Idade) */
 .hud-top {
     position: absolute;
-    top: 40px; /* Desce 40px para evitar o notch do iPhone */
+    top: 40px;
     width: 100%;
     padding: 15px;
     display: flex;
@@ -155,7 +153,6 @@ body, html {
     font-size: 18px;
 }
 
-/* A Masmorra e a Bruxinha */
 .dungeon-room {
     flex: 1;
     display: flex;
@@ -167,11 +164,10 @@ body, html {
     background-position: center;
 }
 
-/* A Mágica da Respiração Fluida */
 #bruxa-img {
-    height: 45vh; /* Ocupa quase metade da tela em altura */
+    height: 45vh;
     max-height: 400px;
-    transition: transform 0.1s ease-out; /* Para as cócegas suaves */
+    transition: transform 0.1s ease-out;
     z-index: 5;
 }
 
@@ -181,67 +177,76 @@ body, html {
 
 @keyframes breathe {
     0%   { transform: scale(1); }
-    50%  { transform: scale(1.02, 0.98); } /* Estica um pouquinho pros lados e achata */
+    50%  { transform: scale(1.02, 0.98); }
     100% { transform: scale(1); }
 }
 
-/* HUD Base (Barrinhas em Grelha 2x2) */
+/* ================= NOVOS BOTÕES / BARRAS ================= */
 .hud-bottom {
     position: absolute;
-    bottom: 30px; /* Espaço para o menu do iPhone */
+    bottom: 30px; 
     width: 100%;
     padding: 20px;
     background: rgba(0, 0, 0, 0.8);
     display: grid;
-    grid-template-columns: 1fr 1fr; /* Cria 2 colunas */
-    gap: 15px; /* Espaço entre os botões */
+    grid-template-columns: 1fr 1fr; /* Grelha 2x2 */
+    gap: 15px;
     z-index: 10;
     border-top-left-radius: 20px;
     border-top-right-radius: 20px;
 }
 
+/* O botão principal agora é o invólucro da barra */
 .bar-container {
+    position: relative;
     width: 100%;
-    background: rgba(255, 255, 255, 0.08); /* Fundo tipo botão */
-    padding: 12px;
+    height: 55px; /* Altura do botão gordinho */
+    background: #1a1a2e; /* Fundo escuro quando a barra esvazia */
     border-radius: 12px;
-    text-align: center;
-    color: white;
-    font-size: 14px;
-    font-weight: bold;
     cursor: pointer;
-    transition: transform 0.1s ease, background 0.2s ease;
+    overflow: hidden; /* Corta a barra de cor para manter os cantos redondos */
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+    transition: transform 0.1s ease;
 }
 
-/* Animação de pressionar */
+/* Efeito de clicar/afundar */
 .bar-container:active {
     transform: scale(0.92);
-    background: rgba(255, 255, 255, 0.15);
 }
 
-.bar {
-    width: 100%;
-    height: 12px;
-    background: #333;
-    border-radius: 6px;
-    margin-top: 8px;
-    overflow: hidden;
-    border: 1px solid #fff;
-}
-
+/* A barra de progresso em si, que agora ocupa a altura toda */
 .fill {
+    position: absolute;
+    top: 0;
+    left: 0;
     height: 100%;
-    width: 100%; /* Começa cheia */
+    width: 100%; /* A largura vai diminuindo com o tempo via JavaScript */
+    z-index: 1;
     transition: width 0.3s ease, background-color 0.3s ease;
+}
+
+/* O texto e emoji ficam flutuando no meio, por cima da barra */
+.btn-label {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 2;
+    color: white;
+    font-size: 16px;
+    font-weight: bold;
+    text-shadow: 1px 1px 4px rgba(0, 0, 0, 0.9); /* Sombra para leitura perfeita em fundos claros */
+    pointer-events: none; /* Deixa o clique atravessar o texto direto para o botão */
+    white-space: nowrap;
 }
 
 /* Cores das Barras */
 .green { background-color: #4caf50; }
-.yellow { background-color: #ffeb3b; }
+.yellow { background-color: #d1b800; } /* Amarelo escurecido para não magoar a vista e o texto ler-se bem */
 .blue { background-color: #2196f3; }
-.red { background-color: #f44336; } /* Atualizado para Vermelho */
+.red { background-color: #f44336; }
 
-/* Garante que a zona das barras e botões fica na camada da frente e é clicável */
 .status-container, .controls, [id^="btn-"], [id^="bar-"] {
     position: relative !important;
     z-index: 9999 !important;
