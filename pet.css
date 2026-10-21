@@ -185,26 +185,38 @@ body, html {
     100% { transform: scale(1); }
 }
 
-/* HUD Base (Barrinhas) */
+/* HUD Base (Barrinhas em Grelha 2x2) */
 .hud-bottom {
     position: absolute;
-    bottom: 80px; /* Subimos as barras para fugir da interface do iPhone */
+    bottom: 30px; /* Espaço para o menu do iPhone */
     width: 100%;
-    padding: 15px;
-    background: rgba(0, 0, 0, 0.7);
-    display: flex;
-    justify-content: space-around;
-    align-items: center;
+    padding: 20px;
+    background: rgba(0, 0, 0, 0.8);
+    display: grid;
+    grid-template-columns: 1fr 1fr; /* Cria 2 colunas */
+    gap: 15px; /* Espaço entre os botões */
     z-index: 10;
+    border-top-left-radius: 20px;
+    border-top-right-radius: 20px;
 }
 
 .bar-container {
-    width: 22%;
+    width: 100%;
+    background: rgba(255, 255, 255, 0.08); /* Fundo tipo botão */
+    padding: 12px;
+    border-radius: 12px;
     text-align: center;
     color: white;
-    font-size: 12px;
+    font-size: 14px;
     font-weight: bold;
     cursor: pointer;
+    transition: transform 0.1s ease, background 0.2s ease;
+}
+
+/* Animação de pressionar */
+.bar-container:active {
+    transform: scale(0.92);
+    background: rgba(255, 255, 255, 0.15);
 }
 
 .bar {
@@ -212,7 +224,7 @@ body, html {
     height: 12px;
     background: #333;
     border-radius: 6px;
-    margin-top: 5px;
+    margin-top: 8px;
     overflow: hidden;
     border: 1px solid #fff;
 }
@@ -223,10 +235,11 @@ body, html {
     transition: width 0.3s ease, background-color 0.3s ease;
 }
 
+/* Cores das Barras */
 .green { background-color: #4caf50; }
 .yellow { background-color: #ffeb3b; }
 .blue { background-color: #2196f3; }
-.pink { background-color: #e91e63; }
+.red { background-color: #f44336; } /* Atualizado para Vermelho */
 
 /* Garante que a zona das barras e botões fica na camada da frente e é clicável */
 .status-container, .controls, [id^="btn-"], [id^="bar-"] {
