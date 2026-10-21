@@ -163,10 +163,18 @@ if (btnSaveName) {
 // ==========================================
 
 function obterImagemEstadoAtual() {
-    if (status.banheiro <= 30) return '30.png'; 
-    if (status.fome <= 30) return '28.png';     
-    if (status.energia <= 30) return '29.png';  
-    if (status.alegria <= 30) return '31.png';  
+    // 1. Encontra qual é a barra mais vazia no momento (o menor número)
+    let necessidadeMaisUrgente = Math.min(status.fome, status.energia, status.banheiro, status.alegria);
+
+    // 2. Só muda a carinha se a necessidade mais urgente estiver em 30 ou menos
+    if (necessidadeMaisUrgente <= 30) {
+        if (necessidadeMaisUrgente === status.fome) return '28.png';
+        if (necessidadeMaisUrgente === status.banheiro) return '30.png'; 
+        if (necessidadeMaisUrgente === status.energia) return '29.png';  
+        if (necessidadeMaisUrgente === status.alegria) return '31.png';  
+    }
+    
+    // 3. Se estiver tudo acima de 30, ela fica normal/feliz
     return '16.png'; 
 }
 
