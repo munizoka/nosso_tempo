@@ -10,6 +10,10 @@
 
     <!-- TELA DE LOGIN -->
     <div id="login-screen">
+        
+        <!-- BOTÃO DE VOLTAR NA TELA DE LOGIN -->
+        <a href="index.html" style="position: absolute; top: 20px; left: 20px; display: flex; align-items: center; justify-content: center; width: 38px; height: 38px; background: rgba(255, 255, 255, 0.25); border-radius: 50%; color: white; text-decoration: none; font-size: 22px; font-weight: bold; border: 1px solid rgba(255, 255, 255, 0.5); backdrop-filter: blur(5px); box-shadow: 0 4px 6px rgba(0,0,0,0.3); z-index: 9999;">←</a>
+
         <div class="login-box">
             <h2>🔮 O Cofre da Masmorra</h2>
             <p>Identifique-se para ver sua Bruxinha</p>
@@ -33,15 +37,23 @@
     <!-- TELA DO JOGO (MASMORRA) -->
     <div id="game-screen" style="display: none;">
         
-        <!-- Cabeçalho -->
-        <div class="hud-top">
-            <div class="pet-name">
+        <!-- Cabeçalho 100% blindado contra falhas de Cache -->
+        <div class="hud-top" style="position: absolute; top: 40px; width: 100%; padding: 15px; z-index: 10; display: flex; align-items: center; justify-content: space-between; box-sizing: border-box;">
+            
+            <div style="display: flex; align-items: center;">
                 <!-- BOTÃO DE VOLTAR PARA A LINHA DO TEMPO -->
-                <a href="index.html" class="btn-voltar">←</a>
-                <span id="pet-name-display">Elfie</span>
+                <a href="index.html" style="display: flex; align-items: center; justify-content: center; width: 38px; height: 38px; background: rgba(255, 255, 255, 0.25); border-radius: 50%; color: white; text-decoration: none; font-size: 22px; font-weight: bold; border: 1px solid rgba(255, 255, 255, 0.5); backdrop-filter: blur(5px); margin-right: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.3);">←</a>
+                
+                <div class="pet-name" style="font-size: 20px; font-weight: bold; color: white;">
+                    <span id="pet-name-display">Elfie</span>
+                </div>
             </div>
-            <div class="pet-age">Idade: <span id="age-display">0</span> dias</div>
-            <button id="logout-btn">Sair</button>
+
+            <div style="display: flex; align-items: center; gap: 15px;">
+                <div class="pet-age" style="color: white; font-weight: 500;">Idade: <span id="age-display">0</span> dias</div>
+                <button id="logout-btn" style="padding: 8px 15px; background-color: #f44336; border: none; border-radius: 8px; color: white; font-weight: bold; cursor: pointer;">Sair</button>
+            </div>
+            
         </div>
 
         <div id="window-view" class="day-time"></div>
