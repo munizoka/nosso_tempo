@@ -133,7 +133,13 @@ function salvarBancoDeDados() {
 // ==========================================
 if (btnSaveName) {
     btnSaveName.addEventListener('click', () => {
-        const novoNome = petNameInput.value.trim() || "Bruxinha"; // Se não digitar nada, assume Bruxinha
+        const novoNome = petNameInput.value.trim(); 
+        
+        // Trava de segurança: Impede de continuar se o campo estiver vazio
+        if (!novoNome) {
+            alert("Por favor, digite um nome para a sua Elphaba antes de começar!");
+            return; // Para a execução do código aqui
+        }
         
         // 1. Atualiza no banco de dados e na tela
         petDocRef.update({ nome: novoNome });
