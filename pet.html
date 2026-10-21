@@ -20,7 +20,7 @@
         </div>
     </div>
 
-    <!-- TELA DE NOME (Fica entre o login e o jogo) -->
+    <!-- TELA DE NOME -->
     <div id="name-screen" style="display: none;">
         <div class="name-modal">
             <img src="16.png" alt="Sua Bruxinha" style="width: 150px; margin-bottom: 15px;">
@@ -30,10 +30,10 @@
         </div>
     </div>
 
-    <!-- TELA DO JOGO (MASMORRA) - Fica escondida até fazer login -->
+    <!-- TELA DO JOGO (MASMORRA) -->
     <div id="game-screen" style="display: none;">
         
-        <!-- Cabeçalho: Nome e Dias -->
+        <!-- Cabeçalho -->
         <div class="hud-top">
             <div class="pet-name">
                 <span id="pet-name-display">Elfie</span>
@@ -42,45 +42,43 @@
             <button id="logout-btn">Sair</button>
         </div>
 
-        <!-- Janela de Fundo (Dia/Noite via CSS) -->
         <div id="window-view" class="day-time"></div>
 
-        <!-- Masmorra e a Bruxinha -->
+        <!-- Masmorra -->
         <div class="dungeon-room">
-            <!-- A imagem principal que vai ficar trocando -->
             <img id="bruxa-img" src="16.png" alt="Bruxinha" class="breathe-anim">
-            
-            <!-- Cortina do Banheiro (Escondida) -->
             <div id="bathroom-curtain"></div>
         </div>
 
-        <!-- Barras de Necessidade (Rodapé) - Agora em Grid 2x2 -->
+        <!-- BARRAS COMPLETAMENTE COLORIDAS (Grelha 2x2 baseada no teu desenho) -->
         <div class="hud-bottom">
+            <!-- Linha 1: Fome (Verde) e Banheiro (Azul) -->
             <div class="bar-container" id="btn-food">
-                <span>🍖 Fome</span>
-                <div class="bar"><div id="bar-fome" class="fill green"></div></div>
-            </div>
-            <div class="bar-container" id="btn-sleep">
-                <span>⚡ Energia</span>
-                <div class="bar"><div id="bar-energia" class="fill yellow"></div></div>
+                <div id="bar-fome" class="fill green"></div>
+                <span class="btn-label">🍖 Fome</span>
             </div>
             <div class="bar-container" id="btn-bath">
-                <span>🚽 Banheiro</span>
-                <div class="bar"><div id="bar-banheiro" class="fill blue"></div></div>
+                <div id="bar-banheiro" class="fill blue"></div>
+                <span class="btn-label">🚽 Banheiro</span>
+            </div>
+
+            <!-- Linha 2: Energia (Amarelo) e Alegria (Vermelho) -->
+            <div class="bar-container" id="btn-sleep">
+                <div id="bar-energia" class="fill yellow"></div>
+                <span class="btn-label">⚡ Energia</span>
             </div>
             <div class="bar-container" id="btn-fun">
-                <span>😂 Alegria</span>
-                <div class="bar"><div id="bar-alegria" class="fill red"></div></div>
+                <div id="bar-alegria" class="fill red"></div>
+                <span class="btn-label">😂 Alegria</span>
             </div>
         </div>
     </div>
 
-    <!-- Firebase SDK (Versão 8 Compat para facilitar a integração direta) -->
+    <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
     
-    <!-- Nosso código de lógica -->
     <script src="pet.js"></script>
 </body>
 </html>
