@@ -52,18 +52,16 @@
         .map-pin-dot { width: 14px; height: 14px; border-radius: 50%; background: #f43f5e; border: 2.5px solid #fff; box-shadow: 0 0 14px #f43f5e; }
         .maplibregl-ctrl-attrib { display: none !important; }
 
-        /* Estilos da Tela de Boas Vindas e Transição Netflix */
-        .welcome-fade-out { opacity: 0 !important; pointer-events: none; }
-        
+        /* Animação Netflix Fluida e Contínua */
         .netflix-anim {
-            animation: netflixZoomOut 2.5s cubic-bezier(0.75, 0, 0.25, 1) forwards;
+            animation: netflixZoom 2.8s ease-in forwards;
         }
 
-        @keyframes netflixZoomOut {
+        @keyframes netflixZoom {
             0% { transform: scale(0.8); opacity: 0; }
-            15% { transform: scale(1); opacity: 1; }
-            60% { transform: scale(1.2); opacity: 1; filter: blur(0px); }
-            100% { transform: scale(25); opacity: 0; filter: blur(5px); }
+            10% { transform: scale(1); opacity: 1; }
+            40% { transform: scale(1); opacity: 1; } /* Pausa para ver o M antes do zoom */
+            100% { transform: scale(50); opacity: 0; } /* Zoom massivo e contínuo */
         }
 
         /* Truque para remover o fundo preto do Logo no Menu Lateral */
@@ -75,7 +73,7 @@
     <!-- ========================================== -->
     <!-- TELA DE BOAS-VINDAS (ESTILO NETFLIX) -->
     <!-- ========================================== -->
-    <div id="welcome-screen" class="fixed inset-0 z-[100] bg-[#141414] flex flex-col items-center justify-center transition-opacity duration-1000">
+    <div id="welcome-screen" class="fixed inset-0 z-[100] bg-[#141414] flex flex-col items-center justify-center">
         <h1 class="text-3xl md:text-5xl font-semibold text-white mb-12 tracking-tight text-center px-4">Quem está acessando?</h1>
         
         <div class="flex gap-8 md:gap-16">
@@ -103,8 +101,9 @@
     <!-- ========================================== -->
     <!-- TELA DE TRANSIÇÃO (O "TUDUM") -->
     <!-- ========================================== -->
-    <div id="netflix-transition" class="fixed inset-0 z-[150] bg-black hidden flex items-center justify-center pointer-events-none">
-        <img src="34.png" id="m-logo" class="w-40 md:w-56 opacity-0">
+    <div id="netflix-transition" class="fixed inset-0 z-[200] bg-[#000000] hidden flex items-center justify-center pointer-events-none" style="opacity: 0; transition: opacity 0.5s ease;">
+        <!-- will-change garante que o celular use aceleração de hardware para não travar -->
+        <img src="34.png" id="m-logo" class="w-32 md:w-48 opacity-0" style="will-change: transform, opacity;">
     </div>
 
 
@@ -358,23 +357,39 @@
             
             msgElement.classList.remove('opacity-0');
             
-            // Etapa 1: Apaga a tela de perfis
+            // Espera 1.2s para ler a saudação
             setTimeout(() => {
-                screenElement.classList.add('welcome-fade-out');
+                // Traz a tela preta por CIMA de tudo (sem opacidade ainda)
+                transScreen.classList.remove('hidden');
                 
-                // Etapa 2: Mostra a tela preta com o Logo e inicia a animação
+                // Pequeno delay para o CSS aplicar a transição suave para preto
                 setTimeout(() => {
-                    screenElement.style.display = 'none';
-                    transScreen.classList.remove('hidden');
-                    mLogo.classList.add('netflix-anim');
+                    transScreen.style.opacity = '1';
                     
-                    // Etapa 3: Apaga a tela de transição para revelar o site
+                    // Quando a tela estiver 100% preta (depois de 0.5s)
                     setTimeout(() => {
-                        transScreen.style.display = 'none';
-                    }, 2400); // Duração da animação
-
-                }, 1000);
-            }, 1200);
+                        // Esconde os perfis (o lobby já está montado atrás da tela preta)
+                        screenElement.style.display = 'none';
+                        
+                        // Dispara a animação fluida do M
+                        mLogo.classList.add('netflix-anim');
+                        
+                        // Espera o Zoom completar (aprox 2.6s)
+                        setTimeout(() => {
+                            // Apaga a tela preta revelando o site
+                            transScreen.style.opacity = '0';
+                            
+                            // Remove a tela preta do fluxo
+                            setTimeout(() => {
+                                transScreen.style.display = 'none';
+                            }, 1000);
+                        }, 2600);
+                        
+                    }, 500); // Fim do fade para preto
+                    
+                }, 50); 
+                
+            }, 1200); // Fim do tempo de leitura da saudação
         }
 
         const dateBeijo = new Date(2023, 7, 21, 0, 0, 0);
