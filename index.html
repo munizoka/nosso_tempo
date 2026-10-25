@@ -8,8 +8,9 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://unpkg.com/maplibre-gl@5.1.0/dist/maplibre-gl.css" rel="stylesheet" />
-    <script src="https://unpkg.com/maplibre-gl@5.1.0/dist/maplibre-gl.js"></script>
+    <!-- Versão do Mapa Corrigida para 3.6.2, que é super estável -->
+    <link href="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css" rel="stylesheet" />
+    <script src="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js"></script>
     <style>
         body { font-family: 'Inter', sans-serif; background: #09090b; color: #fafafa; margin: 0; overflow-x: hidden; -webkit-font-smoothing: antialiased; }
         ::-webkit-scrollbar { width: 6px; height: 6px; }
@@ -121,7 +122,6 @@
     <div id="netflix-transition" class="fixed inset-0 z-[200] bg-[#000000] hidden flex items-center justify-center pointer-events-none" style="opacity: 0; transition: opacity 0.5s ease;">
         <img src="34.png" id="m-logo" class="w-32 md:w-48 opacity-0" style="will-change: transform, opacity;">
     </div>
-
 
     <canvas id="bg-particles" class="fixed inset-0 pointer-events-none z-0 opacity-40"></canvas>
     <div id="ambient-light" class="ambient-glow top-1/4 left-1/2 bg-rose-500"></div>
@@ -242,8 +242,8 @@
         <main class="flex-1 flex flex-col items-center justify-center p-4 md:p-6 max-w-4xl mx-auto w-full">
 
             <!-- ABA 1: BEIJO -->
-            <div id="view-beijo" class="tab-view w-full text-center space-y-8">
-                <div class="space-y-2">
+            <div id="view-beijo" class="tab-view w-full text-center space-y-10">
+                <div class="space-y-3">
                     <button onclick="spawnHearts(event)" class="inline-block px-4 py-1.5 rounded-full bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs font-semibold uppercase tracking-wider mb-2 hover:scale-105 transition-all">✨ Primeiro Beijo</button>
                     <h1 onclick="spawnHearts(event)" class="text-3xl md:text-5xl font-semibold tracking-tight text-white cursor-pointer select-none">Tempo juntos no total</h1>
                     <p class="text-zinc-400 text-sm md:text-base">Desde 21 de Agosto de 2023</p>
@@ -252,8 +252,8 @@
             </div>
 
             <!-- ABA 2: NAMORO -->
-            <div id="view-namoro" class="tab-view w-full text-center space-y-8 hidden">
-                <div class="space-y-2">
+            <div id="view-namoro" class="tab-view w-full text-center space-y-10 hidden">
+                <div class="space-y-3">
                     <button onclick="spawnHearts(event)" class="inline-block px-4 py-1.5 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-300 text-xs font-semibold uppercase tracking-wider mb-2 hover:scale-105 transition-all">💍 Oficialmente Juntos</button>
                     <h1 onclick="spawnHearts(event)" class="text-3xl md:text-5xl font-semibold tracking-tight text-white cursor-pointer select-none">Tempo de namoro</h1>
                     <p class="text-zinc-400 text-sm md:text-base">Desde 07 de Maio de 2024</p>
@@ -531,7 +531,7 @@
         }
 
         // ==========================================
-        // LÓGICA DA TRANSIÇÃO NETFLIX + ÁUDIO
+        // LÓGICA DA TRANSIÇÃO NETFLIX + ÁUDIO (RESOLVIDO PARA CELULAR)
         // ==========================================
         function enterSite(user) {
             const msgElement = document.getElementById('welcome-msg');
@@ -539,6 +539,20 @@
             const transScreen = document.getElementById('netflix-transition');
             const mLogo = document.getElementById('m-logo');
             const tudumAudio = document.getElementById('tudum-audio');
+            const bgMusic = document.getElementById('bg-music');
+            const volSlider = document.getElementById('volume-slider');
+
+            // [TRUQUE PARA CELULAR]: Iniciar o áudio imediatamente no clique, mas mudo!
+            bgMusic.volume = 0;
+            bgMusic.play().catch(e => console.log(e));
+
+            // Para garantir que o Tudum também destrave no iOS
+            tudumAudio.volume = 0;
+            tudumAudio.play().then(() => {
+                tudumAudio.pause();
+                tudumAudio.currentTime = 0;
+                tudumAudio.volume = 1; // Restaura para quando for tocar de verdade
+            }).catch(e => console.log(e));
             
             if (user === 'Vitoria') {
                 msgElement.textContent = "Olá, gatinha";
@@ -553,11 +567,17 @@
                     transScreen.style.opacity = '1';
                     setTimeout(() => {
                         screenElement.style.display = 'none';
+                        
+                        // Toca o Tudum de verdade
                         tudumAudio.play().catch(e => console.log("Áudio bloqueado", e));
                         mLogo.classList.add('netflix-anim');
+                        
                         setTimeout(() => {
                             transScreen.style.opacity = '0';
-                            bgMusic.play().catch(e => console.log("Áudio ambiente bloqueado", e));
+                            
+                            // Aumenta o volume da música ambiente de volta ao nível selecionado
+                            bgMusic.volume = parseFloat(volSlider.value);
+                            
                             setTimeout(() => {
                                 transScreen.style.display = 'none';
                             }, 1000);
@@ -697,10 +717,11 @@
 
         function initHDGlobe() {
             if (hdMap) { hdMap.resize(); return; }
+            // Correção no Mapa: A biblioteca maplibre não suporta projection: globe. Removido para funcionar corretamente!
             hdMap = new maplibregl.Map({
                 container: 'hd-globe-map', center: [-45.5, -24.8], zoom: 4.2, pitch: 25,
                 style: {
-                    version: 8, projection: { type: 'globe' },
+                    version: 8,
                     sources: {
                         'sat-tiles': { type: 'raster', tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'], tileSize: 256, maxzoom: 19 },
                         'labels-tiles': { type: 'raster', tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}'], tileSize: 256, maxzoom: 19 },
