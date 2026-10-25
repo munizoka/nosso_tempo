@@ -78,19 +78,31 @@
         
         <div class="flex gap-8 md:gap-16">
             <!-- Perfil Gabriel -->
-            <div class="group flex flex-col items-center cursor-pointer" onclick="enterSite('Gabriel')">
-                <div class="w-28 h-28 md:w-36 md:h-36 rounded-xl bg-zinc-800 border-2 border-transparent group-hover:border-white transition-all overflow-hidden flex items-center justify-center text-5xl shadow-xl group-hover:scale-105">
-                    👦🏻
+            <div class="relative group flex flex-col items-center">
+                <!-- Botão de Editar Escondido para trocar foto -->
+                <button onclick="document.getElementById('upload-gabriel').click()" class="absolute -top-3 -right-3 w-8 h-8 bg-zinc-700 hover:bg-rose-500 rounded-full text-white text-sm flex items-center justify-center border-2 border-[#141414] z-10 transition-colors shadow-lg cursor-pointer">✏️</button>
+                <input type="file" id="upload-gabriel" class="hidden" accept="image/*" onchange="uploadAvatar(event, 'Gabriel')">
+                
+                <div class="cursor-pointer flex flex-col items-center" onclick="enterSite('Gabriel')">
+                    <div id="avatar-gabriel" class="w-28 h-28 md:w-36 md:h-36 rounded-xl bg-zinc-800 border-2 border-transparent group-hover:border-white transition-all overflow-hidden flex items-center justify-center text-5xl shadow-xl group-hover:scale-105">
+                        👦🏻
+                    </div>
+                    <span class="text-zinc-400 group-hover:text-white mt-4 font-medium transition-colors text-lg">Gabriel</span>
                 </div>
-                <span class="text-zinc-400 group-hover:text-white mt-4 font-medium transition-colors text-lg">Gabriel</span>
             </div>
             
             <!-- Perfil Vitoria -->
-            <div class="group flex flex-col items-center cursor-pointer" onclick="enterSite('Vitoria')">
-                <div class="w-28 h-28 md:w-36 md:h-36 rounded-xl bg-zinc-800 border-2 border-transparent group-hover:border-white transition-all overflow-hidden flex items-center justify-center text-5xl shadow-xl group-hover:scale-105">
-                    👧🏻
+            <div class="relative group flex flex-col items-center">
+                <!-- Botão de Editar Escondido para trocar foto -->
+                <button onclick="document.getElementById('upload-vitoria').click()" class="absolute -top-3 -right-3 w-8 h-8 bg-zinc-700 hover:bg-rose-500 rounded-full text-white text-sm flex items-center justify-center border-2 border-[#141414] z-10 transition-colors shadow-lg cursor-pointer">✏️</button>
+                <input type="file" id="upload-vitoria" class="hidden" accept="image/*" onchange="uploadAvatar(event, 'Vitoria')">
+                
+                <div class="cursor-pointer flex flex-col items-center" onclick="enterSite('Vitoria')">
+                    <div id="avatar-vitoria" class="w-28 h-28 md:w-36 md:h-36 rounded-xl bg-zinc-800 border-2 border-transparent group-hover:border-white transition-all overflow-hidden flex items-center justify-center text-5xl shadow-xl group-hover:scale-105">
+                        👧🏻
+                    </div>
+                    <span class="text-zinc-400 group-hover:text-white mt-4 font-medium transition-colors text-lg">Vitoria</span>
                 </div>
-                <span class="text-zinc-400 group-hover:text-white mt-4 font-medium transition-colors text-lg">Vitoria</span>
             </div>
         </div>
         
@@ -339,7 +351,84 @@
         </main>
     </div>
 
+    <!-- SDKs do Firebase (Usando a mesma configuração que você já tem no pet.js) -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+
+    <!-- O seu pet.js TEM que carregar aqui para inicializar o Firebase -->
+    <script src="pet.js"></script>
+
     <script>
+        // ==========================================
+        // SISTEMA DE UPLOAD E SINCRONIZAÇÃO DE FOTOS DE PERFIL (FIREBASE)
+        // ==========================================
+        
+        // Puxar as fotos da base de dados quando o site abre
+        function loadAvatares() {
+            // Verifica se o Firebase já foi carregado pelo pet.js
+            if(typeof firebase !== 'undefined' && firebase.apps.length > 0) {
+                const db = firebase.firestore();
+                
+                // O onSnapshot faz a magia de atualizar em tempo real na tela do outro
+                db.collection("config").doc("avatares").onSnapshot((doc) => {
+                    if (doc.exists) {
+                        const data = doc.data();
+                        if(data.Gabriel) {
+                            document.getElementById('avatar-gabriel').innerHTML = `<img src="${data.Gabriel}" class="w-full h-full object-cover">`;
+                        }
+                        if(data.Vitoria) {
+                            document.getElementById('avatar-vitoria').innerHTML = `<img src="${data.Vitoria}" class="w-full h-full object-cover">`;
+                        }
+                    }
+                });
+            } else {
+                // Se o Firebase ainda estiver a carregar, tenta de novo em meio segundo
+                setTimeout(loadAvatares, 500); 
+            }
+        }
+        
+        window.addEventListener('load', loadAvatares);
+
+        // Enviar a foto escolhida para a base de dados
+        function uploadAvatar(event, user) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = new Image();
+                img.onload = function() {
+                    // Comprimir a imagem (MUITO IMPORTANTE para não estoirar a base de dados)
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    canvas.width = 200; // Tamanho em pixels (pequeno e leve)
+                    canvas.height = 200;
+                    
+                    // Cortar a imagem em formato quadrado (tipo o cover do CSS)
+                    const size = Math.min(img.width, img.height);
+                    const sx = (img.width - size) / 2;
+                    const sy = (img.height - size) / 2;
+                    ctx.drawImage(img, sx, sy, size, size, 0, 0, 200, 200);
+                    
+                    // Converter para texto (Base64)
+                    const base64String = canvas.toDataURL('image/jpeg', 0.8);
+                    
+                    // Mostrar na tela instantaneamente para quem está a clicar
+                    document.getElementById(`avatar-${user.toLowerCase()}`).innerHTML = `<img src="${base64String}" class="w-full h-full object-cover">`;
+                    
+                    // Salvar no Firebase
+                    const db = firebase.firestore();
+                    db.collection("config").doc("avatares").set({
+                        [user]: base64String
+                    }, { merge: true })
+                    .catch((error) => alert("Erro ao guardar a foto: " + error.message));
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
         // ==========================================
         // FUNÇÃO DE ENTRADA (LÓGICA DA TRANSIÇÃO NETFLIX)
         // ==========================================
@@ -357,39 +446,26 @@
             
             msgElement.classList.remove('opacity-0');
             
-            // Espera 1.2s para ler a saudação
             setTimeout(() => {
-                // Traz a tela preta por CIMA de tudo (sem opacidade ainda)
                 transScreen.classList.remove('hidden');
                 
-                // Pequeno delay para o CSS aplicar a transição suave para preto
                 setTimeout(() => {
                     transScreen.style.opacity = '1';
                     
-                    // Quando a tela estiver 100% preta (depois de 0.5s)
                     setTimeout(() => {
-                        // Esconde os perfis (o lobby já está montado atrás da tela preta)
                         screenElement.style.display = 'none';
-                        
-                        // Dispara a animação fluida do M
                         mLogo.classList.add('netflix-anim');
                         
-                        // Espera o Zoom completar (aprox 2.6s)
                         setTimeout(() => {
-                            // Apaga a tela preta revelando o site
                             transScreen.style.opacity = '0';
                             
-                            // Remove a tela preta do fluxo
                             setTimeout(() => {
                                 transScreen.style.display = 'none';
                             }, 1000);
-                        }, 2600);
-                        
-                    }, 500); // Fim do fade para preto
-                    
+                        }, 2600); 
+                    }, 500); 
                 }, 50); 
-                
-            }, 1200); // Fim do tempo de leitura da saudação
+            }, 1200); 
         }
 
         const dateBeijo = new Date(2023, 7, 21, 0, 0, 0);
@@ -402,6 +478,7 @@
         const tbEnemy1 = new Image(); tbEnemy1.src = '14.jpeg';
         const tbEnemy2 = new Image(); tbEnemy2.src = '15.jpeg';
 
+        // window.addEventListener('load', ...) já existe e carregamos os avatares junto.
         window.addEventListener('load', () => {
             allPhotos.forEach(src => { const img = new Image(); img.decoding = 'async'; img.src = src; });
         });
