@@ -276,8 +276,12 @@
                         <button onclick="spawnHearts(event)" class="inline-block px-3.5 py-1 rounded-full bg-orange-500/10 border border-orange-500/20 text-orange-300 text-xs font-medium mb-2 hover:scale-105 transition-all">🎈 Vitoria's Birthday</button>
                         <h2 class="text-2xl md:text-3xl font-semibold text-white">04 de Setembro de 1999</h2>
                     </div>
-                    <!-- (As fotos aqui estão usando as fotos globais que você já tem, pode trocar depois se quiser) -->
                     <div id="timer-niver-vi" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 md:gap-4 max-w-3xl mx-auto"></div>
+                    
+                    <!-- Novo Contador: Next Birthday Vitoria -->
+                    <div class="mt-4 inline-block px-5 py-2.5 rounded-xl bg-[#141418] border border-zinc-800 text-sm text-zinc-400 shadow-md">
+                        ⏳ Next birthday in: <span id="cd-vi-text" class="text-orange-400 font-semibold tracking-wide ml-1">Carregando...</span>
+                    </div>
                 </div>
                 
                 <!-- Divisor Bonitinho -->
@@ -290,6 +294,11 @@
                         <h2 class="text-2xl md:text-3xl font-semibold text-white">03 de Novembro de 2000</h2>
                     </div>
                     <div id="timer-niver-gabi" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 md:gap-4 max-w-3xl mx-auto"></div>
+
+                    <!-- Novo Contador: Next Birthday Gabriel -->
+                    <div class="mt-4 inline-block px-5 py-2.5 rounded-xl bg-[#141418] border border-zinc-800 text-sm text-zinc-400 shadow-md">
+                        ⏳ Next birthday in: <span id="cd-gabi-text" class="text-orange-400 font-semibold tracking-wide ml-1">Carregando...</span>
+                    </div>
                 </div>
 
             </div>
@@ -551,11 +560,11 @@
             }, 1200); 
         }
 
-        // Datas
+        // Datas de Início e Nascimento
         const dateBeijo = new Date(2023, 7, 21, 0, 0, 0);
         const dateNamoro = new Date(2024, 4, 7, 0, 0, 0);
-        const dateNiverVi = new Date(1999, 8, 4, 0, 0, 0); // Setembro é mês 8 (inicia no 0)
-        const dateNiverGabi = new Date(2000, 10, 3, 0, 0, 0); // Novembro é mês 10
+        const dateNiverVi = new Date(1999, 8, 4, 0, 0, 0); 
+        const dateNiverGabi = new Date(2000, 10, 3, 0, 0, 0);
 
         const photosBeijo = ['1.png', '2.jpeg', '3.jpg', '4.jpg', '5.jpg', '6.jpg'];
         const photosNamoro = ['7.jpg', '8.jpg', '9.jpg', '10.jpg', '11.jpg', '12.jpg'];
@@ -569,6 +578,7 @@
             allPhotos.forEach(src => { const img = new Image(); img.decoding = 'async'; img.src = src; });
         });
 
+        // Calcula tempo decorrido no passado
         function calculateElapsedTime(start) {
             const now = new Date();
             let y = now.getFullYear() - start.getFullYear(), m = now.getMonth() - start.getMonth(), d = now.getDate() - start.getDate(),
@@ -579,6 +589,35 @@
             if (d < 0) { d += new Date(now.getFullYear(), now.getMonth(), 0).getDate(); m--; }
             if (m < 0) { m += 12; y--; }
             return [y, m, d, h, min, s];
+        }
+
+        // Calcula contagem regressiva para o futuro
+        function calculateCountdown(birthMonth, birthDay) {
+            const now = new Date();
+            // Mês do javascript é 0-11.
+            let target = new Date(now.getFullYear(), birthMonth, birthDay);
+            
+            // Se já passou o aniversário este ano, alvo é no próximo ano
+            if (now.getTime() > target.getTime()) {
+                target.setFullYear(now.getFullYear() + 1);
+            }
+
+            let m = target.getMonth() - now.getMonth();
+            let d = target.getDate() - now.getDate();
+            let h = target.getHours() - now.getHours();
+            let min = target.getMinutes() - now.getMinutes();
+            let s = target.getSeconds() - now.getSeconds();
+
+            if (s < 0) { s += 60; min--; }
+            if (min < 0) { min += 60; h--; }
+            if (h < 0) { h += 24; d--; }
+            if (d < 0) {
+                let prevMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+                d += prevMonth.getDate();
+                m--;
+            }
+            if (m < 0) { m += 12; }
+            return [m, d, h, min, s];
         }
 
         const domCache = {};
@@ -599,7 +638,8 @@
 
         function updateAllTimers() {
             if (document.hidden) return;
-            // Atualizando todos os contadores da tela!
+            
+            // Atualiza os contadores clássicos (Tempo passado)
             [['timer-beijo', dateBeijo], ['timer-namoro', dateNamoro], ['timer-niver-vi', dateNiverVi], ['timer-niver-gabi', dateNiverGabi]].forEach(([id, dt]) => {
                 const vals = calculateElapsedTime(dt);
                 vals.forEach((v, i) => {
@@ -607,12 +647,20 @@
                     if (domCache[id][i].textContent !== str) domCache[id][i].textContent = str;
                 });
             });
+
+            // Atualiza o texto do "Next Birthday" da Vitoria (Mês 8, Dia 4)
+            const cdVi = calculateCountdown(8, 4);
+            document.getElementById('cd-vi-text').textContent = `${cdVi[0]} meses, ${cdVi[1]} dias, ${cdVi[2]}h ${cdVi[3]}m ${cdVi[4]}s`;
+
+            // Atualiza o texto do "Next Birthday" do Gabriel (Mês 10, Dia 3)
+            const cdGabi = calculateCountdown(10, 3);
+            document.getElementById('cd-gabi-text').textContent = `${cdGabi[0]} meses, ${cdGabi[1]} dias, ${cdGabi[2]}h ${cdGabi[3]}m ${cdGabi[4]}s`;
         }
 
         initTimerCards('timer-beijo', photosBeijo);
         initTimerCards('timer-namoro', photosNamoro);
-        initTimerCards('timer-niver-vi', allPhotos); // Usando fotos variadas por enquanto
-        initTimerCards('timer-niver-gabi', allPhotos); // Pode criar novas arrays de fotos no futuro se quiser
+        initTimerCards('timer-niver-vi', allPhotos); 
+        initTimerCards('timer-niver-gabi', allPhotos); 
         
         setInterval(updateAllTimers, 1000);
         updateAllTimers();
