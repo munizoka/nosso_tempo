@@ -215,7 +215,6 @@
         <!-- CABEÇALHO SUPERIOR (Com Caixa de Volume Animada) -->
         <header class="p-4 flex items-center sticky top-0 bg-[#09090b]/70 backdrop-blur-md z-20 justify-between">
             
-            <!-- Esquerda do Cabeçalho -->
             <div class="flex items-center gap-3">
                 <button onclick="toggleSidebar()" class="p-2.5 rounded-xl bg-zinc-900/90 border border-zinc-800 hover:bg-zinc-800 text-zinc-300 active:scale-95 transition-all">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></svg>
@@ -223,21 +222,16 @@
                 <span id="header-title" class="text-sm font-medium text-zinc-400">Tempo juntos no total</span>
             </div>
 
-            <!-- Direita do Cabeçalho (Controle de Volume Suave) -->
             <div class="relative flex items-center">
                 <!-- Caixa da Barra de Volume animada -->
                 <div id="volume-popup" class="absolute right-14 bg-[#141418] border border-zinc-800 p-2.5 rounded-xl shadow-2xl flex items-center gap-3 w-52 vol-popup">
-                    <!-- Botão de Mutar -->
                     <button onclick="setVolume(0)" class="text-lg hover:scale-110 transition-transform active:scale-95">🔈</button>
-                    <!-- Barra de Volume -->
                     <input type="range" id="volume-slider" min="0" max="1" step="0.01" value="0.4" class="w-full">
-                    <!-- Botão de Volume Máximo -->
                     <button onclick="setVolume(1)" class="text-lg hover:scale-110 transition-transform active:scale-95">🔊</button>
                 </div>
                 <!-- Botão de Som Principal -->
                 <button id="btn-volume" onclick="toggleVolume()" class="p-2.5 rounded-xl bg-zinc-900/90 border border-zinc-800 hover:bg-zinc-800 text-zinc-300 active:scale-95 transition-all flex items-center justify-center text-rose-500 z-10">
                     <svg id="vol-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <!-- Ícone de volume -->
                         <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
                         <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
                     </svg>
@@ -248,56 +242,74 @@
         <main class="flex-1 flex flex-col items-center justify-center p-4 md:p-6 max-w-4xl mx-auto w-full">
 
             <!-- ABA 1: BEIJO -->
-            <div id="view-beijo" class="tab-view w-full text-center space-y-8">
-                <div class="space-y-2">
-                    <button onclick="spawnHearts(event)" class="inline-block px-3.5 py-1 rounded-full bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs font-medium mb-2 hover:scale-105 transition-all">✨ Primeiro Beijo</button>
+            <div id="view-beijo" class="tab-view w-full text-center space-y-10">
+                <div class="space-y-3">
+                    <button onclick="spawnHearts(event)" class="inline-block px-4 py-1.5 rounded-full bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs font-semibold uppercase tracking-wider mb-2 hover:scale-105 transition-all">✨ Primeiro Beijo</button>
                     <h1 onclick="spawnHearts(event)" class="text-3xl md:text-5xl font-semibold tracking-tight text-white cursor-pointer select-none">Tempo juntos no total</h1>
                     <p class="text-zinc-400 text-sm md:text-base">Desde 21 de Agosto de 2023</p>
+                    <p class="text-rose-400/80 text-sm italic font-medium max-w-sm mx-auto pt-2">"Cada segundo ao seu lado é o meu momento favorito."</p>
                 </div>
                 <div id="timer-beijo" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 md:gap-4 max-w-3xl mx-auto"></div>
             </div>
 
             <!-- ABA 2: NAMORO -->
-            <div id="view-namoro" class="tab-view w-full text-center space-y-8 hidden">
-                <div class="space-y-2">
-                    <button onclick="spawnHearts(event)" class="inline-block px-3.5 py-1 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-300 text-xs font-medium mb-2 hover:scale-105 transition-all">💍 Oficialmente Juntos</button>
+            <div id="view-namoro" class="tab-view w-full text-center space-y-10 hidden">
+                <div class="space-y-3">
+                    <button onclick="spawnHearts(event)" class="inline-block px-4 py-1.5 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-300 text-xs font-semibold uppercase tracking-wider mb-2 hover:scale-105 transition-all">💍 Oficialmente Juntos</button>
                     <h1 onclick="spawnHearts(event)" class="text-3xl md:text-5xl font-semibold tracking-tight text-white cursor-pointer select-none">Tempo de namoro</h1>
                     <p class="text-zinc-400 text-sm md:text-base">Desde 07 de Maio de 2024</p>
+                    <p class="text-purple-400/80 text-sm italic font-medium max-w-sm mx-auto pt-2">"O dia em que a nossa história ganhou um novo capítulo."</p>
                 </div>
                 <div id="timer-namoro" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 md:gap-4 max-w-3xl mx-auto"></div>
             </div>
 
-            <!-- NOVA ABA 3: ANIVERSÁRIOS -->
-            <div id="view-niver" class="tab-view w-full text-center space-y-12 hidden">
+            <!-- ABA 3: ANIVERSÁRIOS -->
+            <div id="view-niver" class="tab-view w-full text-center space-y-14 hidden">
                 
                 <!-- Vitória -->
-                <div class="space-y-6">
-                    <div class="space-y-2">
-                        <button onclick="spawnHearts(event)" class="inline-block px-3.5 py-1 rounded-full bg-orange-500/10 border border-orange-500/20 text-orange-300 text-xs font-medium mb-2 hover:scale-105 transition-all">🎈 Vitoria's Birthday</button>
-                        <h2 class="text-2xl md:text-3xl font-semibold text-white">04 de Setembro de 1999</h2>
+                <div class="space-y-6 relative">
+                    <div class="space-y-3">
+                        <button onclick="spawnHearts(event)" class="inline-block px-4 py-1.5 rounded-full bg-orange-500/10 border border-orange-500/20 text-orange-300 text-xs font-semibold uppercase tracking-wider mb-2 hover:scale-105 transition-all">🎈 Vitoria's Birthday</button>
+                        <h2 class="text-3xl md:text-4xl font-semibold text-white tracking-tight">04 de Setembro de 1999</h2>
                     </div>
                     <div id="timer-niver-vi" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 md:gap-4 max-w-3xl mx-auto"></div>
                     
-                    <!-- Novo Contador: Next Birthday Vitoria -->
-                    <div class="mt-4 inline-block px-5 py-2.5 rounded-xl bg-[#141418] border border-zinc-800 text-sm text-zinc-400 shadow-md">
-                        ⏳ Next birthday in: <span id="cd-vi-text" class="text-orange-400 font-semibold tracking-wide ml-1">Carregando...</span>
+                    <!-- Contador Premium Next Birthday Vitoria -->
+                    <div class="mt-6 flex flex-col items-center justify-center">
+                        <div class="px-5 py-3 rounded-2xl bg-[#141418] border border-zinc-800/80 shadow-xl flex items-center gap-3">
+                            <div class="w-8 h-8 rounded-full bg-orange-500/10 flex items-center justify-center text-orange-400 text-lg">⏳</div>
+                            <div class="text-left">
+                                <p class="text-[10px] text-zinc-500 uppercase tracking-widest font-semibold">Próximo Aniversário</p>
+                                <p id="cd-vi-text" class="text-sm font-medium text-zinc-200">...</p>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 
                 <!-- Divisor Bonitinho -->
-                <hr class="border-zinc-800/60 w-1/2 mx-auto">
+                <div class="flex items-center justify-center gap-4 w-1/2 mx-auto opacity-50">
+                    <hr class="border-zinc-800 flex-1">
+                    <span class="text-zinc-600 text-xs">✨</span>
+                    <hr class="border-zinc-800 flex-1">
+                </div>
 
                 <!-- Gabriel -->
-                <div class="space-y-6">
-                    <div class="space-y-2">
-                        <button onclick="spawnHearts(event)" class="inline-block px-3.5 py-1 rounded-full bg-orange-500/10 border border-orange-500/20 text-orange-300 text-xs font-medium mb-2 hover:scale-105 transition-all">🎉 Gabriel's Birthday</button>
-                        <h2 class="text-2xl md:text-3xl font-semibold text-white">03 de Novembro de 2000</h2>
+                <div class="space-y-6 relative">
+                    <div class="space-y-3">
+                        <button onclick="spawnHearts(event)" class="inline-block px-4 py-1.5 rounded-full bg-orange-500/10 border border-orange-500/20 text-orange-300 text-xs font-semibold uppercase tracking-wider mb-2 hover:scale-105 transition-all">🎉 Gabriel's Birthday</button>
+                        <h2 class="text-3xl md:text-4xl font-semibold text-white tracking-tight">03 de Novembro de 2000</h2>
                     </div>
                     <div id="timer-niver-gabi" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 md:gap-4 max-w-3xl mx-auto"></div>
 
-                    <!-- Novo Contador: Next Birthday Gabriel -->
-                    <div class="mt-4 inline-block px-5 py-2.5 rounded-xl bg-[#141418] border border-zinc-800 text-sm text-zinc-400 shadow-md">
-                        ⏳ Next birthday in: <span id="cd-gabi-text" class="text-orange-400 font-semibold tracking-wide ml-1">Carregando...</span>
+                    <!-- Contador Premium Next Birthday Gabriel -->
+                    <div class="mt-6 flex flex-col items-center justify-center">
+                        <div class="px-5 py-3 rounded-2xl bg-[#141418] border border-zinc-800/80 shadow-xl flex items-center gap-3">
+                            <div class="w-8 h-8 rounded-full bg-orange-500/10 flex items-center justify-center text-orange-400 text-lg">⏳</div>
+                            <div class="text-left">
+                                <p class="text-[10px] text-zinc-500 uppercase tracking-widest font-semibold">Próximo Aniversário</p>
+                                <p id="cd-gabi-text" class="text-sm font-medium text-zinc-200">...</p>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -440,14 +452,12 @@
             popup.classList.toggle('show');
         }
 
-        // Função mágica que os botões (🔈 e 🔊) chamam
         function setVolume(val) {
             volSlider.value = val;
             bgMusic.volume = val;
             updateVolIcon(val);
         }
 
-        // Atualiza o desenho do som quando a barra é arrastada
         volSlider.addEventListener('input', (e) => {
             setVolume(parseFloat(e.target.value));
         });
@@ -462,7 +472,6 @@
             }
         }
 
-        // Fecha a caixinha se clicar fora
         document.addEventListener('click', (e) => {
             const popup = document.getElementById('volume-popup');
             const btn = document.getElementById('btn-volume');
@@ -594,10 +603,8 @@
         // Calcula contagem regressiva para o futuro
         function calculateCountdown(birthMonth, birthDay) {
             const now = new Date();
-            // Mês do javascript é 0-11.
             let target = new Date(now.getFullYear(), birthMonth, birthDay);
             
-            // Se já passou o aniversário este ano, alvo é no próximo ano
             if (now.getTime() > target.getTime()) {
                 target.setFullYear(now.getFullYear() + 1);
             }
@@ -639,7 +646,7 @@
         function updateAllTimers() {
             if (document.hidden) return;
             
-            // Atualiza os contadores clássicos (Tempo passado)
+            // Atualiza Tempo passado
             [['timer-beijo', dateBeijo], ['timer-namoro', dateNamoro], ['timer-niver-vi', dateNiverVi], ['timer-niver-gabi', dateNiverGabi]].forEach(([id, dt]) => {
                 const vals = calculateElapsedTime(dt);
                 vals.forEach((v, i) => {
@@ -648,12 +655,11 @@
                 });
             });
 
-            // Atualiza o texto do "Next Birthday" da Vitoria (Mês 8, Dia 4)
-            const cdVi = calculateCountdown(8, 4);
+            // Atualiza Tempo Futuro (Próximos aniversários)
+            const cdVi = calculateCountdown(8, 4); // Mês 8 = Setembro
             document.getElementById('cd-vi-text').textContent = `${cdVi[0]} meses, ${cdVi[1]} dias, ${cdVi[2]}h ${cdVi[3]}m ${cdVi[4]}s`;
 
-            // Atualiza o texto do "Next Birthday" do Gabriel (Mês 10, Dia 3)
-            const cdGabi = calculateCountdown(10, 3);
+            const cdGabi = calculateCountdown(10, 3); // Mês 10 = Novembro
             document.getElementById('cd-gabi-text').textContent = `${cdGabi[0]} meses, ${cdGabi[1]} dias, ${cdGabi[2]}h ${cdGabi[3]}m ${cdGabi[4]}s`;
         }
 
@@ -662,8 +668,9 @@
         initTimerCards('timer-niver-vi', allPhotos); 
         initTimerCards('timer-niver-gabi', allPhotos); 
         
-        setInterval(updateAllTimers, 1000);
+        // Garante que o texto já carregue imediatamente antes de o relógio iniciar
         updateAllTimers();
+        setInterval(updateAllTimers, 1000);
 
         /* --- GLOBO 3D EM ALTA RESOLUÇÃO --- */
         const visitedPlaces = [
