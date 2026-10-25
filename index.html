@@ -69,8 +69,10 @@
 </head>
 <body class="flex h-screen overflow-hidden relative bg-[#09090b]">
 
-    <!-- AUDIO TUDUM -->
+    <!-- AUDIO TUDUM E MÚSICA AMBIENTE -->
+    <!-- Se o primeiro som não tocar, lembre-se de verificar se no GitHub está "audio 1.mp3" ou "audio 1.mp3.mp3" -->
     <audio id="tudum-audio" src="audio 1.mp3" preload="auto"></audio>
+    <audio id="bg-music" src="audio 2.mp3" loop preload="auto"></audio>
 
     <!-- TELA DE BOAS-VINDAS -->
     <div id="welcome-screen" class="fixed inset-0 z-[100] bg-[#141414] flex flex-col items-center justify-center transition-opacity duration-1000">
@@ -402,14 +404,18 @@
         }
 
         // ==========================================
-        // FUNÇÃO DE ENTRADA COM ÁUDIO
+        // FUNÇÃO DE ENTRADA COM ÁUDIO DUPLO
         // ==========================================
         function enterSite(user) {
             const msgElement = document.getElementById('welcome-msg');
             const screenElement = document.getElementById('welcome-screen');
             const transScreen = document.getElementById('netflix-transition');
             const mLogo = document.getElementById('m-logo');
-            const tudumAudio = document.getElementById('tudum-audio'); // <-- Captura o áudio
+            const tudumAudio = document.getElementById('tudum-audio');
+            const bgMusic = document.getElementById('bg-music'); 
+            
+            // Configurar o volume da música ambiente para ficar agradável (40%)
+            bgMusic.volume = 0.4;
             
             if (user === 'Vitoria') {
                 msgElement.textContent = "Olá, gatinha";
@@ -428,12 +434,15 @@
                     setTimeout(() => {
                         screenElement.style.display = 'none';
                         
-                        // DISPARA O SOM EXATAMENTE AQUI, JUNTO COM A ANIMAÇÃO
-                        tudumAudio.play().catch(e => console.log("Áudio bloqueado pelo navegador", e));
+                        // Toca o Tu-dum
+                        tudumAudio.play().catch(e => console.log("Áudio bloqueado", e));
                         mLogo.classList.add('netflix-anim');
                         
                         setTimeout(() => {
                             transScreen.style.opacity = '0';
+                            
+                            // INICIA A MÚSICA AMBIENTE AQUI (quando o lobby aparece)
+                            bgMusic.play().catch(e => console.log("Áudio ambiente bloqueado", e));
                             
                             setTimeout(() => {
                                 transScreen.style.display = 'none';
