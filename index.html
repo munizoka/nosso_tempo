@@ -60,26 +60,25 @@
         @keyframes netflixZoom {
             0% { transform: scale(0.8); opacity: 0; }
             10% { transform: scale(1); opacity: 1; }
-            40% { transform: scale(1); opacity: 1; } /* Pausa para ver o M antes do zoom */
-            100% { transform: scale(50); opacity: 0; } /* Zoom massivo e contínuo */
+            40% { transform: scale(1); opacity: 1; }
+            100% { transform: scale(50); opacity: 0; }
         }
 
-        /* Truque para remover o fundo preto do Logo no Menu Lateral */
         .blend-logo { mix-blend-mode: screen; }
     </style>
 </head>
 <body class="flex h-screen overflow-hidden relative bg-[#09090b]">
 
-    <!-- ========================================== -->
-    <!-- TELA DE BOAS-VINDAS (ESTILO NETFLIX) -->
-    <!-- ========================================== -->
-    <div id="welcome-screen" class="fixed inset-0 z-[100] bg-[#141414] flex flex-col items-center justify-center">
+    <!-- AUDIO TUDUM -->
+    <audio id="tudum-audio" src="audio 1.mp3" preload="auto"></audio>
+
+    <!-- TELA DE BOAS-VINDAS -->
+    <div id="welcome-screen" class="fixed inset-0 z-[100] bg-[#141414] flex flex-col items-center justify-center transition-opacity duration-1000">
         <h1 class="text-3xl md:text-5xl font-semibold text-white mb-12 tracking-tight text-center px-4">Quem está acessando?</h1>
         
         <div class="flex gap-8 md:gap-16">
             <!-- Perfil Gabriel -->
             <div class="relative group flex flex-col items-center">
-                <!-- Botão de Editar Escondido para trocar foto -->
                 <button onclick="document.getElementById('upload-gabriel').click()" class="absolute -top-3 -right-3 w-8 h-8 bg-zinc-700 hover:bg-rose-500 rounded-full text-white text-sm flex items-center justify-center border-2 border-[#141414] z-10 transition-colors shadow-lg cursor-pointer">✏️</button>
                 <input type="file" id="upload-gabriel" class="hidden" accept="image/*" onchange="uploadAvatar(event, 'Gabriel')">
                 
@@ -93,7 +92,6 @@
             
             <!-- Perfil Vitoria -->
             <div class="relative group flex flex-col items-center">
-                <!-- Botão de Editar Escondido para trocar foto -->
                 <button onclick="document.getElementById('upload-vitoria').click()" class="absolute -top-3 -right-3 w-8 h-8 bg-zinc-700 hover:bg-rose-500 rounded-full text-white text-sm flex items-center justify-center border-2 border-[#141414] z-10 transition-colors shadow-lg cursor-pointer">✏️</button>
                 <input type="file" id="upload-vitoria" class="hidden" accept="image/*" onchange="uploadAvatar(event, 'Vitoria')">
                 
@@ -106,22 +104,15 @@
             </div>
         </div>
         
-        <!-- Mensagem de Saudação -->
         <div id="welcome-msg" class="mt-12 text-rose-500 font-medium text-xl md:text-2xl h-8 opacity-0 transition-opacity duration-500"></div>
     </div>
 
-    <!-- ========================================== -->
-    <!-- TELA DE TRANSIÇÃO (O "TUDUM") -->
-    <!-- ========================================== -->
+    <!-- TELA DE TRANSIÇÃO -->
     <div id="netflix-transition" class="fixed inset-0 z-[200] bg-[#000000] hidden flex items-center justify-center pointer-events-none" style="opacity: 0; transition: opacity 0.5s ease;">
-        <!-- will-change garante que o celular use aceleração de hardware para não travar -->
         <img src="34.png" id="m-logo" class="w-32 md:w-48 opacity-0" style="will-change: transform, opacity;">
     </div>
 
 
-    <!-- ========================================== -->
-    <!-- CONTEÚDO PRINCIPAL DO SITE -->
-    <!-- ========================================== -->
     <canvas id="bg-particles" class="fixed inset-0 pointer-events-none z-0 opacity-40"></canvas>
     <div id="ambient-light" class="ambient-glow top-1/4 left-1/2 bg-rose-500"></div>
     <div id="sidebar-backdrop" onclick="toggleSidebar(false)" class="fixed inset-0 bg-black/60 z-20 hidden md:hidden backdrop-blur-sm"></div>
@@ -138,7 +129,6 @@
     <!-- Barra Lateral -->
     <aside id="sidebar" class="bg-[#121215]/90 backdrop-blur-xl border-r border-zinc-800/80 w-72 flex-shrink-0 flex flex-col transition-all duration-300 fixed md:relative z-30 h-full -translate-x-full md:translate-x-0">
         
-        <!-- CABEÇALHO DO MENU LATERAL (LOGO M) -->
         <div class="p-4 flex items-center justify-between border-b border-zinc-800/60">
             <div class="flex items-center pl-2">
                 <img src="34.png" alt="M" class="h-6 object-contain blend-logo">
@@ -351,26 +341,16 @@
         </main>
     </div>
 
-    <!-- SDKs do Firebase (Usando a mesma configuração que você já tem no pet.js) -->
+    <!-- SDKs do Firebase -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
-
-    <!-- O seu pet.js TEM que carregar aqui para inicializar o Firebase -->
     <script src="pet.js"></script>
 
     <script>
-        // ==========================================
-        // SISTEMA DE UPLOAD E SINCRONIZAÇÃO DE FOTOS DE PERFIL (FIREBASE)
-        // ==========================================
-        
-        // Puxar as fotos da base de dados quando o site abre
         function loadAvatares() {
-            // Verifica se o Firebase já foi carregado pelo pet.js
             if(typeof firebase !== 'undefined' && firebase.apps.length > 0) {
                 const db = firebase.firestore();
-                
-                // O onSnapshot faz a magia de atualizar em tempo real na tela do outro
                 db.collection("config").doc("avatares").onSnapshot((doc) => {
                     if (doc.exists) {
                         const data = doc.data();
@@ -383,14 +363,12 @@
                     }
                 });
             } else {
-                // Se o Firebase ainda estiver a carregar, tenta de novo em meio segundo
                 setTimeout(loadAvatares, 500); 
             }
         }
         
         window.addEventListener('load', loadAvatares);
 
-        // Enviar a foto escolhida para a base de dados
         function uploadAvatar(event, user) {
             const file = event.target.files[0];
             if (!file) return;
@@ -399,25 +377,19 @@
             reader.onload = function(e) {
                 const img = new Image();
                 img.onload = function() {
-                    // Comprimir a imagem (MUITO IMPORTANTE para não estoirar a base de dados)
                     const canvas = document.createElement('canvas');
                     const ctx = canvas.getContext('2d');
-                    canvas.width = 200; // Tamanho em pixels (pequeno e leve)
+                    canvas.width = 200; 
                     canvas.height = 200;
                     
-                    // Cortar a imagem em formato quadrado (tipo o cover do CSS)
                     const size = Math.min(img.width, img.height);
                     const sx = (img.width - size) / 2;
                     const sy = (img.height - size) / 2;
                     ctx.drawImage(img, sx, sy, size, size, 0, 0, 200, 200);
                     
-                    // Converter para texto (Base64)
                     const base64String = canvas.toDataURL('image/jpeg', 0.8);
-                    
-                    // Mostrar na tela instantaneamente para quem está a clicar
                     document.getElementById(`avatar-${user.toLowerCase()}`).innerHTML = `<img src="${base64String}" class="w-full h-full object-cover">`;
                     
-                    // Salvar no Firebase
                     const db = firebase.firestore();
                     db.collection("config").doc("avatares").set({
                         [user]: base64String
@@ -430,13 +402,14 @@
         }
 
         // ==========================================
-        // FUNÇÃO DE ENTRADA (LÓGICA DA TRANSIÇÃO NETFLIX)
+        // FUNÇÃO DE ENTRADA COM ÁUDIO
         // ==========================================
         function enterSite(user) {
             const msgElement = document.getElementById('welcome-msg');
             const screenElement = document.getElementById('welcome-screen');
             const transScreen = document.getElementById('netflix-transition');
             const mLogo = document.getElementById('m-logo');
+            const tudumAudio = document.getElementById('tudum-audio'); // <-- Captura o áudio
             
             if (user === 'Vitoria') {
                 msgElement.textContent = "Olá, gatinha";
@@ -454,6 +427,9 @@
                     
                     setTimeout(() => {
                         screenElement.style.display = 'none';
+                        
+                        // DISPARA O SOM EXATAMENTE AQUI, JUNTO COM A ANIMAÇÃO
+                        tudumAudio.play().catch(e => console.log("Áudio bloqueado pelo navegador", e));
                         mLogo.classList.add('netflix-anim');
                         
                         setTimeout(() => {
@@ -478,7 +454,6 @@
         const tbEnemy1 = new Image(); tbEnemy1.src = '14.jpeg';
         const tbEnemy2 = new Image(); tbEnemy2.src = '15.jpeg';
 
-        // window.addEventListener('load', ...) já existe e carregamos os avatares junto.
         window.addEventListener('load', () => {
             allPhotos.forEach(src => { const img = new Image(); img.decoding = 'async'; img.src = src; });
         });
