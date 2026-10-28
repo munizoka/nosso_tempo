@@ -70,7 +70,7 @@
             transform: translateX(0) scale(1);
         }
 
-        /* Customização da barra de volume com fundo visível */
+        /* Customização da barra de volume */
         input[type=range] { -webkit-appearance: none; background: #27272a; height: 6px; border-radius: 4px; outline: none; }
         input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 16px; width: 16px; border-radius: 50%; background: #f43f5e; cursor: pointer; border: 2.5px solid #fff; box-shadow: 0 0 5px rgba(0,0,0,0.5); transition: transform 0.1s; }
         input[type=range]::-webkit-slider-thumb:active { transform: scale(1.2); }
@@ -214,6 +214,7 @@
         
         <!-- CABEÇALHO SUPERIOR -->
         <header class="p-4 flex items-center sticky top-0 bg-[#09090b]/70 backdrop-blur-md z-20 justify-between">
+            
             <div class="flex items-center gap-3">
                 <button onclick="toggleSidebar()" class="p-2.5 rounded-xl bg-zinc-900/90 border border-zinc-800 hover:bg-zinc-800 text-zinc-300 active:scale-95 transition-all">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></svg>
@@ -279,7 +280,6 @@
                     </div>
                 </div>
                 
-                <!-- Divisor -->
                 <div class="flex items-center justify-center gap-4 w-1/2 mx-auto opacity-50">
                     <hr class="border-zinc-800 flex-1">
                     <span class="text-zinc-600 text-xs">✨</span>
@@ -326,7 +326,7 @@
                 </a>
             </div>
 
-            <!-- ABA: LUGARES QUE VISITAMOS -->
+            <!-- ABA: LUGARES QUE VISITAMOS (MAPA FIXADO) -->
             <div id="view-mapa" class="tab-view w-full max-w-4xl mx-auto space-y-4 hidden">
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                     <div>
@@ -350,7 +350,8 @@
                 </div>
 
                 <div class="relative w-full h-[380px] md:h-[450px] rounded-2xl overflow-hidden border border-zinc-800 bg-[#050508] shadow-2xl">
-                    <div id="hd-globe-map" class="w-full h-full absolute inset-0"></div>
+                    <!-- O mapa é forçado a preencher a tela inteira da caixa -->
+                    <div id="hd-globe-map" style="width: 100%; height: 100%; position: absolute; inset: 0;"></div>
 
                     <div id="place-card" class="hidden absolute bottom-3 left-3 right-3 sm:left-auto sm:right-3 sm:w-72 bg-[#141418]/95 backdrop-blur-md border border-zinc-700/80 rounded-xl p-3.5 shadow-2xl z-20">
                         <button onclick="document.getElementById('place-card').classList.add('hidden')" class="absolute top-2.5 right-2.5 text-zinc-400 hover:text-white text-xs">✕</button>
@@ -398,7 +399,7 @@
                 <div id="memory-grid" class="grid grid-cols-4 sm:grid-cols-6 gap-2 md:gap-3 w-full"></div>
             </div>
 
-            <!-- ABA 6: TALARI BIRD -->
+            <!-- ABA 6: TALARI BIRD (FIXADO TAMANHO E RENDER) -->
             <div id="view-talari" class="tab-view w-full max-w-md mx-auto space-y-3 hidden">
                 <div class="text-center space-y-1">
                     <span class="inline-block px-3 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs font-medium">🕹️ Arcade</span>
@@ -413,8 +414,9 @@
                     </button>
                 </div>
 
-                <div class="relative rounded-2xl overflow-hidden border border-zinc-800 shadow-2xl bg-[#0c0c10] select-none flex justify-center items-center">
-                    <canvas id="talari-canvas" width="360" height="480" class="max-w-full h-auto block cursor-pointer touch-manipulation"></canvas>
+                <!-- A caixa agora tem um tamanho fixo máximo para o canvas não esmagar no mobile -->
+                <div class="relative rounded-2xl overflow-hidden border border-zinc-800 shadow-2xl bg-[#0c0c10] select-none w-full max-w-[360px] mx-auto">
+                    <canvas id="talari-canvas" width="360" height="480" class="w-full h-auto block cursor-pointer touch-manipulation"></canvas>
                 </div>
                 <p class="text-center text-[11px] text-zinc-500">Toque na tela, clique ou aperte Espaço para voar</p>
             </div>
@@ -430,7 +432,7 @@
 
     <script>
         // ==========================================
-        // SISTEMA DE CONTROLE DE VOLUME (Web Audio API - Fix Celular)
+        // SISTEMA DE CONTROLE DE VOLUME (Web Audio API)
         // ==========================================
         const bgMusic = document.getElementById('bg-music'); 
         const volSlider = document.getElementById('volume-slider');
@@ -443,10 +445,8 @@
             const AudioContext = window.AudioContext || window.webkitAudioContext;
             audioCtx = new AudioContext();
             gainNode = audioCtx.createGain();
-            
             const track = audioCtx.createMediaElementSource(bgMusic);
             track.connect(gainNode).connect(audioCtx.destination);
-            
             gainNode.gain.value = parseFloat(volSlider.value);
         }
 
@@ -496,12 +496,8 @@
                 db.collection("config").doc("avatares").onSnapshot((doc) => {
                     if (doc.exists) {
                         const data = doc.data();
-                        if(data.Gabriel) {
-                            document.getElementById('avatar-gabriel').innerHTML = `<img src="${data.Gabriel}" class="w-full h-full object-cover">`;
-                        }
-                        if(data.Vitoria) {
-                            document.getElementById('avatar-vitoria').innerHTML = `<img src="${data.Vitoria}" class="w-full h-full object-cover">`;
-                        }
+                        if(data.Gabriel) document.getElementById('avatar-gabriel').innerHTML = `<img src="${data.Gabriel}" class="w-full h-full object-cover">`;
+                        if(data.Vitoria) document.getElementById('avatar-vitoria').innerHTML = `<img src="${data.Vitoria}" class="w-full h-full object-cover">`;
                     }
                 });
             } else {
@@ -526,8 +522,7 @@
                     const base64String = canvas.toDataURL('image/jpeg', 0.8);
                     document.getElementById(`avatar-${user.toLowerCase()}`).innerHTML = `<img src="${base64String}" class="w-full h-full object-cover">`;
                     const db = firebase.firestore();
-                    db.collection("config").doc("avatares").set({ [user]: base64String }, { merge: true })
-                    .catch((error) => alert("Erro ao guardar a foto: " + error.message));
+                    db.collection("config").doc("avatares").set({ [user]: base64String }, { merge: true }).catch((error) => alert("Erro ao guardar a foto: " + error.message));
                 };
                 img.src = e.target.result;
             };
@@ -535,7 +530,7 @@
         }
 
         // ==========================================
-        // LÓGICA DA TRANSIÇÃO NETFLIX + ÁUDIO CELULAR
+        // LÓGICA DA TRANSIÇÃO NETFLIX + ÁUDIO
         // ==========================================
         function enterSite(user) {
             const msgElement = document.getElementById('welcome-msg');
@@ -547,11 +542,8 @@
             initWebAudio();
             if(audioCtx.state === 'suspended') audioCtx.resume();
             
-            if (user === 'Vitoria') {
-                msgElement.textContent = "Olá, gatinha";
-            } else {
-                msgElement.textContent = "Eai programador.";
-            }
+            if (user === 'Vitoria') msgElement.textContent = "Olá, gatinha";
+            else msgElement.textContent = "Eai programador.";
             msgElement.classList.remove('opacity-0');
             
             setTimeout(() => {
@@ -565,9 +557,7 @@
                         setTimeout(() => {
                             transScreen.style.opacity = '0';
                             bgMusic.play().catch(e => console.log("Áudio ambiente bloqueado", e));
-                            setTimeout(() => {
-                                transScreen.style.display = 'none';
-                            }, 1000);
+                            setTimeout(() => transScreen.style.display = 'none', 1000);
                         }, 2600); 
                     }, 500); 
                 }, 50); 
@@ -656,11 +646,10 @@
         initTimerCards('timer-namoro', photosNamoro);
         initTimerCards('timer-niver-vi', allPhotos); 
         initTimerCards('timer-niver-gabi', allPhotos); 
-        
         updateAllTimers();
         setInterval(updateAllTimers, 1000);
 
-        /* --- MAPA HD FIX --- */
+        /* --- MAPA HD FIXADO --- */
         const visitedPlaces = [
             { name: 'Xerém', state: 'Rio de Janeiro', lat: -22.5481, lng: -43.3056, zoom: 13.5 },
             { name: 'Petrópolis', state: 'Rio de Janeiro', lat: -22.5050, lng: -43.1786, zoom: 13 },
@@ -686,21 +675,19 @@
         `).join('');
 
         function initHDGlobe() {
-            if (hdMap) { 
-                return; 
-            }
+            if (hdMap) return; 
+            
+            // Usando as imagens do Google Maps (Não bloqueiam páginas do GitHub)
             hdMap = new maplibregl.Map({
                 container: 'hd-globe-map', center: [-45.5, -24.8], zoom: 4.2, pitch: 25,
                 style: {
                     version: 8,
                     sources: {
-                        'sat-tiles': { type: 'raster', tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'], tileSize: 256, maxzoom: 19 },
-                        'labels-tiles': { type: 'raster', tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}'], tileSize: 256, maxzoom: 19 },
-                        'osm-streets': { type: 'raster', tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'], tileSize: 256, maxzoom: 19 }
+                        'sat-tiles': { type: 'raster', tiles: ['https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}'], tileSize: 256, maxzoom: 20 },
+                        'osm-streets': { type: 'raster', tiles: ['https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}'], tileSize: 256, maxzoom: 20 }
                     },
                     layers: [
                         { id: 'sat-layer', type: 'raster', source: 'sat-tiles' },
-                        { id: 'labels-layer', type: 'raster', source: 'labels-tiles' },
                         { id: 'osm-layer', type: 'raster', source: 'osm-streets', layout: { visibility: 'none' } }
                     ]
                 }
@@ -744,7 +731,6 @@
             if (!hdMap) return;
             isStreetStyle = !isStreetStyle;
             hdMap.setLayoutProperty('sat-layer', 'visibility', isStreetStyle ? 'none' : 'visible');
-            hdMap.setLayoutProperty('labels-layer', 'visibility', isStreetStyle ? 'none' : 'visible');
             hdMap.setLayoutProperty('osm-layer', 'visibility', isStreetStyle ? 'visible' : 'none');
             document.getElementById('btn-map-style').innerHTML = isStreetStyle ? '🛰️ Modo Satélite HD' : '🗺️ Modo Mapa de Ruas';
         }
@@ -799,7 +785,7 @@
         }
         initMemoryGame();
 
-        /* --- TALARI BIRD GAME FIX --- */
+        /* --- TALARI BIRD GAME FIXADO --- */
         const tCvs = document.getElementById('talari-canvas'), tCtx = tCvs.getContext('2d');
         let tbState = 'idle', tbScore = 0, tbBest = Number(localStorage.getItem('tbBest') || 0), tbFrame = 0;
         document.getElementById('tb-best').textContent = tbBest;
@@ -830,8 +816,8 @@
         }
 
         function drawImageCover(ctx, img, x, y, w, h) {
+            // Prevenção de erro: Se a imagem não for encontrada, desenha um bloco da cor do tema
             if (!img.complete || !img.naturalWidth) { 
-                // Se a imagem não carregar, desenha uma cor sólida bonitinha em vez de ficar invisível
                 ctx.fillStyle = '#f43f5e'; 
                 ctx.fillRect(x, y, w, h); 
                 return; 
@@ -843,41 +829,53 @@
             ctx.drawImage(img, sx, sy, sw, sh, x, y, w, h);
         }
 
-        // Loop principal blindado
+        // Loop contínuo de renderização
         function updateAndDrawTalari() {
             requestAnimationFrame(updateAndDrawTalari);
             
-            // Só desenha se a aba do jogo estiver visível
+            // Só desenha e atualiza se o separador estiver aberto
             if (currentTab !== 'talari' || document.hidden) return;
             
             const grad = tCtx.createLinearGradient(0, 0, 0, tCvs.height);
             grad.addColorStop(0, '#09090b'); grad.addColorStop(1, '#181824');
             tCtx.fillStyle = grad; tCtx.fillRect(0, 0, tCvs.width, tCvs.height);
+            
             tCtx.fillStyle = '#14141d';
             mountains.forEach(m => {
                 if (tbState === 'play') m.x -= 0.45;
                 if (m.x < -180) m.x = tCvs.width;
                 tCtx.beginPath(); tCtx.moveTo(m.x, tCvs.height - 24); tCtx.lineTo(m.x + 90, tCvs.height - 24 - m.h); tCtx.lineTo(m.x + 180, tCvs.height - 24); tCtx.fill();
             });
+            
             if (tbState === 'play') {
                 tbFrame++;
                 if (tbFrame % 115 === 0) spawnObstacle();
                 bird.vy += bird.g; bird.y += bird.vy;
                 if (bird.y + bird.r >= tCvs.height - 24 || bird.y - bird.r <= 0) tbState = 'over';
             }
+            
             for (let i = obstacles.length - 1; i >= 0; i--) {
                 const o = obstacles[i];
                 if (tbState === 'play') o.x -= 1.9;
+                
                 tCtx.fillStyle = '#10b981'; tCtx.strokeStyle = '#059669'; tCtx.lineWidth = 2;
                 tCtx.fillRect(o.x, 0, o.w, o.top); tCtx.strokeRect(o.x, 0, o.w, o.top); tCtx.fillRect(o.x - 3, o.top - 14, o.w + 6, 14);
+                
                 const botH = tCvs.height - 24 - o.bottom;
                 tCtx.fillRect(o.x, o.bottom, o.w, botH); tCtx.strokeRect(o.x, o.bottom, o.w, botH); tCtx.fillRect(o.x - 3, o.bottom, o.w + 6, 14);
+                
                 if (o.isPerson) {
                     const cardH = 68;
                     const py = o.personPos === 'top' ? Math.max(6, o.top - cardH - 4) : o.bottom + 4;
-                    tCtx.save(); tCtx.beginPath(); tCtx.roundRect(o.x - 4, py, o.w + 8, cardH, 10); tCtx.clip(); drawImageCover(tCtx, o.enemyImg, o.x - 4, py, o.w + 8, cardH); tCtx.restore();
-                    tCtx.strokeStyle = '#ef4444'; tCtx.lineWidth = 2.5; tCtx.beginPath(); tCtx.roundRect(o.x - 4, py, o.w + 8, cardH, 10); tCtx.stroke();
+                    tCtx.save(); tCtx.beginPath(); 
+                    // Fallback nativo simples
+                    tCtx.rect(o.x - 4, py, o.w + 8, cardH); 
+                    tCtx.clip(); 
+                    drawImageCover(tCtx, o.enemyImg, o.x - 4, py, o.w + 8, cardH); 
+                    tCtx.restore();
+                    tCtx.strokeStyle = '#ef4444'; tCtx.lineWidth = 2.5; tCtx.beginPath(); tCtx.rect(o.x - 4, py, o.w + 8, cardH); tCtx.stroke();
                 }
+                
                 if (tbState === 'play') {
                     const hitX = bird.x + bird.r - 6 > o.x && bird.x - bird.r + 6 < o.x + o.w;
                     const hitY = bird.y - bird.r + 6 < o.top || bird.y + bird.r - 6 > o.bottom;
@@ -889,11 +887,17 @@
                 }
                 if (o.x + o.w < -20) obstacles.splice(i, 1);
             }
+            
             tCtx.fillStyle = '#18181b'; tCtx.fillRect(0, tCvs.height - 24, tCvs.width, 24); tCtx.strokeStyle = '#27272a';
             tCtx.beginPath(); tCtx.moveTo(0, tCvs.height - 24); tCtx.lineTo(tCvs.width, tCvs.height - 24); tCtx.stroke();
+            
             tCtx.save(); tCtx.translate(bird.x, bird.y); tCtx.rotate(Math.min(Math.PI / 5, Math.max(-Math.PI / 5, bird.vy * 0.06)));
-            tCtx.beginPath(); tCtx.arc(0, 0, bird.r, 0, Math.PI * 2); tCtx.clip(); drawImageCover(tCtx, tbHeroImg, -bird.r, -bird.r, bird.r * 2, bird.r * 2); tCtx.restore();
+            tCtx.beginPath(); tCtx.arc(0, 0, bird.r, 0, Math.PI * 2); tCtx.clip(); 
+            drawImageCover(tCtx, tbHeroImg, -bird.r, -bird.r, bird.r * 2, bird.r * 2); 
+            tCtx.restore();
+            
             tCtx.strokeStyle = '#fbbf24'; tCtx.lineWidth = 2.5; tCtx.beginPath(); tCtx.arc(bird.x, bird.y, bird.r, 0, Math.PI * 2); tCtx.stroke();
+            
             if (tbState !== 'play') {
                 tCtx.fillStyle = 'rgba(9, 9, 11, 0.65)'; tCtx.fillRect(0, 0, tCvs.width, tCvs.height);
                 tCtx.fillStyle = '#ffffff'; tCtx.textAlign = 'center'; tCtx.font = 'bold 22px Inter, sans-serif';
@@ -945,12 +949,15 @@
 
             if (tab === 'fotos') document.getElementById('fotos-popup').classList.remove('hidden');
             
-            // Força o redimensionamento do mapa no exato momento que a aba abre
+            // Força o mapa a recalcular o tamanho até que se ajeite na tela
             if (tab === 'mapa') {
-                setTimeout(() => {
-                    if (!hdMap) initHDGlobe();
-                    else hdMap.resize();
-                }, 150);
+                if (!hdMap) initHDGlobe();
+                let renderLoops = 0;
+                const mapResizer = setInterval(() => {
+                    if (hdMap) hdMap.resize();
+                    renderLoops++;
+                    if (renderLoops > 20) clearInterval(mapResizer);
+                }, 25);
             }
             
             if (window.innerWidth < 768) toggleSidebar(false);
