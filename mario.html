@@ -110,6 +110,7 @@
     <script>
         const canvas = document.getElementById('game-canvas');
         const ctx = canvas.getContext('2d');
+        ctx.imageSmoothingEnabled = false; // Mantém os pixels nítidos, sem borrar a pixel art
 
         const GAME_WIDTH = 800;
         const GAME_HEIGHT = 450;
@@ -143,30 +144,121 @@
         assets.brick.src = '41.png';
         assets.ground.src = '42.png';
 
+        // Remove somente o FUNDO verde conectado às bordas.
+        // Assim, não apaga a grama nem o verde do casco da tartaruga e dos canos.
         function removeGreenScreen(img) {
-            const tempCanvas = document.createElement('canvas');
-            tempCanvas.width = img.width;
-            tempCanvas.height = img.height;
-            const tCtx = tempCanvas.getContext('2d');
-            tCtx.drawImage(img, 0, 0);
-            
-            try {
-                const imgData = tCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
-                const data = imgData.data;
-                for (let i = 0; i < data.length; i += 4) {
-                    let r = data[i], g = data[i+1], b = data[i+2];
-                    if (g > 150 && r < 100 && b < 100) { data[i+3] = 0; }
+            const result = document.createElement('canvas');
+            result.width = img.naturalWidth;
+            result.height = img.naturalHeight;
+            const g = result.getContext('2d', { willReadFrequently: true });
+            g.drawImage(img, 0, 0);
+
+            const pixels = g.getImageData(0, 0, result.width, result.height);
+            const data = pixels.data;
+            const w = result.width, h = result.height;
+            const visited = new Uint8Array(w * h);
+            const queue = new Int32Array(w * h);
+            let head = 0, tail = 0;
+
+            function looksLikeGreenScreen(p) {
+                const i = p * 4;
+                const r = data[i], green = data[i + 1], b = data[i + 2];
+                // Compatível também com pequenas variações de compressão JPEG.
+                return green >= 155 && green > r * 1.65 && green > b * 1.65
+                    && r <= 165 && b <= 165;
+            }
+            function add(p) {
+                if (!visited[p]) {
+                    visited[p] = 1;
+                    if (looksLikeGreenScreen(p)) queue[tail++] = p;
                 }
-                tCtx.putImageData(imgData, 0, 0);
-                return tempCanvas;
-            } catch(e) { return img; }
+            }
+
+            // O chroma key começa nas quatro bordas da imagem.
+            for (let x = 0; x < w; x++) {
+                add(x);
+                add((h - 1) * w + x);
+            }
+            for (let y = 0; y < h; y++) {
+                add(y * w);
+                add(y * w + w - 1);
+            }
+            while (head < tail) {
+                const p = queue[head++];
+                data[p * 4 + 3] = 0;
+                const x = p % w;
+                if (x > 0) add(p - 1);
+                if (x < w - 1) add(p + 1);
+                if (p >= w) add(p - w);
+                if (p < (h - 1) * w) add(p + w);
+            }
+            g.putImageData(pixels, 0, 0);
+            return result;
+        }
+
+        // Retira o espaço transparente EXTERNO de um sprite.
+        function trimTransparent(canvasSource) {
+            const w = canvasSource.width, h = canvasSource.height;
+            const g = canvasSource.getContext('2d', { willReadFrequently: true });
+            const pixels = g.getImageData(0, 0, w, h).data;
+            let left = w, top = h, right = -1, bottom = -1;
+
+            for (let y = 0; y < h; y++) {
+                for (let x = 0; x < w; x++) {
+                    if (pixels[(y * w + x) * 4 + 3] > 12) {
+                        left = Math.min(left, x);
+                        top = Math.min(top, y);
+                        right = Math.max(right, x);
+                        bottom = Math.max(bottom, y);
+                    }
+                }
+            }
+            if (right < left) return canvasSource;
+            const out = document.createElement('canvas');
+            out.width = right - left + 1;
+            out.height = bottom - top + 1;
+            const outCtx = out.getContext('2d');
+            outCtx.imageSmoothingEnabled = false;
+            outCtx.drawImage(canvasSource, left, top, out.width, out.height,
+                             0, 0, out.width, out.height);
+            return out;
+        }
+
+        // A folha de sprites do Gabriel tem 4 quadros; a dos inimigos, 2.
+        // Recortar cada quadro SEPARADAMENTE evita que as margens causem levitação.
+        function makeFrames(sheet, count) {
+            const frames = [];
+            const frameW = Math.floor(sheet.width / count);
+            for (let i = 0; i < count; i++) {
+                const frame = document.createElement('canvas');
+                frame.width = frameW;
+                frame.height = sheet.height;
+                frame.getContext('2d').drawImage(
+                    sheet, i * frameW, 0, frameW, sheet.height,
+                    0, 0, frameW, sheet.height
+                );
+                frames.push(trimTransparent(frame));
+            }
+            return frames;
         }
 
         Object.keys(assets).forEach(key => {
             assets[key].onload = () => {
-                processedAssets[key] = removeGreenScreen(assets[key]);
-                assetsLoaded++;
+                try {
+                    const transparent = removeGreenScreen(assets[key]);
+                    if (key === 'hero') {
+                        processedAssets.heroFrames = makeFrames(transparent, 4);
+                    } else if (key === 'enemies') {
+                        processedAssets.enemyFrames = makeFrames(transparent, 2);
+                    } else {
+                        processedAssets[key] = trimTransparent(transparent);
+                    }
+                    assetsLoaded++;
+                } catch (err) {
+                    console.error('Erro ao preparar sprite:', key, err);
+                }
             };
+            assets[key].onerror = () => console.error('Imagem não encontrada:', assets[key].src);
         });
 
         const clouds = [
@@ -362,26 +454,57 @@
         }
 
         // ==========================================
-        // FUNÇÃO DE DESENHO APRIMORADA (COSTURA AS TEXTURAS)
+        // CHÃO CONTÍNUO (GRAMA EM CIMA, TERRA EMBAIXO)
         // ==========================================
-        function drawImageTile(img, dx, dy, dw, dh, type = '') {
-            if(!img) return;
-            
-            // Overlap minúsculo para matar as linhas invisíveis
-            const bleed = 1.5; 
+        function drawGround(img, b) {
+            if (!img) return;
+            const tile = 32;  // Largura/altura visível de cada repetição
+            // Evita repetir as bordas pretas laterais do desenho original.
+            const side = Math.max(1, Math.floor(img.width * 0.035));
+            const srcW = Math.max(1, img.width - side * 2);
+            // Pedaço só de terra, sem grama nem a borda preta inferior.
+            const dirtY = Math.floor(img.height * 0.42);
+            const dirtH = Math.max(1, Math.floor(img.height * 0.42));
 
-            if(type === 'ground') {
-                const tileW = 48;
-                // Sobreposição de blocos horizontais
-                for(let i = 0; i <= dw; i += (tileW - bleed)) {
-                    ctx.drawImage(img, dx + i, dy, tileW, tileW);
+            ctx.save();
+            ctx.beginPath();
+            ctx.rect(b.x, b.y, b.w, b.h); // preserva os buracos reais da fase
+            ctx.clip();
+            ctx.fillStyle = '#a85a28';
+            ctx.fillRect(b.x, b.y, b.w, b.h);
+
+            for (let x = b.x; x < b.x + b.w; x += tile) {
+                // Primeira fileira: o bloco de grama completo.
+                ctx.drawImage(img, side, 0, srcW, img.height,
+                              x, b.y, tile, tile);
+                // Fileiras abaixo: apenas a textura da terra.
+                for (let y = b.y + tile; y < b.y + b.h; y += tile) {
+                    ctx.drawImage(img, side, dirtY, srcW, dirtH,
+                                  x, y, tile, tile);
                 }
-                // Preenchimento de terra espessa para baixo
-                ctx.fillStyle = '#9b5b29';
-                ctx.fillRect(dx, dy + tileW - bleed, dw, dh - tileW + bleed);
-            } else {
-                ctx.drawImage(img, dx - bleed, dy - bleed, dw + bleed * 2, dh + bleed * 2);
             }
+            ctx.restore();
+        }
+
+        function drawImageTile(img, dx, dy, dw, dh, type = '') {
+            if (!img) return;
+            if (type === 'ground') {
+                drawGround(img, { x: dx, y: dy, w: dw, h: dh });
+            } else {
+                // Os sprites agora estão recortados, então NÃO precisam de 'bleed'.
+                ctx.drawImage(img, Math.round(dx), Math.round(dy), dw, dh);
+            }
+        }
+
+        // Coloca a base VISÍVEL do sprite exatamente na base da colisão.
+        function drawSpriteOnFeet(sprite, centerX, footY, height, facing = 1) {
+            if (!sprite) return;
+            const width = Math.max(1, Math.round(height * sprite.width / sprite.height));
+            ctx.save();
+            ctx.translate(Math.round(centerX), Math.round(footY));
+            if (facing === -1) ctx.scale(-1, 1);
+            ctx.drawImage(sprite, -Math.round(width / 2), -height, width, height);
+            ctx.restore();
         }
 
         function draw() {
@@ -394,17 +517,18 @@
                 return;
             }
 
-            ctx.save();
-            ctx.translate(-cameraX, 0); 
-            
+            // Nuvens em coordenadas de TELA (parallax de 20%, sem deslocar 120%).
             ctx.fillStyle = '#ffffff';
             for (let c of clouds) {
-                let cx = c.x - (cameraX * 0.2); 
-                cx = cx % (GAME_WIDTH * 4);
-                if (cx < -200) cx += (GAME_WIDTH * 4);
+                let cx = (c.x - cameraX * 0.2) % (GAME_WIDTH * 4);
+                if (cx < -200) cx += GAME_WIDTH * 4;
+                cx = Math.round(cx);
                 ctx.fillRect(cx, c.y, c.w, c.h);
                 ctx.fillRect(cx + 10, c.y - 10, c.w - 20, c.h + 20);
             }
+
+            ctx.save();
+            ctx.translate(-Math.round(cameraX), 0);
 
             for (let b of blocks) {
                 drawImageTile(processedAssets[b.type], b.x, b.y, b.w, b.h, b.type);
@@ -412,49 +536,26 @@
 
             drawImageTile(processedAssets.castle, castle.x, castle.y, castle.w, castle.h);
             
-            // Princesa (Offset visual para colar os pés no chão)
-            const princessVisualOffset = 8;
-            ctx.save();
-            ctx.translate(princess.x + princess.w/2, princess.y + princess.h);
-            ctx.drawImage(processedAssets.princess, -24, -48 + princessVisualOffset, 48, 48); 
-            ctx.restore();
-            
-            // Inimigos (Offset visual para colar os pés no chão)
-            const enemyVisualOffset = 10;
+            // A princesa, os inimigos e o Gabriel encostam os PÉS na colisão.
+            drawSpriteOnFeet(processedAssets.princess,
+                             princess.x + princess.w / 2, princess.y + princess.h,
+                             princess.h);
+
             for (let enemy of enemies) {
-                if(enemy.alive) {
-                    const img = processedAssets.enemies;
-                    const frameW = img.width / 2; 
-                    const frameX = enemy.type === 'mushroom' ? 0 : frameW;
-                    
-                    ctx.save();
-                    ctx.translate(enemy.x + enemy.w/2, enemy.y + enemy.h);
-                    
-                    if (enemy.type === 'mushroom' && enemy.vx < 0) ctx.scale(-1, 1);
-                    if (enemy.type === 'mushroom' && enemy.vx > 0) ctx.scale(1, 1);
-                    if (enemy.type === 'turtle' && enemy.vx > 0) ctx.scale(-1, 1);
-                    if (enemy.type === 'turtle' && enemy.vx < 0) ctx.scale(1, 1);
-                    
-                    ctx.drawImage(img, frameX, 0, frameW, img.height, -24, -48 + enemyVisualOffset, 48, 48);
-                    ctx.restore();
-                }
+                if (!enemy.alive) continue;
+                const frame = processedAssets.enemyFrames[
+                    enemy.type === 'mushroom' ? 0 : 1
+                ];
+                const facing = enemy.type === 'mushroom'
+                    ? (enemy.vx < 0 ? -1 : 1)
+                    : (enemy.vx > 0 ? -1 : 1);
+                drawSpriteOnFeet(frame, enemy.x + enemy.w / 2,
+                                 enemy.y + enemy.h, enemy.h, facing);
             }
 
-            // HERÓI (GABRIEL) Offset visual puxando para baixo para não levitar
-            const spriteSheet = processedAssets.hero;
-            const frameWidth = spriteSheet.width / 4;
-            const heroVisualOffset = 12; // Ajuste fino
-            
-            ctx.save();
-            ctx.translate(player.x + player.w/2, player.y + player.h); 
-            if (player.direction === -1) ctx.scale(-1, 1); 
-            
-            ctx.drawImage(
-                spriteSheet, 
-                player.animFrame * frameWidth, 0, frameWidth, spriteSheet.height, 
-                -24, -48 + heroVisualOffset, 48, 48 
-            );
-            ctx.restore();
+            drawSpriteOnFeet(processedAssets.heroFrames[player.animFrame],
+                             player.x + player.w / 2, player.y + player.h,
+                             player.h, player.direction);
 
             if(gameWin) {
                 ctx.fillStyle = 'rgba(0,0,0,0.7)';
