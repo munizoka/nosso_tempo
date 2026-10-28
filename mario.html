@@ -81,10 +81,11 @@
     <div class="absolute top-4 left-4 right-4 z-50 flex justify-between items-start pointer-events-none">
         <a href="index.html" class="w-12 h-12 bg-zinc-800/80 border-2 border-white rounded-full flex items-center justify-center text-white font-sans font-bold backdrop-blur pointer-events-auto shadow-lg text-2xl active:scale-90 transition-transform">←</a>
         
+        <!-- UI Dinâmica (Score, Vidas e Tempo) -->
         <div class="flex gap-6 ui-text items-center mt-2 hidden sm:flex">
-            <span>HP:8900</span>
-            <span>🍄 x10</span>
-            <span>⏱ 00:03:18</span>
+            <span id="ui-score">SCORE: 0</span>
+            <span id="ui-lives">🍄 x5</span>
+            <span id="ui-time">⏱ 00:00:00</span>
         </div>
 
         <button onclick="reiniciarFase()" class="px-4 py-3 bg-zinc-800/80 border-2 border-white rounded-xl flex items-center justify-center text-white font-sans font-bold backdrop-blur pointer-events-auto shadow-lg active:scale-95 transition-transform text-sm uppercase">
@@ -110,12 +111,33 @@
     <script>
         const canvas = document.getElementById('game-canvas');
         const ctx = canvas.getContext('2d');
-        ctx.imageSmoothingEnabled = false; // Mantém os pixels nítidos, sem borrar a pixel art
+        ctx.imageSmoothingEnabled = false;
 
         const GAME_WIDTH = 800;
         const GAME_HEIGHT = 450;
         canvas.width = GAME_WIDTH;
         canvas.height = GAME_HEIGHT;
+
+        // ==========================================
+        // VARIÁVEIS DE SISTEMA (HUD)
+        // ==========================================
+        let score = 0;
+        let lives = 5;
+        let startTime = Date.now();
+        let gameOver = false;
+        let gameWin = false;
+
+        // Atualiza o relógio a cada segundo
+        setInterval(() => {
+            if (!gameWin && !gameOver && assetsLoaded === totalAssets) {
+                let ms = Date.now() - startTime;
+                let totalSeconds = Math.floor(ms / 1000);
+                let h = String(Math.floor(totalSeconds / 3600)).padStart(2, '0');
+                let m = String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, '0');
+                let s = String(totalSeconds % 60).padStart(2, '0');
+                document.getElementById('ui-time').innerText = `⏱ ${h}:${m}:${s}`;
+            }
+        }, 1000);
 
         // ==========================================
         // SISTEMA DE IMAGENS E CHROMA KEY
@@ -144,8 +166,6 @@
         assets.brick.src = '41.png';
         assets.ground.src = '42.png';
 
-        // Remove somente o FUNDO verde conectado às bordas.
-        // Assim, não apaga a grama nem o verde do casco da tartaruga e dos canos.
         function removeGreenScreen(img) {
             const result = document.createElement('canvas');
             result.width = img.naturalWidth;
@@ -163,9 +183,7 @@
             function looksLikeGreenScreen(p) {
                 const i = p * 4;
                 const r = data[i], green = data[i + 1], b = data[i + 2];
-                // Compatível também com pequenas variações de compressão JPEG.
-                return green >= 155 && green > r * 1.65 && green > b * 1.65
-                    && r <= 165 && b <= 165;
+                return green >= 155 && green > r * 1.65 && green > b * 1.65 && r <= 165 && b <= 165;
             }
             function add(p) {
                 if (!visited[p]) {
@@ -174,15 +192,9 @@
                 }
             }
 
-            // O chroma key começa nas quatro bordas da imagem.
-            for (let x = 0; x < w; x++) {
-                add(x);
-                add((h - 1) * w + x);
-            }
-            for (let y = 0; y < h; y++) {
-                add(y * w);
-                add(y * w + w - 1);
-            }
+            for (let x = 0; x < w; x++) { add(x); add((h - 1) * w + x); }
+            for (let y = 0; y < h; y++) { add(y * w); add(y * w + w - 1); }
+            
             while (head < tail) {
                 const p = queue[head++];
                 data[p * 4 + 3] = 0;
@@ -196,7 +208,6 @@
             return result;
         }
 
-        // Retira o espaço transparente EXTERNO de um sprite.
         function trimTransparent(canvasSource) {
             const w = canvasSource.width, h = canvasSource.height;
             const g = canvasSource.getContext('2d', { willReadFrequently: true });
@@ -219,13 +230,10 @@
             out.height = bottom - top + 1;
             const outCtx = out.getContext('2d');
             outCtx.imageSmoothingEnabled = false;
-            outCtx.drawImage(canvasSource, left, top, out.width, out.height,
-                             0, 0, out.width, out.height);
+            outCtx.drawImage(canvasSource, left, top, out.width, out.height, 0, 0, out.width, out.height);
             return out;
         }
 
-        // A folha de sprites do Gabriel tem 4 quadros; a dos inimigos, 2.
-        // Recortar cada quadro SEPARADAMENTE evita que as margens causem levitação.
         function makeFrames(sheet, count) {
             const frames = [];
             const frameW = Math.floor(sheet.width / count);
@@ -253,12 +261,13 @@
                     } else {
                         processedAssets[key] = trimTransparent(transparent);
                     }
+                    // Inicia o timer quando as texturas estão prontas
+                    if (assetsLoaded === totalAssets - 1) {
+                        startTime = Date.now();
+                    }
                     assetsLoaded++;
-                } catch (err) {
-                    console.error('Erro ao preparar sprite:', key, err);
-                }
+                } catch (err) {}
             };
-            assets[key].onerror = () => console.error('Imagem não encontrada:', assets[key].src);
         });
 
         const clouds = [
@@ -296,7 +305,6 @@
         ];
 
         let cameraX = 0;
-        let gameWin = false;
 
         const blocks = [
             // CHÃO
@@ -356,14 +364,36 @@
             return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
         }
 
+        // Função de Restart (Gestão das Vidas e Reset)
         window.reiniciarFase = function() {
-            player.x = 50; player.y = 100; player.vx = 0; player.vy = 0;
-            cameraX = 0; gameWin = false;
-            enemies.forEach(e => { e.alive = true; });
+            if (gameOver || gameWin) {
+                // Reset Total (Fim de Jogo)
+                lives = 5;
+                score = 0;
+                startTime = Date.now();
+                gameOver = false;
+                gameWin = false;
+            } else {
+                // Perdeu uma vida por dano/buraco ou por clicar no botão
+                lives--;
+                if (lives <= 0) {
+                    gameOver = true;
+                }
+            }
+
+            // Atualiza Interface (HUD)
+            document.getElementById('ui-lives').innerText = '🍄 x' + Math.max(0, lives);
+            document.getElementById('ui-score').innerText = 'SCORE: ' + score;
+
+            if (!gameOver) {
+                player.x = 50; player.y = 100; player.vx = 0; player.vy = 0;
+                cameraX = 0; 
+                enemies.forEach(e => { e.alive = true; });
+            }
         }
 
         function update() {
-            if(gameWin || assetsLoaded < totalAssets) return;
+            if(gameWin || gameOver || assetsLoaded < totalAssets) return;
 
             if (keys.left && !keys.down) { player.vx = -player.speed; player.direction = -1; }
             else if (keys.right && !keys.down) { player.vx = player.speed; player.direction = 1; }
@@ -407,6 +437,7 @@
                 }
             }
 
+            // Morreu por cair num buraco
             if (player.y > GAME_HEIGHT + 200) reiniciarFase();
 
             for (let enemy of enemies) {
@@ -427,9 +458,13 @@
 
                 if (isColliding(player, enemy)) {
                     if (player.vy > 0 && player.y + player.h < enemy.y + 15) {
+                        // Pisou no inimigo (Mata e Ganha Score)
                         enemy.alive = false; 
                         player.vy = player.jumpPower * 0.8;
+                        score += 100;
+                        document.getElementById('ui-score').innerText = 'SCORE: ' + score;
                     } else {
+                        // Morreu por contato
                         reiniciarFase(); 
                     }
                 }
@@ -453,34 +488,25 @@
             }
         }
 
-        // ==========================================
-        // CHÃO CONTÍNUO (GRAMA EM CIMA, TERRA EMBAIXO)
-        // ==========================================
         function drawGround(img, b) {
             if (!img) return;
-            const tile = 32;  // Largura/altura visível de cada repetição
-            // Evita repetir as bordas pretas laterais do desenho original.
+            const tile = 32;  
             const side = Math.max(1, Math.floor(img.width * 0.035));
             const srcW = Math.max(1, img.width - side * 2);
-            // Pedaço só de terra, sem grama nem a borda preta inferior.
             const dirtY = Math.floor(img.height * 0.42);
             const dirtH = Math.max(1, Math.floor(img.height * 0.42));
 
             ctx.save();
             ctx.beginPath();
-            ctx.rect(b.x, b.y, b.w, b.h); // preserva os buracos reais da fase
+            ctx.rect(b.x, b.y, b.w, b.h); 
             ctx.clip();
             ctx.fillStyle = '#a85a28';
             ctx.fillRect(b.x, b.y, b.w, b.h);
 
             for (let x = b.x; x < b.x + b.w; x += tile) {
-                // Primeira fileira: o bloco de grama completo.
-                ctx.drawImage(img, side, 0, srcW, img.height,
-                              x, b.y, tile, tile);
-                // Fileiras abaixo: apenas a textura da terra.
+                ctx.drawImage(img, side, 0, srcW, img.height, x, b.y, tile, tile);
                 for (let y = b.y + tile; y < b.y + b.h; y += tile) {
-                    ctx.drawImage(img, side, dirtY, srcW, dirtH,
-                                  x, y, tile, tile);
+                    ctx.drawImage(img, side, dirtY, srcW, dirtH, x, y, tile, tile);
                 }
             }
             ctx.restore();
@@ -491,12 +517,10 @@
             if (type === 'ground') {
                 drawGround(img, { x: dx, y: dy, w: dw, h: dh });
             } else {
-                // Os sprites agora estão recortados, então NÃO precisam de 'bleed'.
                 ctx.drawImage(img, Math.round(dx), Math.round(dy), dw, dh);
             }
         }
 
-        // Coloca a base VISÍVEL do sprite exatamente na base da colisão.
         function drawSpriteOnFeet(sprite, centerX, footY, height, facing = 1) {
             if (!sprite) return;
             const width = Math.max(1, Math.round(height * sprite.width / sprite.height));
@@ -517,7 +541,6 @@
                 return;
             }
 
-            // Nuvens em coordenadas de TELA (parallax de 20%, sem deslocar 120%).
             ctx.fillStyle = '#ffffff';
             for (let c of clouds) {
                 let cx = (c.x - cameraX * 0.2) % (GAME_WIDTH * 4);
@@ -536,26 +559,31 @@
 
             drawImageTile(processedAssets.castle, castle.x, castle.y, castle.w, castle.h);
             
-            // A princesa, os inimigos e o Gabriel encostam os PÉS na colisão.
-            drawSpriteOnFeet(processedAssets.princess,
-                             princess.x + princess.w / 2, princess.y + princess.h,
-                             princess.h);
+            drawSpriteOnFeet(processedAssets.princess, princess.x + princess.w / 2, princess.y + princess.h, princess.h);
 
             for (let enemy of enemies) {
                 if (!enemy.alive) continue;
-                const frame = processedAssets.enemyFrames[
-                    enemy.type === 'mushroom' ? 0 : 1
-                ];
-                const facing = enemy.type === 'mushroom'
-                    ? (enemy.vx < 0 ? -1 : 1)
-                    : (enemy.vx > 0 ? -1 : 1);
-                drawSpriteOnFeet(frame, enemy.x + enemy.w / 2,
-                                 enemy.y + enemy.h, enemy.h, facing);
+                const frame = processedAssets.enemyFrames[ enemy.type === 'mushroom' ? 0 : 1 ];
+                const facing = enemy.type === 'mushroom' ? (enemy.vx < 0 ? -1 : 1) : (enemy.vx > 0 ? -1 : 1);
+                drawSpriteOnFeet(frame, enemy.x + enemy.w / 2, enemy.y + enemy.h, enemy.h, facing);
             }
 
-            drawSpriteOnFeet(processedAssets.heroFrames[player.animFrame],
-                             player.x + player.w / 2, player.y + player.h,
-                             player.h, player.direction);
+            if (!gameOver) {
+                drawSpriteOnFeet(processedAssets.heroFrames[player.animFrame], player.x + player.w / 2, player.y + player.h, player.h, player.direction);
+            }
+
+            if (gameOver) {
+                ctx.fillStyle = 'rgba(0,0,0,0.85)';
+                ctx.fillRect(cameraX, 0, GAME_WIDTH, GAME_HEIGHT);
+                ctx.fillStyle = '#fff';
+                ctx.font = '24px "Press Start 2P"';
+                ctx.textAlign = 'center';
+                ctx.fillText("GAME OVER", cameraX + GAME_WIDTH/2, GAME_HEIGHT/2 - 10);
+                
+                ctx.font = '10px "Press Start 2P"';
+                ctx.fillStyle = '#94a3b8';
+                ctx.fillText("As vidas acabaram. Clique em RECOMEÇAR.", cameraX + GAME_WIDTH/2, GAME_HEIGHT/2 + 30);
+            }
 
             if(gameWin) {
                 ctx.fillStyle = 'rgba(0,0,0,0.7)';
