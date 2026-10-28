@@ -110,6 +110,7 @@
         <img src="34.png" id="m-logo" class="w-32 md:w-48 opacity-0" style="will-change: transform, opacity;">
     </div>
 
+
     <canvas id="bg-particles" class="fixed inset-0 pointer-events-none z-0 opacity-40"></canvas>
     <div id="ambient-light" class="ambient-glow top-1/4 left-1/2 bg-rose-500"></div>
     <div id="sidebar-backdrop" onclick="toggleSidebar(false)" class="fixed inset-0 bg-black/60 z-20 hidden md:hidden backdrop-blur-sm"></div>
@@ -178,7 +179,7 @@
                 <span class="truncate">Talari Bird</span>
             </button>
             
-            <!-- BOTÃO DA ROLETA ATUALIZADO PARA "ViSorte" -->
+            <!-- BOTÃO DA ROLETA -->
             <button onclick="switchTab('roleta')" id="btn-roleta" class="tab-btn w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-left text-sm font-medium transition-all text-zinc-400 hover:bg-zinc-800/40 hover:text-zinc-200">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-pink-400 flex-shrink-0"><circle cx="12" cy="12" r="10"></circle><path d="M12 2v20"></path><path d="M2 12h20"></path><path d="m4.93 4.93 14.14 14.14"></path><path d="m19.07 4.93-14.14 14.14"></path></svg>
                 <span class="truncate">ViSorte</span>
@@ -397,7 +398,7 @@
 
                 <div class="relative w-64 h-64 md:w-80 md:h-80 mx-auto mt-8">
                     <div class="absolute -top-6 left-1/2 -translate-x-1/2 z-20 text-4xl drop-shadow-2xl">👇</div>
-                    <div id="wheel-container" class="w-full h-full rounded-full overflow-hidden border-4 border-zinc-800 shadow-2xl transition-transform duration-[4000ms] ease-out" style="transform: rotate(0deg);">
+                    <div id="wheel-container" class="w-full h-full rounded-full overflow-hidden border-4 border-zinc-800 shadow-2xl transition-transform duration-[4000ms] ease-out cursor-pointer active:scale-95" onclick="girarRoleta()" style="transform: rotate(0deg);">
                         <canvas id="wheel-canvas" width="400" height="400" class="w-full h-full bg-[#141418]"></canvas>
                     </div>
                 </div>
@@ -624,9 +625,9 @@
         window.addEventListener('load', carregarLugares);
 
         // ==========================================
-        // ROLETA DO CASAL
+        // ROLETA DO CASAL (ViSorte)
         // ==========================================
-        let roletaOpcoes = ['Pedir Pizza 🍕', 'Ver um Filme 🎬', 'Ficar a Namorar ❤️', 'Sair para Comer 🍔', 'Sessão de Jogos 🎮'];
+        let roletaOpcoes = [];
         let currentRotation = 0;
         let isSpinning = false;
 
@@ -641,7 +642,26 @@
             const r = w/2;
 
             ctx.clearRect(0,0,w,h);
-            if(roletaOpcoes.length === 0) return;
+            
+            // SE A ROLETA ESTIVER VAZIA: Desenha um círculo cinza neutro
+            if(roletaOpcoes.length === 0) {
+                ctx.beginPath();
+                ctx.arc(cx, cy, r, 0, 2 * Math.PI);
+                ctx.fillStyle = '#27272a'; // Cor de fundo cinza escuro
+                ctx.fill();
+                ctx.strokeStyle = "#141418";
+                ctx.lineWidth = 4;
+                ctx.stroke();
+                
+                ctx.textAlign = "center";
+                ctx.textBaseline = "middle";
+                ctx.fillStyle = "#52525b";
+                ctx.font = "italic 18px Inter";
+                ctx.fillText("Adicione opções acima", cx, cy);
+                return;
+            }
+            
+            ctx.textBaseline = "alphabetic"; // Reseta o baseline para o normal
 
             const sliceAngle = (2 * Math.PI) / roletaOpcoes.length;
             const colors = ['#f43f5e', '#a855f7', '#3b82f6', '#10b981', '#f59e0b', '#ec4899', '#06b6d4', '#6366f1'];
@@ -675,6 +695,7 @@
             if(val && roletaOpcoes.length < 12) { 
                 roletaOpcoes.push(val);
                 input.value = '';
+                document.getElementById('roleta-winner').textContent = ''; // Limpa vencedor
                 drawWheel();
                 renderRoletaList();
             } else if (roletaOpcoes.length >= 12) {
@@ -693,12 +714,17 @@
         function removeRoletaOption(i) {
             if (isSpinning) return;
             roletaOpcoes.splice(i, 1);
+            document.getElementById('roleta-winner').textContent = ''; // Limpa vencedor
             drawWheel();
             renderRoletaList();
         }
 
         function girarRoleta() {
-            if(roletaOpcoes.length === 0 || isSpinning) return;
+            if(roletaOpcoes.length < 2) {
+                document.getElementById('roleta-winner').textContent = 'Adicione pelo menos 2 opções!';
+                return;
+            }
+            if(isSpinning) return;
             isSpinning = true;
             document.getElementById('roleta-winner').textContent = 'Girando...';
             
@@ -948,11 +974,7 @@
                 if (o.isPerson) {
                     const cardH = 68;
                     const py = o.personPos === 'top' ? Math.max(6, o.top - cardH - 4) : o.bottom + 4;
-                    tCtx.save(); tCtx.beginPath(); 
-                    tCtx.rect(o.x - 4, py, o.w + 8, cardH); 
-                    tCtx.clip(); 
-                    drawImageCover(tCtx, o.enemyImg, o.x - 4, py, o.w + 8, cardH); 
-                    tCtx.restore();
+                    tCtx.save(); tCtx.beginPath(); tCtx.rect(o.x - 4, py, o.w + 8, cardH); tCtx.clip(); drawImageCover(tCtx, o.enemyImg, o.x - 4, py, o.w + 8, cardH); tCtx.restore();
                     tCtx.strokeStyle = '#ef4444'; tCtx.lineWidth = 2.5; tCtx.beginPath(); tCtx.rect(o.x - 4, py, o.w + 8, cardH); tCtx.stroke();
                 }
                 
