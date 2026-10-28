@@ -17,22 +17,18 @@
             image-rendering: pixelated; 
         }
 
-        /* D-Pad Estilo Consola */
-        .dpad-container {
-            display: grid;
-            grid-template-columns: 60px 60px 60px;
-            grid-template-rows: 60px 60px 60px;
-            gap: 4px;
-        }
+        /* D-Pad Estilo Minimalista (Apenas Laterais) */
         .dpad-btn {
+            width: 70px;
+            height: 70px;
             background: #cbd5e1;
             border: 4px solid #475569;
-            border-radius: 8px;
+            border-radius: 12px;
             display: flex;
             align-items: center;
             justify-content: center;
             font-family: sans-serif;
-            font-size: 28px;
+            font-size: 32px;
             color: #334155;
             box-shadow: 0 6px 0 #334155;
             user-select: none;
@@ -41,12 +37,6 @@
             cursor: pointer;
         }
         .dpad-btn:active { transform: translateY(6px); box-shadow: 0 0 0 #334155; background: #94a3b8; }
-        
-        #btn-up { grid-column: 2; grid-row: 1; border-radius: 12px 12px 4px 4px; }
-        #btn-left { grid-column: 1; grid-row: 2; border-radius: 12px 4px 4px 12px; }
-        #btn-right { grid-column: 3; grid-row: 2; border-radius: 4px 12px 12px 4px; }
-        #btn-down { grid-column: 2; grid-row: 3; border-radius: 4px 4px 12px 12px; }
-        .dpad-center { grid-column: 2; grid-row: 2; background: #cbd5e1; border: none; }
 
         /* Botão A (Pular) */
         .action-btn {
@@ -78,31 +68,38 @@
         <h2 class="text-sm text-center px-4 leading-relaxed font-sans">Gire o celular na horizontal<br>para jogar!</h2>
     </div>
 
+    <!-- Interface Superior (Score, Tempo, Fullscreen e Recomeçar) -->
     <div class="absolute top-4 left-4 right-4 z-50 flex justify-between items-start pointer-events-none">
         <a href="index.html" class="w-12 h-12 bg-zinc-800/80 border-2 border-white rounded-full flex items-center justify-center text-white font-sans font-bold backdrop-blur pointer-events-auto shadow-lg text-2xl active:scale-90 transition-transform">←</a>
         
-        <!-- UI Dinâmica (Score, Vidas e Tempo) -->
         <div class="flex gap-6 ui-text items-center mt-2 hidden sm:flex">
             <span id="ui-score">SCORE: 0</span>
             <span id="ui-lives">🍄 x5</span>
             <span id="ui-time">⏱ 00:00:00</span>
         </div>
 
-        <button onclick="reiniciarFase()" class="px-4 py-3 bg-zinc-800/80 border-2 border-white rounded-xl flex items-center justify-center text-white font-sans font-bold backdrop-blur pointer-events-auto shadow-lg active:scale-95 transition-transform text-sm uppercase">
-            🔄 Recomeçar
-        </button>
+        <div class="flex gap-2">
+            <!-- Botão de Tela Cheia -->
+            <button onclick="toggleFullScreen()" class="w-12 h-12 bg-zinc-800/80 border-2 border-white rounded-xl flex items-center justify-center text-white font-sans font-bold backdrop-blur pointer-events-auto shadow-lg active:scale-95 transition-transform text-lg" title="Tela Cheia">
+                🔲
+            </button>
+            <button onclick="reiniciarFase()" class="px-4 py-3 bg-zinc-800/80 border-2 border-white rounded-xl flex items-center justify-center text-white font-sans font-bold backdrop-blur pointer-events-auto shadow-lg active:scale-95 transition-transform text-sm uppercase">
+                🔄 Recomeçar
+            </button>
+        </div>
     </div>
 
     <canvas id="game-canvas"></canvas>
 
+    <!-- Controles Mobile -->
     <div class="fixed inset-0 pointer-events-none z-40 flex justify-between items-end pb-8 px-10 landscape:flex portrait:hidden sm:flex">
-        <div class="dpad-container pointer-events-auto opacity-80 hover:opacity-100 transition-opacity">
-            <div class="dpad-center"></div>
-            <button id="btn-up" class="dpad-btn">▲</button>
+        
+        <!-- Direcionais Limpos (Esquerda/Direita) -->
+        <div class="flex gap-6 pointer-events-auto opacity-80 hover:opacity-100 transition-opacity items-end">
             <button id="btn-left" class="dpad-btn">◀</button>
             <button id="btn-right" class="dpad-btn">▶</button>
-            <button id="btn-down" class="dpad-btn">▼</button>
         </div>
+
         <div class="pointer-events-auto pb-4 opacity-90 hover:opacity-100 transition-opacity">
             <button id="btn-jump" class="action-btn">A</button>
         </div>
@@ -119,6 +116,23 @@
         canvas.height = GAME_HEIGHT;
 
         // ==========================================
+        // TELA CHEIA (FULLSCREEN API)
+        // ==========================================
+        function toggleFullScreen() {
+            let doc = window.document;
+            let docEl = doc.documentElement;
+
+            let requestFullScreen = docEl.requestFullscreen || docEl.mozRequestFullScreen || docEl.webkitRequestFullscreen || docEl.msRequestFullscreen;
+            let cancelFullScreen = doc.exitFullscreen || doc.mozCancelFullScreen || doc.webkitExitFullscreen || doc.msExitFullscreen;
+
+            if(!doc.fullscreenElement && !doc.mozFullScreenElement && !doc.webkitFullscreenElement && !doc.msFullscreenElement) {
+                if(requestFullScreen) requestFullScreen.call(docEl);
+            } else {
+                if(cancelFullScreen) cancelFullScreen.call(doc);
+            }
+        }
+
+        // ==========================================
         // VARIÁVEIS DE SISTEMA (HUD)
         // ==========================================
         let score = 0;
@@ -127,7 +141,6 @@
         let gameOver = false;
         let gameWin = false;
 
-        // Atualiza o relógio a cada segundo
         setInterval(() => {
             if (!gameWin && !gameOver && assetsLoaded === totalAssets) {
                 let ms = Date.now() - startTime;
@@ -261,7 +274,6 @@
                     } else {
                         processedAssets[key] = trimTransparent(transparent);
                     }
-                    // Inicia o timer quando as texturas estão prontas
                     if (assetsLoaded === totalAssets - 1) {
                         startTime = Date.now();
                     }
@@ -290,7 +302,7 @@
             x: 50, y: 100, w: 24, h: 40, 
             vx: 0, vy: 0,
             speed: 5.5, jumpPower: -13, gravity: 0.6,
-            grounded: false, isCrouching: false, direction: 1, 
+            grounded: false, direction: 1, 
             animFrame: 0, animTimer: 0
         };
 
@@ -333,55 +345,48 @@
         window.addEventListener('keydown', (e) => {
             if (e.code === 'ArrowLeft' || e.code === 'KeyA') keys.left = true;
             if (e.code === 'ArrowRight' || e.code === 'KeyD') keys.right = true;
-            if (e.code === 'ArrowDown' || e.code === 'KeyS') keys.down = true;
             if (e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'KeyW') keys.up = true;
         });
         window.addEventListener('keyup', (e) => {
             if (e.code === 'ArrowLeft' || e.code === 'KeyA') keys.left = false;
             if (e.code === 'ArrowRight' || e.code === 'KeyD') keys.right = false;
-            if (e.code === 'ArrowDown' || e.code === 'KeyS') keys.down = false;
             if (e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'KeyW') keys.up = false;
         });
 
         function bindInput(id, keyStr) {
             const btn = document.getElementById(id);
+            if(!btn) return;
             const press = (e) => { e.preventDefault(); keys[keyStr] = true; };
             const release = (e) => { e.preventDefault(); keys[keyStr] = false; };
             
-            btn.addEventListener('touchstart', press);
-            btn.addEventListener('touchend', release);
+            btn.addEventListener('touchstart', press, {passive: false});
+            btn.addEventListener('touchend', release, {passive: false});
             btn.addEventListener('mousedown', press);
             btn.addEventListener('mouseup', release);
             btn.addEventListener('mouseleave', release);
         }
         bindInput('btn-left', 'left');
         bindInput('btn-right', 'right');
-        bindInput('btn-down', 'down');
-        bindInput('btn-up', 'up');
         bindInput('btn-jump', 'up');
 
         function isColliding(a, b) {
             return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
         }
 
-        // Função de Restart (Gestão das Vidas e Reset)
         window.reiniciarFase = function() {
             if (gameOver || gameWin) {
-                // Reset Total (Fim de Jogo)
                 lives = 5;
                 score = 0;
                 startTime = Date.now();
                 gameOver = false;
                 gameWin = false;
             } else {
-                // Perdeu uma vida por dano/buraco ou por clicar no botão
                 lives--;
                 if (lives <= 0) {
                     gameOver = true;
                 }
             }
 
-            // Atualiza Interface (HUD)
             document.getElementById('ui-lives').innerText = '🍄 x' + Math.max(0, lives);
             document.getElementById('ui-score').innerText = 'SCORE: ' + score;
 
@@ -395,17 +400,11 @@
         function update() {
             if(gameWin || gameOver || assetsLoaded < totalAssets) return;
 
-            if (keys.left && !keys.down) { player.vx = -player.speed; player.direction = -1; }
-            else if (keys.right && !keys.down) { player.vx = player.speed; player.direction = 1; }
+            if (keys.left) { player.vx = -player.speed; player.direction = -1; }
+            else if (keys.right) { player.vx = player.speed; player.direction = 1; }
             else player.vx = 0;
 
-            if (keys.down && player.grounded) {
-                if(!player.isCrouching) { player.isCrouching = true; player.h = 24; player.y += 16; }
-            } else if (player.isCrouching) {
-                player.isCrouching = false; player.y -= 16; player.h = 40;
-            }
-
-            if (keys.up && player.grounded && !keys.down) {
+            if (keys.up && player.grounded) {
                 player.vy = player.jumpPower; player.grounded = false;
             }
 
@@ -437,7 +436,6 @@
                 }
             }
 
-            // Morreu por cair num buraco
             if (player.y > GAME_HEIGHT + 200) reiniciarFase();
 
             for (let enemy of enemies) {
@@ -458,13 +456,11 @@
 
                 if (isColliding(player, enemy)) {
                     if (player.vy > 0 && player.y + player.h < enemy.y + 15) {
-                        // Pisou no inimigo (Mata e Ganha Score)
                         enemy.alive = false; 
                         player.vy = player.jumpPower * 0.8;
                         score += 100;
                         document.getElementById('ui-score').innerText = 'SCORE: ' + score;
                     } else {
-                        // Morreu por contato
                         reiniciarFase(); 
                     }
                 }
@@ -476,15 +472,13 @@
                 cameraX = player.x - GAME_WIDTH / 2.5;
             }
 
-            if (player.isCrouching) {
-                player.animFrame = 3;
-            } else if (!player.grounded) {
-                player.animFrame = 2;
+            if (!player.grounded) {
+                player.animFrame = 2; // Pulo
             } else if (player.vx !== 0) {
                 player.animTimer++;
                 if (player.animTimer > 8) { player.animFrame = player.animFrame === 1 ? 0 : 1; player.animTimer = 0; }
             } else {
-                player.animFrame = 0;
+                player.animFrame = 0; // Parado
             }
         }
 
