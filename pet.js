@@ -59,6 +59,7 @@ let isAnimating = false;
 // ==========================================
 auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(console.error);
 
+// Protegido contra conflito com index.html
 if (loginBtn) {
     loginBtn.addEventListener('click', () => {
         auth.signInWithEmailAndPassword(emailInput.value, passwordInput.value)
@@ -70,6 +71,7 @@ if (loginBtn) {
     });
 }
 
+// Protegido contra conflito com index.html
 if (logoutBtn) {
     logoutBtn.addEventListener('click', () => { auth.signOut(); });
 }
@@ -139,6 +141,7 @@ function salvarBancoDeDados() {
 // ==========================================
 // 3. EVENTO DA ESCOLHA DE NOME
 // ==========================================
+// Protegido contra conflito com index.html
 if (btnSaveName) {
     btnSaveName.addEventListener('click', () => {
         const novoNome = petNameInput.value.trim(); 
