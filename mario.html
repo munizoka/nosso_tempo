@@ -2,24 +2,26 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
+    <!-- Força a tela cheia e impede zoom no celular -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, orientation=landscape">
-    <title>Super Gabriel: O Resgate</title>
+    <title>Super Gabriel Bros</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background-color: #5c94fc; touch-action: none; font-family: 'Courier New', Courier, monospace; }
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background-color: #5c94fc; touch-action: none; font-family: 'Inter', sans-serif; }
         
-        /* O Canvas do Jogo */
+        /* O Canvas do Jogo Pixelado */
         #game-canvas {
             display: block;
             width: 100%;
             height: 100%;
-            object-fit: contain; /* Mantém a proporção do jogo sem esticar no celular */
+            object-fit: cover;
+            image-rendering: pixelated; /* Deixa o jogo com ar retro */
         }
 
-        /* Controles Touch por cima do Canvas */
+        /* Controles Touch Translucidos */
         .touch-btn {
-            background: rgba(255, 255, 255, 0.3);
-            border: 2px solid rgba(255, 255, 255, 0.5);
+            background: rgba(255, 255, 255, 0.2);
+            border: 2px solid rgba(255, 255, 255, 0.4);
             backdrop-filter: blur(4px);
             border-radius: 50%;
             color: white;
@@ -29,38 +31,38 @@
             justify-content: center;
             user-select: none;
             -webkit-user-select: none;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            transition: background 0.1s, transform 0.1s;
         }
-        .touch-btn:active { background: rgba(255, 255, 255, 0.6); transform: scale(0.95); }
+        .touch-btn:active { background: rgba(255, 255, 255, 0.5); transform: scale(0.90); }
     </style>
 </head>
 <body>
 
-    <!-- Aviso para girar a tela -->
+    <!-- Aviso para girar a tela (Aparece se o celular estiver em pé) -->
     <div id="orientation-warning" class="fixed inset-0 bg-black z-[100] flex flex-col items-center justify-center text-white md:hidden portrait:flex landscape:hidden">
-        <span class="text-6xl mb-4">📱🔄</span>
-        <h2 class="text-xl font-bold text-center px-4">Por favor, gire o celular deitada para jogar!</h2>
+        <span class="text-6xl mb-4 animate-bounce">📱🔄</span>
+        <h2 class="text-xl font-bold text-center px-4">Vire o celular deitado para jogar!</h2>
     </div>
 
-    <!-- Botão de Voltar para a Linha do Tempo -->
-    <a href="index.html" class="absolute top-4 left-4 z-50 w-10 h-10 bg-black/40 border border-white/30 rounded-full flex items-center justify-center text-white font-bold backdrop-blur">←</a>
+    <!-- Botão de Voltar -->
+    <a href="index.html" class="absolute top-4 left-4 z-50 w-10 h-10 bg-black/40 border border-white/30 rounded-full flex items-center justify-center text-white font-bold backdrop-blur hover:bg-black/60 transition-all">←</a>
 
     <canvas id="game-canvas"></canvas>
 
-    <!-- Controles Mobile (Joysticks) -->
-    <div class="fixed inset-0 pointer-events-none z-40 flex justify-between items-end pb-8 px-8 landscape:flex portrait:hidden">
+    <!-- Controles Mobile (Joysticks) Ocultos no PC, visíveis no Mobile em modo Paisagem -->
+    <div class="fixed inset-0 pointer-events-none z-40 flex justify-between items-end pb-6 px-6 landscape:flex portrait:hidden sm:flex">
         
         <!-- Direcional Esquerdo -->
-        <div class="flex gap-2 pointer-events-auto">
-            <button id="btn-left" class="touch-btn w-16 h-16 text-2xl shadow-lg">◀</button>
-            <div class="flex flex-col justify-end">
-                <button id="btn-down" class="touch-btn w-16 h-16 text-2xl shadow-lg">▼</button>
-            </div>
-            <button id="btn-right" class="touch-btn w-16 h-16 text-2xl shadow-lg">▶</button>
+        <div class="flex gap-2 pointer-events-auto items-end">
+            <button id="btn-left" class="touch-btn w-16 h-16 text-2xl">◀</button>
+            <button id="btn-down" class="touch-btn w-16 h-16 text-2xl">▼</button>
+            <button id="btn-right" class="touch-btn w-16 h-16 text-2xl">▶</button>
         </div>
 
-        <!-- Botão de Ação Direito -->
-        <div class="pointer-events-auto pb-4 pr-4">
-            <button id="btn-jump" class="touch-btn w-20 h-20 text-3xl shadow-[0_0_20px_rgba(244,63,94,0.6)] !bg-rose-500/60 !border-rose-400">A</button>
+        <!-- Botão de Ação Direito (Pular) -->
+        <div class="pointer-events-auto">
+            <button id="btn-jump" class="touch-btn w-20 h-20 text-4xl shadow-[0_0_20px_rgba(244,63,94,0.4)] !bg-rose-500/50 !border-rose-400">A</button>
         </div>
     </div>
 
@@ -68,51 +70,79 @@
         const canvas = document.getElementById('game-canvas');
         const ctx = canvas.getContext('2d');
 
-        // Resolução interna do jogo (Estilo Super Nintendo)
-        const GAME_WIDTH = 800;
-        const GAME_HEIGHT = 450;
+        // Resolução interna do jogo (Estilo GBA/SNES)
+        const GAME_WIDTH = 600;
+        const GAME_HEIGHT = 350;
         canvas.width = GAME_WIDTH;
         canvas.height = GAME_HEIGHT;
 
-        // ESTADOS DO JOGO
+        // ESTADOS DO TECLADO/TOUCH
         const keys = { left: false, right: false, up: false, down: false };
 
-        // PERSONAGEM (GABRIEL)
+        // O HERÓI (GABRIEL)
         const player = {
-            x: 50, y: 300, w: 32, h: 48,
+            x: 50, y: 200, w: 24, h: 32,
             vx: 0, vy: 0,
-            speed: 5, jumpPower: -12, gravity: 0.6,
+            speed: 3.5, jumpPower: -10, gravity: 0.5,
             grounded: false, isCrouching: false,
-            color: '#3b82f6' // Azul provisório
+            color: '#3b82f6' // Azul
         };
 
-        // A PRINCESA (VITÓRIA)
+        // A PRINCESA (VITÓRIA) E O FIM DA FASE
         const princess = {
-            x: 3200, y: 302, w: 32, h: 48, // Fica lá no final da fase
-            color: '#ec4899' // Rosa provisório
+            x: 2800, y: 288, w: 24, h: 32,
+            color: '#ec4899' // Rosa
         };
+        const castle = { x: 2850, y: 200, w: 100, h: 120, color: '#94a3b8' };
 
-        // CÂMERA (Segue o jogador)
-        let cameraX = 0;
-
-        // O CENÁRIO (Plataformas e Chão)
-        const platforms = [
-            { x: 0, y: 350, w: 1200, h: 100 }, // Chão 1
-            { x: 1350, y: 350, w: 800, h: 100 }, // Chão 2 (Buraco no meio)
-            { x: 2300, y: 350, w: 1000, h: 100 }, // Chão Final
-            { x: 400, y: 250, w: 150, h: 20 }, // Plataforma flutuante
-            { x: 700, y: 180, w: 150, h: 20 }, // Plataforma flutuante alta
-            { x: 1500, y: 220, w: 200, h: 20 } // Plataforma no salto
+        // INIMIGOS
+        let enemies = [
+            { x: 400, y: 288, w: 24, h: 24, vx: -1, type: 'goomba', alive: true, color: '#b45309' },
+            { x: 900, y: 288, w: 24, h: 24, vx: -1, type: 'goomba', alive: true, color: '#b45309' },
+            { x: 1400, y: 288, w: 24, h: 24, vx: -1.2, type: 'koopa', alive: true, color: '#15803d' },
+            { x: 1450, y: 288, w: 24, h: 24, vx: -1.2, type: 'koopa', alive: true, color: '#15803d' }
         ];
 
-        // EVENTOS DE TECLADO (Para jogar no PC)
+        let cameraX = 0;
+        let gameWin = false;
+
+        // O CENÁRIO (Réplica minimalista do Mario 1-1)
+        const blocks = [
+            // CHÃO PRINCIPAL (Com os famosos 2 buracos)
+            { x: 0, y: 320, w: 1100, h: 100, type: 'ground', color: '#854d21' },
+            { x: 1180, y: 320, w: 300, h: 100, type: 'ground', color: '#854d21' },
+            { x: 1550, y: 320, w: 1500, h: 100, type: 'ground', color: '#854d21' },
+
+            // CANOS VERDES
+            { x: 450, y: 270, w: 40, h: 50, type: 'pipe', color: '#22c55e' },
+            { x: 600, y: 240, w: 40, h: 80, type: 'pipe', color: '#22c55e' },
+            { x: 750, y: 210, w: 40, h: 110, type: 'pipe', color: '#22c55e' },
+            { x: 950, y: 210, w: 40, h: 110, type: 'pipe', color: '#22c55e' },
+
+            // BLOCOS MISTERIOSOS E TIJOLOS (Y: 210 = Baixos, Y: 100 = Altos)
+            { x: 250, y: 210, w: 24, h: 24, type: 'surprise', color: '#eab308' },
+            
+            { x: 350, y: 210, w: 24, h: 24, type: 'brick', color: '#b45309' },
+            { x: 374, y: 210, w: 24, h: 24, type: 'surprise', color: '#eab308' },
+            { x: 398, y: 210, w: 24, h: 24, type: 'brick', color: '#b45309' },
+            { x: 422, y: 210, w: 24, h: 24, type: 'surprise', color: '#eab308' },
+            { x: 446, y: 210, w: 24, h: 24, type: 'brick', color: '#b45309' },
+            { x: 398, y: 100, w: 24, h: 24, type: 'surprise', color: '#eab308' }, // Aquele bloco alto solitário
+
+            // A ESCADINHA CLÁSSICA ANTES DA BANDEIRA
+            { x: 2400, y: 296, w: 24, h: 24, type: 'block', color: '#f87171' },
+            { x: 2424, y: 272, w: 24, h: 48, type: 'block', color: '#f87171' },
+            { x: 2448, y: 248, w: 24, h: 72, type: 'block', color: '#f87171' },
+            { x: 2472, y: 224, w: 24, h: 96, type: 'block', color: '#f87171' },
+        ];
+
+        // Mapeamento de Teclado
         window.addEventListener('keydown', (e) => {
             if (e.code === 'ArrowLeft' || e.code === 'KeyA') keys.left = true;
             if (e.code === 'ArrowRight' || e.code === 'KeyD') keys.right = true;
             if (e.code === 'ArrowDown' || e.code === 'KeyS') keys.down = true;
             if (e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'KeyW') keys.up = true;
         });
-
         window.addEventListener('keyup', (e) => {
             if (e.code === 'ArrowLeft' || e.code === 'KeyA') keys.left = false;
             if (e.code === 'ArrowRight' || e.code === 'KeyD') keys.right = false;
@@ -120,7 +150,7 @@
             if (e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'KeyW') keys.up = false;
         });
 
-        // EVENTOS TOUCH (Mobile)
+        // Mapeamento de Touch
         function bindTouch(id, keyStr) {
             const btn = document.getElementById(id);
             btn.addEventListener('touchstart', (e) => { e.preventDefault(); keys[keyStr] = true; });
@@ -131,16 +161,25 @@
         bindTouch('btn-down', 'down');
         bindTouch('btn-jump', 'up');
 
-        // DETECÇÃO DE COLISÃO BÁSICA
-        function checkCollision(rect1, rect2) {
-            return rect1.x < rect2.x + rect2.w &&
-                   rect1.x + rect1.w > rect2.x &&
-                   rect1.y < rect2.y + rect2.h &&
-                   rect1.y + rect1.h > rect2.y;
+        // Função de Colisão Básica
+        function isColliding(a, b) {
+            return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
         }
 
-        // MOTOR FÍSICO E LÓGICA
+        function reiniciarFase() {
+            player.x = 50; 
+            player.y = 100;
+            player.vx = 0; 
+            player.vy = 0;
+            cameraX = 0;
+            // Revive inimigos
+            enemies.forEach(e => { e.alive = true; });
+        }
+
+        // MOTOR FÍSICO
         function update() {
+            if(gameWin) return;
+
             // Movimento Horizontal
             if (keys.left && !keys.down) player.vx = -player.speed;
             else if (keys.right && !keys.down) player.vx = player.speed;
@@ -149,10 +188,12 @@
             // Agachar
             if (keys.down && player.grounded) {
                 player.isCrouching = true;
-                player.h = 24; // Fica pequenininho
-            } else {
+                player.h = 16; 
+                player.y += 16; // Compensa a altura para não flutuar
+            } else if (player.isCrouching) {
                 player.isCrouching = false;
-                player.h = 48; // Altura normal
+                player.y -= 16; // Volta a altura normal
+                player.h = 32;
             }
 
             // Pulo
@@ -164,94 +205,160 @@
             // Aplicar Gravidade
             player.vy += player.gravity;
 
-            // Atualizar posições futuras
-            let nextX = player.x + player.vx;
-            let nextY = player.y + player.vy;
-
+            // === RESOLUÇÃO DE COLISÕES (O SEGREDO DO MOTOR PLATAFORMA) ===
             player.grounded = false;
 
-            // Colisões com o cenário
-            for (let plat of platforms) {
-                // Colisão Vertical (Caindo na plataforma)
-                if (player.vy > 0 && 
-                    player.y + player.h <= plat.y + 10 && 
-                    nextY + player.h >= plat.y &&
-                    player.x + player.w > plat.x && 
-                    player.x < plat.x + plat.w) 
-                {
-                    nextY = plat.y - player.h;
-                    player.vy = 0;
-                    player.grounded = true;
+            // Mover em X
+            player.x += player.vx;
+            // Limite da tela esquerda
+            if (player.x < cameraX) player.x = cameraX; 
+
+            for (let b of blocks) {
+                if (isColliding(player, b)) {
+                    if (player.vx > 0) player.x = b.x - player.w; // Bateu na esquerda do bloco
+                    else if (player.vx < 0) player.x = b.x + b.w; // Bateu na direita do bloco
+                    player.vx = 0;
                 }
             }
 
-            player.x = nextX;
-            player.y = nextY;
-
-            // Caiu no buraco (Game Over)
-            if (player.y > GAME_HEIGHT) {
-                player.x = 50; player.y = 100; // Renasce no começo
-                player.vy = 0;
+            // Mover em Y
+            player.y += player.vy;
+            for (let b of blocks) {
+                if (isColliding(player, b)) {
+                    if (player.vy > 0) { // Caindo em cima do bloco
+                        player.y = b.y - player.h;
+                        player.vy = 0;
+                        player.grounded = true;
+                    } else if (player.vy < 0) { // Bateu a cabeça por baixo
+                        player.y = b.y + b.h;
+                        player.vy = 0;
+                        // Aqui no futuro tocaremos o som da moedinha!
+                    }
+                }
             }
 
-            // Bloquear para não voltar para trás da tela
-            if (player.x < 0) player.x = 0;
+            // Buraco da morte
+            if (player.y > GAME_HEIGHT + 100) {
+                reiniciarFase();
+            }
 
-            // Câmera segue o Gabriel, travada no limite esquerdo
-            cameraX = player.x - GAME_WIDTH / 3;
-            if (cameraX < 0) cameraX = 0;
+            // Lógica dos Inimigos
+            for (let enemy of enemies) {
+                if (!enemy.alive) continue;
+                
+                // Inimigo cai
+                enemy.y += 3; 
+                for (let b of blocks) {
+                    if (isColliding(enemy, b)) {
+                        enemy.y = b.y - enemy.h;
+                        break;
+                    }
+                }
+
+                // Inimigo anda
+                enemy.x += enemy.vx;
+                // Bateu no tubo? Muda de lado
+                for (let b of blocks) {
+                    if (b.type !== 'ground' && isColliding(enemy, b)) {
+                        if (enemy.vx < 0) { enemy.x = b.x + b.w; enemy.vx *= -1; }
+                        else { enemy.x = b.x - enemy.w; enemy.vx *= -1; }
+                    }
+                }
+
+                // Colisão do Herói com Inimigo
+                if (isColliding(player, enemy)) {
+                    if (player.vy > 0 && player.y + player.h < enemy.y + 15) {
+                        // PISOU EM CIMA (Mata Inimigo)
+                        enemy.alive = false;
+                        player.vy = player.jumpPower * 0.7; // Pulinho extra
+                    } else {
+                        // BATEU DE LADO (Morreu)
+                        reiniciarFase();
+                    }
+                }
+            }
+
+            // Encostou na Princesa (Vitória!)
+            if (isColliding(player, princess)) {
+                gameWin = true;
+            }
+
+            // Câmera persegue o herói (avança apenas para a direita)
+            if (player.x > cameraX + GAME_WIDTH / 2.5) {
+                cameraX = player.x - GAME_WIDTH / 2.5;
+            }
         }
 
         // DESENHAR NA TELA
         function draw() {
-            // Limpa o céu
-            ctx.fillStyle = '#5c94fc'; // Azul Mario
+            // Fundo
+            ctx.fillStyle = '#5c94fc'; // Céu
             ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
 
             ctx.save();
-            ctx.translate(-cameraX, 0); // Move o mundo com a câmera
+            ctx.translate(-cameraX, 0); 
 
-            // Desenha as Plataformas (Chão)
-            ctx.fillStyle = '#a0522d'; // Marrom provisório
-            for (let plat of platforms) {
-                ctx.fillRect(plat.x, plat.y, plat.w, plat.h);
-                // Matinho em cima
-                ctx.fillStyle = '#4ade80';
-                ctx.fillRect(plat.x, plat.y, plat.w, 10);
-                ctx.fillStyle = '#a0522d';
+            // Cenário (Enquanto não temos as texturas)
+            for (let b of blocks) {
+                ctx.fillStyle = b.color;
+                ctx.fillRect(b.x, b.y, b.w, b.h);
+                
+                // Detalhe extra para parecer matinho no chão
+                if(b.type === 'ground') {
+                    ctx.fillStyle = '#4ade80';
+                    ctx.fillRect(b.x, b.y, b.w, 8);
+                }
+                // Desenhar '?' no bloco surpresa
+                if(b.type === 'surprise') {
+                    ctx.fillStyle = '#fff';
+                    ctx.font = 'bold 16px Inter';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('?', b.x + 12, b.y + 18);
+                }
             }
 
-            // Desenha a Princesa Vitória
+            // Castelo e Princesa
+            ctx.fillStyle = castle.color;
+            ctx.fillRect(castle.x, castle.y, castle.w, castle.h);
             ctx.fillStyle = princess.color;
             ctx.fillRect(princess.x, princess.y, princess.w, princess.h);
             
-            // Desenha o Jogador (Gabriel)
+            // Inimigos
+            for (let enemy of enemies) {
+                if(enemy.alive) {
+                    ctx.fillStyle = enemy.color;
+                    ctx.fillRect(enemy.x, enemy.y, enemy.w, enemy.h);
+                }
+            }
+
+            // Jogador (Gabriel)
             ctx.fillStyle = player.color;
             ctx.fillRect(player.x, player.y, player.w, player.h);
 
-            // Se encostar na princesa...
-            if(checkCollision(player, princess)) {
-                ctx.fillStyle = 'rgba(0,0,0,0.5)';
+            // Tela de Vitória
+            if(gameWin) {
+                ctx.fillStyle = 'rgba(0,0,0,0.6)';
                 ctx.fillRect(cameraX, 0, GAME_WIDTH, GAME_HEIGHT);
                 ctx.fillStyle = '#fff';
-                ctx.font = 'bold 40px Courier New';
+                ctx.font = 'bold 30px Inter';
                 ctx.textAlign = 'center';
-                ctx.fillText("VOCÊ SALVOU A VITÓRIA! ❤️", cameraX + GAME_WIDTH/2, GAME_HEIGHT/2);
+                ctx.fillText("VOCÊ RESGATOU A PRINCESA! ❤️", cameraX + GAME_WIDTH/2, GAME_HEIGHT/2 - 20);
+                
+                ctx.font = '14px Inter';
+                ctx.fillStyle = '#f43f5e';
+                ctx.fillText("Parabéns, meu herói!", cameraX + GAME_WIDTH/2, GAME_HEIGHT/2 + 20);
             }
 
             ctx.restore();
         }
 
-        // LOOP INFINITO DO JOGO
         function loop() {
             update();
             draw();
             requestAnimationFrame(loop);
         }
 
-        // Inicia o Jogo
         requestAnimationFrame(loop);
-
     </script>
 </body>
 </html>
