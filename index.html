@@ -110,7 +110,6 @@
         <img src="34.png" id="m-logo" class="w-32 md:w-48 opacity-0" style="will-change: transform, opacity;">
     </div>
 
-
     <canvas id="bg-particles" class="fixed inset-0 pointer-events-none z-0 opacity-40"></canvas>
     <div id="ambient-light" class="ambient-glow top-1/4 left-1/2 bg-rose-500"></div>
     <div id="sidebar-backdrop" onclick="toggleSidebar(false)" class="fixed inset-0 bg-black/60 z-20 hidden md:hidden backdrop-blur-sm"></div>
@@ -161,7 +160,7 @@
                 <span class="truncate">Nosso Álbum de Fotos</span>
             </button>
 
-            <!-- NOVO BOTÃO DOS LUGARES -->
+            <!-- BOTÃO DOS LUGARES -->
             <button onclick="switchTab('lugares')" id="btn-lugares" class="tab-btn w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-left text-sm font-medium transition-all text-zinc-400 hover:bg-zinc-800/40 hover:text-zinc-200">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-cyan-400 flex-shrink-0"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
                 <span class="truncate">Lugares que Visitamos</span>
@@ -179,10 +178,10 @@
                 <span class="truncate">Talari Bird</span>
             </button>
             
-            <!-- NOVA ABA DA ROLETA -->
+            <!-- BOTÃO DA ROLETA ATUALIZADO PARA "ViSorte" -->
             <button onclick="switchTab('roleta')" id="btn-roleta" class="tab-btn w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-left text-sm font-medium transition-all text-zinc-400 hover:bg-zinc-800/40 hover:text-zinc-200">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-pink-400 flex-shrink-0"><circle cx="12" cy="12" r="10"></circle><path d="M12 2v20"></path><path d="M2 12h20"></path><path d="m4.93 4.93 14.14 14.14"></path><path d="m19.07 4.93-14.14 14.14"></path></svg>
-                <span class="truncate">A Roleta</span>
+                <span class="truncate">ViSorte</span>
             </button>
 
             <div class="pt-3 pb-1"><div class="text-[11px] font-semibold text-zinc-500 uppercase tracking-wider px-3 py-1">Pet</div></div>
@@ -319,20 +318,18 @@
                 </a>
             </div>
 
-            <!-- ABA NOVA: LUGARES QUE VISITAMOS (LISTA INTERATIVA SALVA NO FIREBASE) -->
+            <!-- ABA: LUGARES QUE VISITAMOS (LISTA INTERATIVA MINIMALISTA) -->
             <div id="view-lugares" class="tab-view w-full max-w-4xl mx-auto space-y-6 hidden">
                 <div class="text-center">
                     <span class="inline-block px-3 py-0.5 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-cyan-300 text-xs font-medium mb-3">🌍 Nossas Viagens</span>
                     <h1 class="text-2xl md:text-4xl font-semibold tracking-tight text-white mt-1">Lugares que Visitamos</h1>
-                    <p class="text-sm text-zinc-400 mt-2">Nossa lista de memórias pelo mundo. Fica sempre guardada!</p>
                 </div>
 
-                <div class="flex gap-2 max-w-md mx-auto">
+                <div class="flex gap-2 max-w-md mx-auto mt-4">
                     <input type="text" id="input-novo-lugar" placeholder="Ex: Paris, França" class="flex-1 bg-[#141418] border border-zinc-800 rounded-xl px-4 py-3 text-white outline-none focus:border-cyan-500 transition-colors shadow-lg" onkeydown="if(event.key === 'Enter') adicionarLugar()">
                     <button onclick="adicionarLugar()" class="px-5 py-3 bg-cyan-500/20 text-cyan-300 font-bold rounded-xl hover:bg-cyan-500/30 transition-all shadow-lg active:scale-95">+</button>
                 </div>
 
-                <!-- Grelha Onde os lugares vão aparecer -->
                 <div id="lista-lugares" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 mt-8">
                     <!-- Gerado pelo JS -->
                 </div>
@@ -383,23 +380,21 @@
                 <p class="text-center text-[11px] text-zinc-500">Toque na tela, clique ou aperte Espaço para voar</p>
             </div>
 
-            <!-- ABA NOVA: ROLETA DO CASAL -->
+            <!-- ABA NOVA: ROLETA DO CASAL (ATUALIZADA) -->
             <div id="view-roleta" class="tab-view w-full max-w-2xl mx-auto space-y-6 hidden">
                 <div class="text-center">
                     <span class="inline-block px-3 py-0.5 rounded-full bg-pink-500/10 border border-pink-500/20 text-pink-300 text-xs font-medium">🎡 Sorteio</span>
-                    <h1 class="text-2xl md:text-4xl font-semibold tracking-tight text-white mt-1">A Roleta do Casal</h1>
-                    <p class="text-sm text-zinc-400 mt-2">Na dúvida do que fazer? Deixem o destino decidir!</p>
+                    <h1 class="text-2xl md:text-4xl font-semibold tracking-tight text-white mt-1">ViSorte</h1>
+                    <p class="text-sm text-zinc-400 mt-2">na duvida? só girar.</p>
                 </div>
 
-                <div class="flex gap-2 max-w-md mx-auto">
-                    <input type="text" id="roleta-input" placeholder="Ex: Pedir Pizza 🍕" class="flex-1 bg-[#141418] border border-zinc-800 rounded-xl px-4 py-3 text-white outline-none focus:border-pink-500 transition-colors shadow-lg" onkeydown="if(event.key === 'Enter') addRoletaOption()">
+                <div class="flex gap-2 max-w-md mx-auto mt-4">
+                    <input type="text" id="roleta-input" placeholder="Ex: Pedir canaanburger" class="flex-1 bg-[#141418] border border-zinc-800 rounded-xl px-4 py-3 text-white outline-none focus:border-pink-500 transition-colors shadow-lg" onkeydown="if(event.key === 'Enter') addRoletaOption()">
                     <button onclick="addRoletaOption()" class="px-5 py-3 bg-pink-500/20 text-pink-300 font-bold rounded-xl hover:bg-pink-500/30 transition-all shadow-lg active:scale-95">+</button>
                 </div>
 
-                <!-- Lista de Opções da Roleta para remover -->
                 <div id="roleta-list" class="flex flex-wrap gap-2 justify-center max-w-lg mx-auto"></div>
 
-                <!-- A Roleta Gráfica -->
                 <div class="relative w-64 h-64 md:w-80 md:h-80 mx-auto mt-8">
                     <div class="absolute -top-6 left-1/2 -translate-x-1/2 z-20 text-4xl drop-shadow-2xl">👇</div>
                     <div id="wheel-container" class="w-full h-full rounded-full overflow-hidden border-4 border-zinc-800 shadow-2xl transition-transform duration-[4000ms] ease-out" style="transform: rotate(0deg);">
@@ -433,7 +428,6 @@
             messagingSenderId: "812792210449",
             appId: "1:812792210449:web:df98d32608446979ae7db0"
         };
-        // Inicializa apenas se não estiver inicializado (Evita erros)
         if (!firebase.apps.length) {
             firebase.initializeApp(firebaseConfig);
         }
@@ -571,7 +565,7 @@
         }
 
         // ==========================================
-        // LISTA DE LUGARES FIREBASE (Substituiu o Mapa)
+        // LISTA DE LUGARES FIREBASE
         // ==========================================
         let lugaresVisitados = [];
 
@@ -582,7 +576,6 @@
                     lugaresVisitados = doc.data().lista || [];
                     renderLugares();
                 } else {
-                    // Se for a primeira vez e o BD estiver vazio, injetamos a sua lista original
                     lugaresVisitados = [
                         'Xerém, RJ', 'Petrópolis, RJ', 'Itaipava, RJ', 'Centro do Rio, RJ', 
                         'Jaconé, RJ', 'Maricá, RJ', 'Saquarema, RJ', 'Guarulhos, SP', 
@@ -628,7 +621,6 @@
             }
         }
         
-        // Iniciar o carregamento quando a página abrir
         window.addEventListener('load', carregarLugares);
 
         // ==========================================
@@ -664,14 +656,12 @@
                 ctx.lineWidth = 4;
                 ctx.stroke();
 
-                // Escrever Texto
                 ctx.save();
                 ctx.translate(cx, cy);
                 ctx.rotate(i*sliceAngle + sliceAngle/2);
                 ctx.textAlign = "right";
                 ctx.fillStyle = "#fff";
                 ctx.font = "bold 20px Inter";
-                // Limitar tamanho do texto para não sair da roleta
                 let txt = roletaOpcoes[i];
                 if(txt.length > 15) txt = txt.substring(0, 15) + '...';
                 ctx.fillText(txt, r - 30, 7);
@@ -682,7 +672,7 @@
         function addRoletaOption() {
             const input = document.getElementById('roleta-input');
             const val = input.value.trim();
-            if(val && roletaOpcoes.length < 12) { // Limite máximo de opções
+            if(val && roletaOpcoes.length < 12) { 
                 roletaOpcoes.push(val);
                 input.value = '';
                 drawWheel();
@@ -712,7 +702,6 @@
             isSpinning = true;
             document.getElementById('roleta-winner').textContent = 'Girando...';
             
-            // Gira entre 5 e 10 voltas completas + grau aleatório
             const spins = Math.floor(Math.random() * 5) + 5;
             const deg = Math.floor(Math.random() * 360);
             currentRotation += (spins * 360) + deg;
@@ -721,23 +710,20 @@
             wheel.style.transition = 'transform 4s cubic-bezier(0.1, 0.7, 0.1, 1)';
             wheel.style.transform = `rotate(${currentRotation}deg)`;
             
-            // Calcula o vencedor baseado na matemática do CSS Rotate vs Canvas Arc
             setTimeout(() => {
                 isSpinning = false;
                 const actualDeg = currentRotation % 360;
                 const sliceAngle = 360 / roletaOpcoes.length;
-                // A seta está em cima (que equivale a 270 graus no Canvas)
                 const originalAngle = (270 - actualDeg + 360) % 360;
                 const index = Math.floor(originalAngle / sliceAngle);
                 
                 const winner = roletaOpcoes[index];
                 document.getElementById('roleta-winner').textContent = `🎉 Saiu: ${winner}! 🎉`;
                 
-                // Chuva de corações no meio do ecrã
                 for(let i=0; i<3; i++) {
                     setTimeout(() => spawnHearts({ clientX: window.innerWidth / 2, clientY: window.innerHeight / 2 }), i*200);
                 }
-            }, 4000); // Exatos 4s da transição CSS
+            }, 4000); 
         }
 
         // ==========================================
@@ -915,7 +901,9 @@
 
         function drawImageCover(ctx, img, x, y, w, h) {
             if (!img.complete || !img.naturalWidth) { 
-                ctx.fillStyle = '#f43f5e'; ctx.fillRect(x, y, w, h); return; 
+                ctx.fillStyle = '#f43f5e'; 
+                ctx.fillRect(x, y, w, h); 
+                return; 
             }
             const imgRatio = img.naturalWidth / img.naturalHeight, boxRatio = w / h;
             let sx = 0, sy = 0, sw = img.naturalWidth, sh = img.naturalHeight;
@@ -960,7 +948,11 @@
                 if (o.isPerson) {
                     const cardH = 68;
                     const py = o.personPos === 'top' ? Math.max(6, o.top - cardH - 4) : o.bottom + 4;
-                    tCtx.save(); tCtx.beginPath(); tCtx.rect(o.x - 4, py, o.w + 8, cardH); tCtx.clip(); drawImageCover(tCtx, o.enemyImg, o.x - 4, py, o.w + 8, cardH); tCtx.restore();
+                    tCtx.save(); tCtx.beginPath(); 
+                    tCtx.rect(o.x - 4, py, o.w + 8, cardH); 
+                    tCtx.clip(); 
+                    drawImageCover(tCtx, o.enemyImg, o.x - 4, py, o.w + 8, cardH); 
+                    tCtx.restore();
                     tCtx.strokeStyle = '#ef4444'; tCtx.lineWidth = 2.5; tCtx.beginPath(); tCtx.rect(o.x - 4, py, o.w + 8, cardH); tCtx.stroke();
                 }
                 
@@ -980,7 +972,9 @@
             tCtx.beginPath(); tCtx.moveTo(0, tCvs.height - 24); tCtx.lineTo(tCvs.width, tCvs.height - 24); tCtx.stroke();
             
             tCtx.save(); tCtx.translate(bird.x, bird.y); tCtx.rotate(Math.min(Math.PI / 5, Math.max(-Math.PI / 5, bird.vy * 0.06)));
-            tCtx.beginPath(); tCtx.arc(0, 0, bird.r, 0, Math.PI * 2); tCtx.clip(); drawImageCover(tCtx, tbHeroImg, -bird.r, -bird.r, bird.r * 2, bird.r * 2); tCtx.restore();
+            tCtx.beginPath(); tCtx.arc(0, 0, bird.r, 0, Math.PI * 2); tCtx.clip(); 
+            drawImageCover(tCtx, tbHeroImg, -bird.r, -bird.r, bird.r * 2, bird.r * 2); 
+            tCtx.restore();
             
             tCtx.strokeStyle = '#fbbf24'; tCtx.lineWidth = 2.5; tCtx.beginPath(); tCtx.arc(bird.x, bird.y, bird.r, 0, Math.PI * 2); tCtx.stroke();
             
@@ -1010,7 +1004,7 @@
                 lugares: 'Lugares que Visitamos',
                 jogo: 'ViMória game',
                 talari: 'Talari Bird',
-                roleta: 'A Roleta do Casal'
+                roleta: 'ViSorte'
             };
             const glows = {
                 beijo: 'bg-rose-500',
@@ -1040,7 +1034,7 @@
             document.getElementById('header-title').textContent = titles[tab];
 
             if (tab === 'fotos') document.getElementById('fotos-popup').classList.remove('hidden');
-            if (tab === 'roleta') drawWheel(); // Força desenhar roleta se redimensionou
+            if (tab === 'roleta') drawWheel(); 
             
             if (window.innerWidth < 768) toggleSidebar(false);
         }
