@@ -59,25 +59,29 @@ let isAnimating = false;
 // ==========================================
 auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(console.error);
 
-loginBtn.addEventListener('click', () => {
-    auth.signInWithEmailAndPassword(emailInput.value, passwordInput.value)
-        .then(() => { loginError.style.display = 'none'; })
-        .catch((error) => {
-            loginError.style.display = 'block';
-            console.error(error.message);
-        });
-});
+if (loginBtn) {
+    loginBtn.addEventListener('click', () => {
+        auth.signInWithEmailAndPassword(emailInput.value, passwordInput.value)
+            .then(() => { loginError.style.display = 'none'; })
+            .catch((error) => {
+                loginError.style.display = 'block';
+                console.error(error.message);
+            });
+    });
+}
 
-logoutBtn.addEventListener('click', () => { auth.signOut(); });
+if (logoutBtn) {
+    logoutBtn.addEventListener('click', () => { auth.signOut(); });
+}
 
 auth.onAuthStateChanged((user) => {
     if (user) {
-        loginScreen.style.display = 'none';
-        gameScreen.style.display = 'none'; 
+        if(loginScreen) loginScreen.style.display = 'none';
+        if(gameScreen) gameScreen.style.display = 'none'; 
         carregarBancoDeDados(user.uid);
     } else {
-        loginScreen.style.display = 'flex';
-        gameScreen.style.display = 'none';
+        if(loginScreen) loginScreen.style.display = 'flex';
+        if(gameScreen) gameScreen.style.display = 'none';
         if(nameScreen) nameScreen.style.display = 'none';
         pararJogo();
     }
@@ -93,7 +97,7 @@ function carregarBancoDeDados(uid) {
             status.banheiro = dados.banheiro;
             status.alegria = dados.alegria;
             
-            if (dados.nascimento) {
+            if (dados.nascimento && ageDisplay) {
                 let dias = Math.floor((Date.now() - dados.nascimento.toDate().getTime()) / (1000 * 60 * 60 * 24));
                 ageDisplay.innerText = dias;
             }
@@ -103,11 +107,11 @@ function carregarBancoDeDados(uid) {
             
             if (dados.nome) {
                 if (petNameDisplay) petNameDisplay.innerText = dados.nome;
-                nameScreen.style.display = 'none';
-                gameScreen.style.display = 'flex';
+                if (nameScreen) nameScreen.style.display = 'none';
+                if (gameScreen) gameScreen.style.display = 'flex';
                 iniciarJogo();
             } else {
-                nameScreen.style.display = 'flex';
+                if (nameScreen) nameScreen.style.display = 'flex';
             }
         } else {
             petDocRef.set({
@@ -117,7 +121,7 @@ function carregarBancoDeDados(uid) {
             }).then(() => {
                 atualizarBarrasNaTela();
                 atualizarExpressao();
-                nameScreen.style.display = 'flex'; 
+                if(nameScreen) nameScreen.style.display = 'flex'; 
             });
         }
     });
@@ -176,7 +180,7 @@ function obterImagemEstadoAtual() {
 }
 
 function atualizarExpressao() {
-    if (!isAnimating) {
+    if (!isAnimating && bruxaImg) {
         let imagemCorreta = obterImagemEstadoAtual();
         if (bruxaImg.src.indexOf(imagemCorreta) === -1) {
             bruxaImg.src = imagemCorreta;
@@ -185,24 +189,26 @@ function atualizarExpressao() {
 }
 
 function atualizarBarrasNaTela() {
-    barFome.style.width = status.fome + '%';
-    barEnergia.style.width = status.energia + '%';
-    barBanheiro.style.width = status.banheiro + '%';
-    barAlegria.style.width = status.alegria + '%';
+    if(barFome) barFome.style.width = status.fome + '%';
+    if(barEnergia) barEnergia.style.width = status.energia + '%';
+    if(barBanheiro) barBanheiro.style.width = status.banheiro + '%';
+    if(barAlegria) barAlegria.style.width = status.alegria + '%';
 
-    // Atualização dos números na tela
-    percFome.innerText = Math.floor(status.fome) + '%';
-    percEnergia.innerText = Math.floor(status.energia) + '%';
-    percBanheiro.innerText = Math.floor(status.banheiro) + '%';
-    percAlegria.innerText = Math.floor(status.alegria) + '%';
+    if(percFome) percFome.innerText = Math.floor(status.fome) + '%';
+    if(percEnergia) percEnergia.innerText = Math.floor(status.energia) + '%';
+    if(percBanheiro) percBanheiro.innerText = Math.floor(status.banheiro) + '%';
+    if(percAlegria) percAlegria.innerText = Math.floor(status.alegria) + '%';
 
-    barFome.style.backgroundColor = status.fome > 30 ? '#4caf50' : '#8b0000';
-    barEnergia.style.backgroundColor = status.energia > 30 ? '#d1b800' : '#8b0000';
-    barBanheiro.style.backgroundColor = status.banheiro > 30 ? '#2196f3' : '#8b0000';
-    barAlegria.style.backgroundColor = status.alegria > 30 ? '#f44336' : '#8b0000';
+    if(barFome) barFome.style.backgroundColor = status.fome > 30 ? '#4caf50' : '#8b0000';
+    if(barEnergia) barEnergia.style.backgroundColor = status.energia > 30 ? '#d1b800' : '#8b0000';
+    if(barBanheiro) barBanheiro.style.backgroundColor = status.banheiro > 30 ? '#2196f3' : '#8b0000';
+    if(barAlegria) barAlegria.style.backgroundColor = status.alegria > 30 ? '#f44336' : '#8b0000';
 }
 
 function iniciarJogo() {
+    if(gameLoop) clearInterval(gameLoop);
+    if(saveLoop) clearInterval(saveLoop);
+    
     gameLoop = setInterval(() => {
         status.fome = Math.max(0, status.fome - 1);
         status.energia = Math.max(0, status.energia - 0.5);
@@ -227,6 +233,8 @@ function pararJogo() {
 let timeoutAnimacao;
 
 function animarAcao(novaImagem) {
+    if(!bruxaImg) return;
+    
     isAnimating = true; 
     bruxaImg.src = novaImagem;
     bruxaImg.classList.remove('breathe-anim'); 
@@ -246,7 +254,6 @@ function animarAcao(novaImagem) {
     }, 1500);
 }
 
-// Ação de Comer
 function acaoComer() {
     status.fome = Math.min(100, status.fome + 20);
     atualizarBarrasNaTela();
@@ -255,7 +262,6 @@ function acaoComer() {
 }
 if(btnFood) btnFood.addEventListener('click', acaoComer);
 
-// Ação de Dormir
 function acaoDormir() {
     status.energia = Math.min(100, status.energia + 30);
     atualizarBarrasNaTela();
@@ -264,7 +270,6 @@ function acaoDormir() {
 }
 if(btnSleep) btnSleep.addEventListener('click', acaoDormir);
 
-// Ação de Banheiro
 function acaoBanheiro() {
     status.banheiro = 100;
     atualizarBarrasNaTela();
@@ -273,7 +278,6 @@ function acaoBanheiro() {
 }
 if(btnBath) btnBath.addEventListener('click', acaoBanheiro);
 
-// Ação de Brincar
 function acaoBrincar() {
     status.alegria = Math.min(100, status.alegria + 25);
     atualizarBarrasNaTela();
