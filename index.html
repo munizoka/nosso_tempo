@@ -80,7 +80,6 @@
 
     <!-- AUDIO -->
     <audio id="tudum-audio" src="audio 1.mp3" preload="auto"></audio>
-    <!-- Adicionado crossorigin para permitir controle do Web Audio API no celular -->
     <audio id="bg-music" src="audio 2.mp3" loop preload="auto" crossorigin="anonymous"></audio>
 
     <!-- TELA DE BOAS-VINDAS -->
@@ -213,9 +212,8 @@
     <!-- Conteúdo Principal -->
     <div class="flex-1 flex flex-col h-full relative overflow-y-auto z-10">
         
-        <!-- CABEÇALHO SUPERIOR (Com Caixa de Volume Animada) -->
+        <!-- CABEÇALHO SUPERIOR -->
         <header class="p-4 flex items-center sticky top-0 bg-[#09090b]/70 backdrop-blur-md z-20 justify-between">
-            
             <div class="flex items-center gap-3">
                 <button onclick="toggleSidebar()" class="p-2.5 rounded-xl bg-zinc-900/90 border border-zinc-800 hover:bg-zinc-800 text-zinc-300 active:scale-95 transition-all">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></svg>
@@ -224,13 +222,11 @@
             </div>
 
             <div class="relative flex items-center">
-                <!-- Caixa da Barra de Volume animada -->
                 <div id="volume-popup" class="absolute right-14 bg-[#141418] border border-zinc-800 p-2.5 rounded-xl shadow-2xl flex items-center gap-3 w-52 vol-popup">
                     <button onclick="setVolume(0)" class="text-lg hover:scale-110 transition-transform active:scale-95">🔈</button>
                     <input type="range" id="volume-slider" min="0" max="1" step="0.01" value="0.4" class="w-full">
                     <button onclick="setVolume(1)" class="text-lg hover:scale-110 transition-transform active:scale-95">🔊</button>
                 </div>
-                <!-- Botão de Som Principal -->
                 <button id="btn-volume" onclick="toggleVolume()" class="p-2.5 rounded-xl bg-zinc-900/90 border border-zinc-800 hover:bg-zinc-800 text-zinc-300 active:scale-95 transition-all flex items-center justify-center text-rose-500 z-10">
                     <svg id="vol-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
@@ -272,8 +268,6 @@
                         <h2 class="text-3xl md:text-4xl font-semibold text-white tracking-tight">04 de Setembro de 1999</h2>
                     </div>
                     <div id="timer-niver-vi" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 md:gap-4 max-w-3xl mx-auto"></div>
-                    
-                    <!-- Contador Premium Next Birthday Vitoria -->
                     <div class="mt-6 flex flex-col items-center justify-center">
                         <div class="px-5 py-3 rounded-2xl bg-[#141418] border border-zinc-800/80 shadow-xl flex items-center gap-3">
                             <div class="w-8 h-8 rounded-full bg-orange-500/10 flex items-center justify-center text-orange-400 text-lg">⏳</div>
@@ -285,7 +279,7 @@
                     </div>
                 </div>
                 
-                <!-- Divisor Bonitinho -->
+                <!-- Divisor -->
                 <div class="flex items-center justify-center gap-4 w-1/2 mx-auto opacity-50">
                     <hr class="border-zinc-800 flex-1">
                     <span class="text-zinc-600 text-xs">✨</span>
@@ -299,8 +293,6 @@
                         <h2 class="text-3xl md:text-4xl font-semibold text-white tracking-tight">03 de Novembro de 2000</h2>
                     </div>
                     <div id="timer-niver-gabi" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 md:gap-4 max-w-3xl mx-auto"></div>
-
-                    <!-- Contador Premium Next Birthday Gabriel -->
                     <div class="mt-6 flex flex-col items-center justify-center">
                         <div class="px-5 py-3 rounded-2xl bg-[#141418] border border-zinc-800/80 shadow-xl flex items-center gap-3">
                             <div class="w-8 h-8 rounded-full bg-orange-500/10 flex items-center justify-center text-orange-400 text-lg">⏳</div>
@@ -357,7 +349,6 @@
                     </div>
                 </div>
 
-                <!-- Fix do Mapa: Absolute Inset para forçar o tamanho do Canvas -->
                 <div class="relative w-full h-[380px] md:h-[450px] rounded-2xl overflow-hidden border border-zinc-800 bg-[#050508] shadow-2xl">
                     <div id="hd-globe-map" class="w-full h-full absolute inset-0"></div>
 
@@ -422,8 +413,8 @@
                     </button>
                 </div>
 
-                <div class="relative rounded-2xl overflow-hidden border border-zinc-800 shadow-2xl bg-[#0c0c10] select-none">
-                    <canvas id="talari-canvas" width="360" height="480" class="w-full h-auto block cursor-pointer touch-manipulation"></canvas>
+                <div class="relative rounded-2xl overflow-hidden border border-zinc-800 shadow-2xl bg-[#0c0c10] select-none flex justify-center items-center">
+                    <canvas id="talari-canvas" width="360" height="480" class="max-w-full h-auto block cursor-pointer touch-manipulation"></canvas>
                 </div>
                 <p class="text-center text-[11px] text-zinc-500">Toque na tela, clique ou aperte Espaço para voar</p>
             </div>
@@ -447,7 +438,6 @@
         
         let audioCtx, gainNode;
 
-        // Cria o estúdio virtual para forçar a mudança de volume no celular
         function initWebAudio() {
             if (audioCtx) return;
             const AudioContext = window.AudioContext || window.webkitAudioContext;
@@ -468,10 +458,8 @@
         function setVolume(val) {
             volSlider.value = val;
             if (gainNode) {
-                // Altera o volume no celular (Web Audio API)
                 gainNode.gain.value = val;
             } else {
-                // Altera o volume no PC (Padrão)
                 bgMusic.volume = val;
             }
             updateVolIcon(val);
@@ -556,7 +544,6 @@
             const mLogo = document.getElementById('m-logo');
             const tudumAudio = document.getElementById('tudum-audio');
             
-            // Ativa o áudio no momento do clique (Requisito do Celular)
             initWebAudio();
             if(audioCtx.state === 'suspended') audioCtx.resume();
             
@@ -700,7 +687,6 @@
 
         function initHDGlobe() {
             if (hdMap) { 
-                setTimeout(() => hdMap.resize(), 100); 
                 return; 
             }
             hdMap = new maplibregl.Map({
@@ -727,9 +713,6 @@
                 wrap.onclick = (e) => { e.stopPropagation(); focusPlace(idx); };
                 new maplibregl.Marker({ element: wrap, anchor: 'bottom' }).setLngLat([p.lng, p.lat]).addTo(hdMap);
             });
-            
-            // Força o mapa a recalcular o tamanho assim que termina de carregar no navegador
-            hdMap.on('load', () => hdMap.resize());
         }
 
         function showPlaceCard(p) {
@@ -816,7 +799,7 @@
         }
         initMemoryGame();
 
-        /* --- TALARI BIRD GAME --- */
+        /* --- TALARI BIRD GAME FIX --- */
         const tCvs = document.getElementById('talari-canvas'), tCtx = tCvs.getContext('2d');
         let tbState = 'idle', tbScore = 0, tbBest = Number(localStorage.getItem('tbBest') || 0), tbFrame = 0;
         document.getElementById('tb-best').textContent = tbBest;
@@ -847,7 +830,12 @@
         }
 
         function drawImageCover(ctx, img, x, y, w, h) {
-            if (!img.complete || !img.naturalWidth) { ctx.fillStyle = '#3f3f46'; ctx.fillRect(x, y, w, h); return; }
+            if (!img.complete || !img.naturalWidth) { 
+                // Se a imagem não carregar, desenha uma cor sólida bonitinha em vez de ficar invisível
+                ctx.fillStyle = '#f43f5e'; 
+                ctx.fillRect(x, y, w, h); 
+                return; 
+            }
             const imgRatio = img.naturalWidth / img.naturalHeight, boxRatio = w / h;
             let sx = 0, sy = 0, sw = img.naturalWidth, sh = img.naturalHeight;
             if (imgRatio > boxRatio) { sw = sh * boxRatio; sx = (img.naturalWidth - sw) / 2; }
@@ -855,62 +843,68 @@
             ctx.drawImage(img, sx, sy, sw, sh, x, y, w, h);
         }
 
+        // Loop principal blindado
         function updateAndDrawTalari() {
-            if (currentTab === 'talari' && !document.hidden) {
-                const grad = tCtx.createLinearGradient(0, 0, 0, tCvs.height);
-                grad.addColorStop(0, '#09090b'); grad.addColorStop(1, '#181824');
-                tCtx.fillStyle = grad; tCtx.fillRect(0, 0, tCvs.width, tCvs.height);
-                tCtx.fillStyle = '#14141d';
-                mountains.forEach(m => {
-                    if (tbState === 'play') m.x -= 0.45;
-                    if (m.x < -180) m.x = tCvs.width;
-                    tCtx.beginPath(); tCtx.moveTo(m.x, tCvs.height - 24); tCtx.lineTo(m.x + 90, tCvs.height - 24 - m.h); tCtx.lineTo(m.x + 180, tCvs.height - 24); tCtx.fill();
-                });
-                if (tbState === 'play') {
-                    tbFrame++;
-                    if (tbFrame % 115 === 0) spawnObstacle();
-                    bird.vy += bird.g; bird.y += bird.vy;
-                    if (bird.y + bird.r >= tCvs.height - 24 || bird.y - bird.r <= 0) tbState = 'over';
-                }
-                for (let i = obstacles.length - 1; i >= 0; i--) {
-                    const o = obstacles[i];
-                    if (tbState === 'play') o.x -= 1.9;
-                    tCtx.fillStyle = '#10b981'; tCtx.strokeStyle = '#059669'; tCtx.lineWidth = 2;
-                    tCtx.fillRect(o.x, 0, o.w, o.top); tCtx.strokeRect(o.x, 0, o.w, o.top); tCtx.fillRect(o.x - 3, o.top - 14, o.w + 6, 14);
-                    const botH = tCvs.height - 24 - o.bottom;
-                    tCtx.fillRect(o.x, o.bottom, o.w, botH); tCtx.strokeRect(o.x, o.bottom, o.w, botH); tCtx.fillRect(o.x - 3, o.bottom, o.w + 6, 14);
-                    if (o.isPerson) {
-                        const cardH = 68;
-                        const py = o.personPos === 'top' ? Math.max(6, o.top - cardH - 4) : o.bottom + 4;
-                        tCtx.save(); tCtx.beginPath(); tCtx.roundRect(o.x - 4, py, o.w + 8, cardH, 10); tCtx.clip(); drawImageCover(tCtx, o.enemyImg, o.x - 4, py, o.w + 8, cardH); tCtx.restore();
-                        tCtx.strokeStyle = '#ef4444'; tCtx.lineWidth = 2.5; tCtx.beginPath(); tCtx.roundRect(o.x - 4, py, o.w + 8, cardH, 10); tCtx.stroke();
-                    }
-                    if (tbState === 'play') {
-                        const hitX = bird.x + bird.r - 6 > o.x && bird.x - bird.r + 6 < o.x + o.w;
-                        const hitY = bird.y - bird.r + 6 < o.top || bird.y + bird.r - 6 > o.bottom;
-                        if (hitX && hitY) tbState = 'over';
-                        if (!o.passed && o.x + o.w < bird.x) {
-                            o.passed = true; tbScore++; document.getElementById('tb-score').textContent = tbScore;
-                            if (tbScore > tbBest) { tbBest = tbScore; localStorage.setItem('tbBest', tbBest); document.getElementById('tb-best').textContent = tbBest; }
-                        }
-                    }
-                    if (o.x + o.w < -20) obstacles.splice(i, 1);
-                }
-                tCtx.fillStyle = '#18181b'; tCtx.fillRect(0, tCvs.height - 24, tCvs.width, 24); tCtx.strokeStyle = '#27272a';
-                tCtx.beginPath(); tCtx.moveTo(0, tCvs.height - 24); tCtx.lineTo(tCvs.width, tCvs.height - 24); tCtx.stroke();
-                tCtx.save(); tCtx.translate(bird.x, bird.y); tCtx.rotate(Math.min(Math.PI / 5, Math.max(-Math.PI / 5, bird.vy * 0.06)));
-                tCtx.beginPath(); tCtx.arc(0, 0, bird.r, 0, Math.PI * 2); tCtx.clip(); drawImageCover(tCtx, tbHeroImg, -bird.r, -bird.r, bird.r * 2, bird.r * 2); tCtx.restore();
-                tCtx.strokeStyle = '#fbbf24'; tCtx.lineWidth = 2.5; tCtx.beginPath(); tCtx.arc(bird.x, bird.y, bird.r, 0, Math.PI * 2); tCtx.stroke();
-                if (tbState !== 'play') {
-                    tCtx.fillStyle = 'rgba(9, 9, 11, 0.65)'; tCtx.fillRect(0, 0, tCvs.width, tCvs.height);
-                    tCtx.fillStyle = '#ffffff'; tCtx.textAlign = 'center'; tCtx.font = 'bold 22px Inter, sans-serif';
-                    tCtx.fillText(tbState === 'idle' ? 'Talari Bird' : 'Fim de Jogo!', tCvs.width / 2, 215);
-                    tCtx.fillStyle = '#a1a1aa'; tCtx.font = '13px Inter, sans-serif';
-                    tCtx.fillText(tbState === 'idle' ? 'Toque ou clique para começar' : `Pontos: ${tbScore} — Toque para jogar de novo`, tCvs.width / 2, 245);
-                }
-            }
             requestAnimationFrame(updateAndDrawTalari);
+            
+            // Só desenha se a aba do jogo estiver visível
+            if (currentTab !== 'talari' || document.hidden) return;
+            
+            const grad = tCtx.createLinearGradient(0, 0, 0, tCvs.height);
+            grad.addColorStop(0, '#09090b'); grad.addColorStop(1, '#181824');
+            tCtx.fillStyle = grad; tCtx.fillRect(0, 0, tCvs.width, tCvs.height);
+            tCtx.fillStyle = '#14141d';
+            mountains.forEach(m => {
+                if (tbState === 'play') m.x -= 0.45;
+                if (m.x < -180) m.x = tCvs.width;
+                tCtx.beginPath(); tCtx.moveTo(m.x, tCvs.height - 24); tCtx.lineTo(m.x + 90, tCvs.height - 24 - m.h); tCtx.lineTo(m.x + 180, tCvs.height - 24); tCtx.fill();
+            });
+            if (tbState === 'play') {
+                tbFrame++;
+                if (tbFrame % 115 === 0) spawnObstacle();
+                bird.vy += bird.g; bird.y += bird.vy;
+                if (bird.y + bird.r >= tCvs.height - 24 || bird.y - bird.r <= 0) tbState = 'over';
+            }
+            for (let i = obstacles.length - 1; i >= 0; i--) {
+                const o = obstacles[i];
+                if (tbState === 'play') o.x -= 1.9;
+                tCtx.fillStyle = '#10b981'; tCtx.strokeStyle = '#059669'; tCtx.lineWidth = 2;
+                tCtx.fillRect(o.x, 0, o.w, o.top); tCtx.strokeRect(o.x, 0, o.w, o.top); tCtx.fillRect(o.x - 3, o.top - 14, o.w + 6, 14);
+                const botH = tCvs.height - 24 - o.bottom;
+                tCtx.fillRect(o.x, o.bottom, o.w, botH); tCtx.strokeRect(o.x, o.bottom, o.w, botH); tCtx.fillRect(o.x - 3, o.bottom, o.w + 6, 14);
+                if (o.isPerson) {
+                    const cardH = 68;
+                    const py = o.personPos === 'top' ? Math.max(6, o.top - cardH - 4) : o.bottom + 4;
+                    tCtx.save(); tCtx.beginPath(); tCtx.roundRect(o.x - 4, py, o.w + 8, cardH, 10); tCtx.clip(); drawImageCover(tCtx, o.enemyImg, o.x - 4, py, o.w + 8, cardH); tCtx.restore();
+                    tCtx.strokeStyle = '#ef4444'; tCtx.lineWidth = 2.5; tCtx.beginPath(); tCtx.roundRect(o.x - 4, py, o.w + 8, cardH, 10); tCtx.stroke();
+                }
+                if (tbState === 'play') {
+                    const hitX = bird.x + bird.r - 6 > o.x && bird.x - bird.r + 6 < o.x + o.w;
+                    const hitY = bird.y - bird.r + 6 < o.top || bird.y + bird.r - 6 > o.bottom;
+                    if (hitX && hitY) tbState = 'over';
+                    if (!o.passed && o.x + o.w < bird.x) {
+                        o.passed = true; tbScore++; document.getElementById('tb-score').textContent = tbScore;
+                        if (tbScore > tbBest) { tbBest = tbScore; localStorage.setItem('tbBest', tbBest); document.getElementById('tb-best').textContent = tbBest; }
+                    }
+                }
+                if (o.x + o.w < -20) obstacles.splice(i, 1);
+            }
+            tCtx.fillStyle = '#18181b'; tCtx.fillRect(0, tCvs.height - 24, tCvs.width, 24); tCtx.strokeStyle = '#27272a';
+            tCtx.beginPath(); tCtx.moveTo(0, tCvs.height - 24); tCtx.lineTo(tCvs.width, tCvs.height - 24); tCtx.stroke();
+            tCtx.save(); tCtx.translate(bird.x, bird.y); tCtx.rotate(Math.min(Math.PI / 5, Math.max(-Math.PI / 5, bird.vy * 0.06)));
+            tCtx.beginPath(); tCtx.arc(0, 0, bird.r, 0, Math.PI * 2); tCtx.clip(); drawImageCover(tCtx, tbHeroImg, -bird.r, -bird.r, bird.r * 2, bird.r * 2); tCtx.restore();
+            tCtx.strokeStyle = '#fbbf24'; tCtx.lineWidth = 2.5; tCtx.beginPath(); tCtx.arc(bird.x, bird.y, bird.r, 0, Math.PI * 2); tCtx.stroke();
+            if (tbState !== 'play') {
+                tCtx.fillStyle = 'rgba(9, 9, 11, 0.65)'; tCtx.fillRect(0, 0, tCvs.width, tCvs.height);
+                tCtx.fillStyle = '#ffffff'; tCtx.textAlign = 'center'; tCtx.font = 'bold 22px Inter, sans-serif';
+                tCtx.fillText(tbState === 'idle' ? 'Talari Bird' : 'Fim de Jogo!', tCvs.width / 2, 215);
+                tCtx.fillStyle = '#a1a1aa'; tCtx.font = '13px Inter, sans-serif';
+                tCtx.fillText(tbState === 'idle' ? 'Toque ou clique para começar' : `Pontos: ${tbScore} — Toque para jogar de novo`, tCvs.width / 2, 245);
+            }
         }
+        
+        // Inicia o motor do jogo 
+        requestAnimationFrame(updateAndDrawTalari);
 
         /* --- NAVEGAÇÃO E EFEITOS --- */
         let currentTab = 'beijo';
@@ -950,12 +944,17 @@
             document.getElementById('header-title').textContent = titles[tab];
 
             if (tab === 'fotos') document.getElementById('fotos-popup').classList.remove('hidden');
-            // FIX: Atraso maior para garantir que a aba abriu no DOM antes de redesenhar o mapa
-            if (tab === 'mapa') setTimeout(initHDGlobe, 250); 
+            
+            // Força o redimensionamento do mapa no exato momento que a aba abre
+            if (tab === 'mapa') {
+                setTimeout(() => {
+                    if (!hdMap) initHDGlobe();
+                    else hdMap.resize();
+                }, 150);
+            }
+            
             if (window.innerWidth < 768) toggleSidebar(false);
         }
-
-        updateAndDrawTalari();
 
         function spawnHearts(e) {
             const emojis = ['❤', '💖', '✨', '💕'];
