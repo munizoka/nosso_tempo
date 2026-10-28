@@ -2,6 +2,7 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
+    <!-- Força a tela cheia e impede zoom no celular -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, orientation=landscape">
     <title>Super Gabriel Bros</title>
     <script src="https://cdn.tailwindcss.com"></script>
@@ -38,6 +39,7 @@
             user-select: none;
             -webkit-user-select: none;
             transition: transform 0.05s, box-shadow 0.05s;
+            cursor: pointer;
         }
         .dpad-btn:active {
             transform: translateY(6px);
@@ -67,6 +69,7 @@
             -webkit-user-select: none;
             box-shadow: 0 8px 0 #991b1b, 0 15px 25px rgba(0,0,0,0.5);
             transition: transform 0.05s, box-shadow 0.05s;
+            cursor: pointer;
         }
         .action-btn:active {
             transform: translateY(8px);
@@ -103,7 +106,7 @@
 
     <canvas id="game-canvas"></canvas>
 
-    <!-- Controles Mobile -->
+    <!-- Controles Mobile (Também funcionam com rato no PC) -->
     <div class="fixed inset-0 pointer-events-none z-40 flex justify-between items-end pb-8 px-10 landscape:flex portrait:hidden sm:flex">
         
         <!-- D-PAD Esquerdo -->
@@ -148,10 +151,10 @@
         const totalAssets = 8;
         let processedAssets = {};
 
-        // Carrega as imagens exatas que você nomeou
+        // Carrega as imagens
         assets.hero.src = '35.png';
         assets.princess.src = '36.png';
-        assets.enemies.src = '37.jpg'; // Pode ser JPG, o filtro resolve o verde
+        assets.enemies.src = '37.jpg'; 
         assets.castle.src = '38.png';
         assets.surprise.src = '39.png';
         assets.pipe.src = '40.png';
@@ -171,17 +174,13 @@
                 const data = imgData.data;
                 for (let i = 0; i < data.length; i += 4) {
                     let r = data[i], g = data[i+1], b = data[i+2];
-                    // Se for verde forte (tipo Chroma Key)
                     if (g > 150 && r < 100 && b < 100) {
-                        data[i+3] = 0; // Fica transparente!
+                        data[i+3] = 0; // Transparente
                     }
                 }
                 tCtx.putImageData(imgData, 0, 0);
                 return tempCanvas;
-            } catch(e) {
-                // Se der erro de CORS rodando local, retorna a imagem original
-                return img;
-            }
+            } catch(e) { return img; }
         }
 
         Object.keys(assets).forEach(key => {
@@ -191,44 +190,56 @@
             };
         });
 
+        // Nuvens para textura do Fundo
+        const clouds = [
+            {x: 100, y: 50, w: 60, h: 20}, {x: 120, y: 40, w: 40, h: 40},
+            {x: 400, y: 80, w: 80, h: 25}, {x: 420, y: 60, w: 50, h: 50},
+            {x: 800, y: 40, w: 70, h: 20}, {x: 820, y: 30, w: 30, h: 40},
+            {x: 1200, y: 70, w: 90, h: 30}, {x: 1230, y: 50, w: 40, h: 60},
+            {x: 1600, y: 50, w: 60, h: 20}, {x: 1620, y: 40, w: 40, h: 40},
+            {x: 2000, y: 80, w: 80, h: 25}, {x: 2020, y: 60, w: 50, h: 50},
+            {x: 2500, y: 40, w: 70, h: 20}, {x: 2520, y: 30, w: 30, h: 40},
+            {x: 2900, y: 70, w: 90, h: 30}, {x: 2930, y: 50, w: 40, h: 60},
+        ];
+
         // ==========================================
         // LÓGICA DO JOGO E FÍSICA
         // ==========================================
         const keys = { left: false, right: false, up: false, down: false };
 
+        // Hitbox do Jogador exata (Não voa mais)
         const player = {
-            x: 50, y: 100, w: 48, h: 64, // Tamanho base
+            x: 50, y: 100, w: 24, h: 40, 
             vx: 0, vy: 0,
             speed: 5, jumpPower: -13, gravity: 0.6,
-            grounded: false, isCrouching: false, direction: 1, // 1 = direita, -1 = esquerda
+            grounded: false, isCrouching: false, direction: 1, 
             animFrame: 0, animTimer: 0
         };
 
-        const princess = { x: 3400, y: 316, w: 48, h: 64 };
+        const princess = { x: 3400, y: 340, w: 32, h: 40 };
         const castle = { x: 3450, y: 130, w: 250, h: 250 };
 
         let enemies = [
-            { x: 600, y: 332, w: 48, h: 48, vx: -1.5, type: 'mushroom', alive: true },
-            { x: 1200, y: 332, w: 48, h: 48, vx: -1.5, type: 'mushroom', alive: true },
-            { x: 1800, y: 332, w: 48, h: 48, vx: -2, type: 'turtle', alive: true },
-            { x: 2200, y: 332, w: 48, h: 48, vx: -2, type: 'turtle', alive: true }
+            { x: 600, y: 332, w: 32, h: 32, vx: -1.5, type: 'mushroom', alive: true },
+            { x: 1200, y: 332, w: 32, h: 32, vx: -1.5, type: 'mushroom', alive: true },
+            { x: 1800, y: 332, w: 32, h: 32, vx: -2, type: 'turtle', alive: true },
+            { x: 2200, y: 332, w: 32, h: 32, vx: -2, type: 'turtle', alive: true }
         ];
 
         let cameraX = 0;
         let gameWin = false;
 
-        // MAPA DA FASE (Totalmente revisto contra softlocks)
-        // y: 380 é o chão base. 
+        // MAPA DA FASE (Chão com altura de 150 para tapar o fundo)
         const blocks = [
             // CHÃO
-            { x: 0, y: 380, w: 1200, h: 70, type: 'ground' },
-            { x: 1300, y: 380, w: 800, h: 70, type: 'ground' }, // Buraco
-            { x: 2250, y: 380, w: 1800, h: 70, type: 'ground' }, // Final
+            { x: 0, y: 380, w: 1200, h: 150, type: 'ground' },
+            { x: 1300, y: 380, w: 800, h: 150, type: 'ground' }, 
+            { x: 2250, y: 380, w: 1800, h: 150, type: 'ground' }, 
 
-            // CANOS (Mais baixos para garantir o pulo)
+            // CANOS 
             { x: 400, y: 300, w: 60, h: 80, type: 'pipe' },
             { x: 750, y: 260, w: 60, h: 120, type: 'pipe' },
-            { x: 950, y: 260, w: 60, h: 120, type: 'pipe' }, // Espaço de 140px (dá pra pular ou sair)
+            { x: 950, y: 260, w: 60, h: 120, type: 'pipe' }, 
 
             // BLOCOS AÉREOS
             { x: 250, y: 220, w: 48, h: 48, type: 'surprise' },
@@ -237,7 +248,7 @@
             { x: 548, y: 220, w: 48, h: 48, type: 'surprise' },
             { x: 596, y: 220, w: 48, h: 48, type: 'brick' },
             
-            // ESCADINHA CLÁSSICA (Feita de bricks para subir)
+            // ESCADINHA
             { x: 2900, y: 332, w: 48, h: 48, type: 'brick' },
             { x: 2948, y: 284, w: 48, h: 96, type: 'brick' },
             { x: 2996, y: 236, w: 48, h: 144, type: 'brick' },
@@ -258,17 +269,23 @@
             if (e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'KeyW') keys.up = false;
         });
 
-        // Mapeamento de Touch
-        function bindTouch(id, keyStr) {
+        // Mapeamento de Touch e Mouse
+        function bindInput(id, keyStr) {
             const btn = document.getElementById(id);
-            btn.addEventListener('touchstart', (e) => { e.preventDefault(); keys[keyStr] = true; });
-            btn.addEventListener('touchend', (e) => { e.preventDefault(); keys[keyStr] = false; });
+            const press = (e) => { e.preventDefault(); keys[keyStr] = true; };
+            const release = (e) => { e.preventDefault(); keys[keyStr] = false; };
+            
+            btn.addEventListener('touchstart', press);
+            btn.addEventListener('touchend', release);
+            btn.addEventListener('mousedown', press);
+            btn.addEventListener('mouseup', release);
+            btn.addEventListener('mouseleave', release); // Previne agarrar a tecla
         }
-        bindTouch('btn-left', 'left');
-        bindTouch('btn-right', 'right');
-        bindTouch('btn-down', 'down');
-        bindTouch('btn-up', 'up');
-        bindTouch('btn-jump', 'up');
+        bindInput('btn-left', 'left');
+        bindInput('btn-right', 'right');
+        bindInput('btn-down', 'down');
+        bindInput('btn-up', 'up');
+        bindInput('btn-jump', 'up');
 
         function isColliding(a, b) {
             return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
@@ -290,9 +307,9 @@
 
             // Agachar
             if (keys.down && player.grounded) {
-                if(!player.isCrouching) { player.isCrouching = true; player.h = 48; player.y += 16; }
+                if(!player.isCrouching) { player.isCrouching = true; player.h = 24; player.y += 16; }
             } else if (player.isCrouching) {
-                player.isCrouching = false; player.y -= 16; player.h = 64;
+                player.isCrouching = false; player.y -= 16; player.h = 40;
             }
 
             // Pulo
@@ -306,7 +323,7 @@
 
             // Colisão Eixo X
             player.x += player.vx;
-            if (player.x < cameraX) player.x = cameraX; // Não deixa voltar
+            if (player.x < cameraX) player.x = cameraX;
 
             for (let b of blocks) {
                 if (isColliding(player, b)) {
@@ -320,18 +337,17 @@
             player.y += player.vy;
             for (let b of blocks) {
                 if (isColliding(player, b)) {
-                    if (player.vy > 0) { // Caiu no bloco
+                    if (player.vy > 0) { 
                         player.y = b.y - player.h;
                         player.vy = 0;
                         player.grounded = true;
-                    } else if (player.vy < 0) { // Bateu a cabeça
+                    } else if (player.vy < 0) { 
                         player.y = b.y + b.h;
                         player.vy = 0;
                     }
                 }
             }
 
-            // Morte no buraco
             if (player.y > GAME_HEIGHT + 200) reiniciarFase();
 
             // Inimigos
@@ -352,11 +368,11 @@
                 }
 
                 if (isColliding(player, enemy)) {
-                    if (player.vy > 0 && player.y + player.h < enemy.y + 25) {
-                        enemy.alive = false; // Pisou!
+                    if (player.vy > 0 && player.y + player.h < enemy.y + 15) {
+                        enemy.alive = false; 
                         player.vy = player.jumpPower * 0.8;
                     } else {
-                        reiniciarFase(); // Dano!
+                        reiniciarFase(); 
                     }
                 }
             }
@@ -368,8 +384,7 @@
                 cameraX = player.x - GAME_WIDTH / 2.5;
             }
 
-            // ANIMAR BONECO (GABRIEL)
-            // Lógica baseada nas 4 poses que você pediu: 0=Parado, 1=Andando, 2=Pulando, 3=Agachado
+            // Animação
             if (player.isCrouching) {
                 player.animFrame = 3;
             } else if (!player.grounded) {
@@ -382,15 +397,18 @@
             }
         }
 
-        // DESENHAR NA TELA
-        function drawImageTile(img, dx, dy, dw, dh, repeatX = false) {
+        function drawImageTile(img, dx, dy, dw, dh, isGround = false) {
             if(!img) return;
-            if(repeatX) {
-                // Para o chão de terra repetir infinitamente
-                for(let i = 0; i < dw; i += img.width) {
-                    let drawWidth = Math.min(img.width, dw - i);
-                    ctx.drawImage(img, 0, 0, drawWidth, img.height, dx + i, dy, drawWidth, dh);
+            if(isGround) {
+                // Desenha a grama em cima
+                const tileW = 48;
+                for(let i = 0; i < dw; i += tileW) {
+                    let w = Math.min(tileW, dw - i);
+                    ctx.drawImage(img, 0, 0, w * (img.width/tileW), img.height, dx + i, dy, w, 48);
                 }
+                // Preenche a terra por baixo para cobrir espaços vazios
+                ctx.fillStyle = '#9b5b29';
+                ctx.fillRect(dx, dy + 48, dw, dh - 48);
             } else {
                 ctx.drawImage(img, dx, dy, dw, dh);
             }
@@ -408,6 +426,18 @@
 
             ctx.save();
             ctx.translate(-cameraX, 0); 
+            
+            // Desenha as Nuvens
+            ctx.fillStyle = '#ffffff';
+            for (let c of clouds) {
+                let cx = c.x - (cameraX * 0.2); // Efeito Parallax suave
+                // Se a nuvem sair do ecrã, volta pelo outro lado
+                cx = cx % (GAME_WIDTH * 4);
+                if (cx < -200) cx += (GAME_WIDTH * 4);
+                
+                ctx.fillRect(cx, c.y, c.w, c.h);
+                ctx.fillRect(cx + 10, c.y - 10, c.w - 20, c.h + 20);
+            }
 
             // Cenário
             for (let b of blocks) {
@@ -420,35 +450,45 @@
 
             // Castelo e Princesa
             drawImageTile(processedAssets.castle, castle.x, castle.y, castle.w, castle.h);
-            drawImageTile(processedAssets.princess, princess.x, princess.y, princess.w, princess.h);
             
-            // Inimigos (Mushroom ou Turtle dependendo do tipo)
+            ctx.save();
+            ctx.translate(princess.x + princess.w/2, princess.y + princess.h);
+            ctx.drawImage(processedAssets.princess, -24, -48, 48, 48); // Desenha a Vitoria certinha
+            ctx.restore();
+            
+            // Inimigos
             for (let enemy of enemies) {
                 if(enemy.alive) {
                     const img = processedAssets.enemies;
-                    const frameW = img.width / 2; // Corta a imagem ao meio (0=Mushroom, 1=Turtle)
+                    const frameW = img.width / 2; 
                     const frameX = enemy.type === 'mushroom' ? 0 : frameW;
                     
                     ctx.save();
                     ctx.translate(enemy.x + enemy.w/2, enemy.y + enemy.h/2);
-                    if (enemy.vx > 0) ctx.scale(-1, 1); // Vira a tartaruga
-                    ctx.drawImage(img, frameX, 0, frameW, img.height, -enemy.w/2, -enemy.h/2, enemy.w, enemy.h);
+                    
+                    // CORREÇÃO DO MOONWALK DOS MONSTROS
+                    if (enemy.type === 'mushroom' && enemy.vx < 0) ctx.scale(-1, 1);
+                    if (enemy.type === 'mushroom' && enemy.vx > 0) ctx.scale(1, 1);
+                    if (enemy.type === 'turtle' && enemy.vx > 0) ctx.scale(-1, 1);
+                    if (enemy.type === 'turtle' && enemy.vx < 0) ctx.scale(1, 1);
+                    
+                    ctx.drawImage(img, frameX, 0, frameW, img.height, -enemy.w/2 - 8, -enemy.h/2 - 8, enemy.w + 16, enemy.h + 16);
                     ctx.restore();
                 }
             }
 
             // JOGADOR (GABRIEL)
             const spriteSheet = processedAssets.hero;
-            const frameWidth = spriteSheet.width / 4; // Corta a imagem em 4 pedaços iguais
+            const frameWidth = spriteSheet.width / 4;
             
             ctx.save();
-            ctx.translate(player.x + player.w/2, player.y + player.h/2);
-            if (player.direction === -1) ctx.scale(-1, 1); // Vira o Gabriel para a esquerda
+            ctx.translate(player.x + player.w/2, player.y + player.h); // Ponto âncora nos pés
+            if (player.direction === -1) ctx.scale(-1, 1); 
             
             ctx.drawImage(
                 spriteSheet, 
-                player.animFrame * frameWidth, 0, frameWidth, spriteSheet.height, // Fonte (Corte da sprite)
-                -player.w/2, -player.h/2, player.w, player.h // Destino
+                player.animFrame * frameWidth, 0, frameWidth, spriteSheet.height, 
+                -24, -50, 48, 52 // Ajuste visual para não flutuar
             );
             ctx.restore();
 
@@ -459,7 +499,7 @@
                 ctx.fillStyle = '#fff';
                 ctx.font = '20px "Press Start 2P"';
                 ctx.textAlign = 'center';
-                ctx.fillText("VITÓRIA RESGATADA!", cameraX + GAME_WIDTH/2, GAME_HEIGHT/2 - 20);
+                ctx.fillText("VOCÊ RESGATOU A VITORIA!", cameraX + GAME_WIDTH/2, GAME_HEIGHT/2 - 20);
                 
                 ctx.font = '10px "Press Start 2P"';
                 ctx.fillStyle = '#f43f5e';
