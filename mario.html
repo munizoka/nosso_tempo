@@ -117,7 +117,7 @@
         canvas.height = GAME_HEIGHT;
 
         // ==========================================
-        // SISTEMA DE IMAGENS E CHROMA KEY (FUNDO VERDE)
+        // SISTEMA DE IMAGENS E CHROMA KEY
         // ==========================================
         const assets = {
             hero: new Image(),
@@ -185,7 +185,6 @@
         // ==========================================
         const keys = { left: false, right: false, up: false, down: false };
 
-        // Hitbox do Herói (Muito ajustada e fina para a colisão ser perfeita)
         const player = {
             x: 50, y: 100, w: 24, h: 40, 
             vx: 0, vy: 0,
@@ -207,7 +206,6 @@
         let cameraX = 0;
         let gameWin = false;
 
-        // MAPA DA FASE (Calculado matematicamente do chão: 380)
         const blocks = [
             // CHÃO
             { x: 0, y: 380, w: 1200, h: 150, type: 'ground' },
@@ -221,7 +219,6 @@
 
             // BLOCOS AÉREOS
             { x: 250, y: 220, w: 48, h: 48, type: 'surprise' },
-            
             { x: 500, y: 220, w: 48, h: 48, type: 'brick' },
             { x: 548, y: 220, w: 48, h: 48, type: 'surprise' },
             { x: 596, y: 220, w: 48, h: 48, type: 'brick' },
@@ -364,18 +361,22 @@
             }
         }
 
-        function drawImageTile(img, dx, dy, dw, dh, isGround = false) {
+        // ==========================================
+        // FUNÇÃO DE DESENHO APRIMORADA (COSTURA AS TEXTURAS)
+        // ==========================================
+        function drawImageTile(img, dx, dy, dw, dh, type = '') {
             if(!img) return;
             
-            // O Segredo contra as frestas: Engolimos 1 pixel em cada borda
-            const bleed = 1; 
+            // Overlap minúsculo para matar as linhas invisíveis
+            const bleed = 1.5; 
 
-            if(isGround) {
+            if(type === 'ground') {
                 const tileW = 48;
-                for(let i = 0; i < dw; i += tileW) {
-                    let w = Math.min(tileW, dw - i);
-                    ctx.drawImage(img, dx + i - bleed, dy, w + bleed * 2, tileW);
+                // Sobreposição de blocos horizontais
+                for(let i = 0; i <= dw; i += (tileW - bleed)) {
+                    ctx.drawImage(img, dx + i, dy, tileW, tileW);
                 }
+                // Preenchimento de terra espessa para baixo
                 ctx.fillStyle = '#9b5b29';
                 ctx.fillRect(dx, dy + tileW - bleed, dw, dh - tileW + bleed);
             } else {
@@ -406,22 +407,20 @@
             }
 
             for (let b of blocks) {
-                if (b.type === 'ground') drawImageTile(processedAssets.ground, b.x, b.y, b.w, b.h, true);
-                if (b.type === 'pipe') drawImageTile(processedAssets.pipe, b.x, b.y, b.w, b.h);
-                if (b.type === 'brick') drawImageTile(processedAssets.brick, b.x, b.y, b.w, b.h);
-                if (b.type === 'surprise') drawImageTile(processedAssets.surprise, b.x, b.y, b.w, b.h);
-                if (b.type === 'block') drawImageTile(processedAssets.brick, b.x, b.y, b.w, b.h);
+                drawImageTile(processedAssets[b.type], b.x, b.y, b.w, b.h, b.type);
             }
 
             drawImageTile(processedAssets.castle, castle.x, castle.y, castle.w, castle.h);
             
-            // Princesa Ancorada nos pés
+            // Princesa (Offset visual para colar os pés no chão)
+            const princessVisualOffset = 8;
             ctx.save();
             ctx.translate(princess.x + princess.w/2, princess.y + princess.h);
-            ctx.drawImage(processedAssets.princess, -24, -48, 48, 48); 
+            ctx.drawImage(processedAssets.princess, -24, -48 + princessVisualOffset, 48, 48); 
             ctx.restore();
             
-            // Inimigos Ancorados nos pés (Não flutuam)
+            // Inimigos (Offset visual para colar os pés no chão)
+            const enemyVisualOffset = 10;
             for (let enemy of enemies) {
                 if(enemy.alive) {
                     const img = processedAssets.enemies;
@@ -436,14 +435,15 @@
                     if (enemy.type === 'turtle' && enemy.vx > 0) ctx.scale(-1, 1);
                     if (enemy.type === 'turtle' && enemy.vx < 0) ctx.scale(1, 1);
                     
-                    ctx.drawImage(img, frameX, 0, frameW, img.height, -24, -48, 48, 48);
+                    ctx.drawImage(img, frameX, 0, frameW, img.height, -24, -48 + enemyVisualOffset, 48, 48);
                     ctx.restore();
                 }
             }
 
-            // HERÓI (GABRIEL) Ancorado perfeitamente nos pés (Não flutua mais)
+            // HERÓI (GABRIEL) Offset visual puxando para baixo para não levitar
             const spriteSheet = processedAssets.hero;
             const frameWidth = spriteSheet.width / 4;
+            const heroVisualOffset = 12; // Ajuste fino
             
             ctx.save();
             ctx.translate(player.x + player.w/2, player.y + player.h); 
@@ -452,7 +452,7 @@
             ctx.drawImage(
                 spriteSheet, 
                 player.animFrame * frameWidth, 0, frameWidth, spriteSheet.height, 
-                -24, -48, 48, 48 
+                -24, -48 + heroVisualOffset, 48, 48 
             );
             ctx.restore();
 
@@ -462,7 +462,7 @@
                 ctx.fillStyle = '#fff';
                 ctx.font = '20px "Press Start 2P"';
                 ctx.textAlign = 'center';
-                ctx.fillText("VOCÊ RESGATOU A VITORIA!", cameraX + GAME_WIDTH/2, GAME_HEIGHT/2 - 20);
+                ctx.fillText("VITORIA RESGATADA!", cameraX + GAME_WIDTH/2, GAME_HEIGHT/2 - 20);
                 
                 ctx.font = '10px "Press Start 2P"';
                 ctx.fillStyle = '#f43f5e';
