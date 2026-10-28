@@ -110,7 +110,6 @@
         <img src="34.png" id="m-logo" class="w-32 md:w-48 opacity-0" style="will-change: transform, opacity;">
     </div>
 
-
     <canvas id="bg-particles" class="fixed inset-0 pointer-events-none z-0 opacity-40"></canvas>
     <div id="ambient-light" class="ambient-glow top-1/4 left-1/2 bg-rose-500"></div>
     <div id="sidebar-backdrop" onclick="toggleSidebar(false)" class="fixed inset-0 bg-black/60 z-20 hidden md:hidden backdrop-blur-sm"></div>
@@ -161,7 +160,6 @@
                 <span class="truncate">Nosso Álbum de Fotos</span>
             </button>
 
-            <!-- BOTÃO DOS LUGARES -->
             <button onclick="switchTab('lugares')" id="btn-lugares" class="tab-btn w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-left text-sm font-medium transition-all text-zinc-400 hover:bg-zinc-800/40 hover:text-zinc-200">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-cyan-400 flex-shrink-0"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
                 <span class="truncate">Lugares que Visitamos</span>
@@ -178,12 +176,17 @@
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-amber-400 flex-shrink-0"><path d="M16 7h.01"/><path d="M3.4 18H12a8 8 0 0 0 8-8V7a4 4 0 0 0-7.28-2.3L2 20"/><path d="m20 7 2 .5-2 .5"/><path d="M10 18v3"/><path d="M14 17.75V21"/><path d="M7 18a6 6 0 0 0 3.84-10.61"/></svg>
                 <span class="truncate">Talari Bird</span>
             </button>
-            
-            <!-- BOTÃO DA ROLETA -->
+
             <button onclick="switchTab('roleta')" id="btn-roleta" class="tab-btn w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-left text-sm font-medium transition-all text-zinc-400 hover:bg-zinc-800/40 hover:text-zinc-200">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-pink-400 flex-shrink-0"><circle cx="12" cy="12" r="10"></circle><path d="M12 2v20"></path><path d="M2 12h20"></path><path d="m4.93 4.93 14.14 14.14"></path><path d="m19.07 4.93-14.14 14.14"></path></svg>
                 <span class="truncate">ViSorte</span>
             </button>
+
+            <!-- NOVO: BOTÃO SUPER GABRIEL BROS -->
+            <a href="mario.html" class="tab-btn w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-left text-sm font-medium transition-all text-zinc-400 hover:bg-zinc-800/40 hover:text-zinc-200">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-blue-400 flex-shrink-0"><path d="M2 12a10 10 0 1 0 20 0 10 10 0 1 0-20 0z"/><path d="M12 8v8"/><path d="M8 12h8"/></svg>
+                <span class="truncate">Super Gabriel Bros</span>
+            </a>
 
             <div class="pt-3 pb-1"><div class="text-[11px] font-semibold text-zinc-500 uppercase tracking-wider px-3 py-1">Pet</div></div>
             
@@ -207,9 +210,7 @@
     <!-- Conteúdo Principal -->
     <div class="flex-1 flex flex-col h-full relative overflow-y-auto z-10">
         
-        <!-- CABEÇALHO SUPERIOR -->
         <header class="p-4 flex items-center sticky top-0 bg-[#09090b]/70 backdrop-blur-md z-20 justify-between">
-            
             <div class="flex items-center gap-3">
                 <button onclick="toggleSidebar()" class="p-2.5 rounded-xl bg-zinc-900/90 border border-zinc-800 hover:bg-zinc-800 text-zinc-300 active:scale-95 transition-all">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></svg>
@@ -234,7 +235,6 @@
 
         <main class="flex-1 flex flex-col items-center justify-center p-4 md:p-6 max-w-4xl mx-auto w-full">
 
-            <!-- ABA 1: BEIJO -->
             <div id="view-beijo" class="tab-view w-full text-center space-y-8">
                 <div class="space-y-2">
                     <button onclick="spawnHearts(event)" class="inline-block px-4 py-1.5 rounded-full bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs font-semibold uppercase tracking-wider mb-2 hover:scale-105 transition-all">✨ Primeiro Beijo</button>
@@ -244,7 +244,6 @@
                 <div id="timer-beijo" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 md:gap-4 max-w-3xl mx-auto"></div>
             </div>
 
-            <!-- ABA 2: NAMORO -->
             <div id="view-namoro" class="tab-view w-full text-center space-y-8 hidden">
                 <div class="space-y-2">
                     <button onclick="spawnHearts(event)" class="inline-block px-4 py-1.5 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-300 text-xs font-semibold uppercase tracking-wider mb-2 hover:scale-105 transition-all">💍 Oficialmente Juntos</button>
@@ -254,9 +253,7 @@
                 <div id="timer-namoro" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 md:gap-4 max-w-3xl mx-auto"></div>
             </div>
 
-            <!-- ABA 3: ANIVERSÁRIOS -->
             <div id="view-niver" class="tab-view w-full text-center space-y-14 hidden">
-                <!-- Vitória -->
                 <div class="space-y-6 relative">
                     <div class="space-y-3">
                         <button onclick="spawnHearts(event)" class="inline-block px-4 py-1.5 rounded-full bg-orange-500/10 border border-orange-500/20 text-orange-300 text-xs font-semibold uppercase tracking-wider mb-2 hover:scale-105 transition-all">🎈 Vitoria's Birthday</button>
@@ -280,7 +277,6 @@
                     <hr class="border-zinc-800 flex-1">
                 </div>
 
-                <!-- Gabriel -->
                 <div class="space-y-6 relative">
                     <div class="space-y-3">
                         <button onclick="spawnHearts(event)" class="inline-block px-4 py-1.5 rounded-full bg-orange-500/10 border border-orange-500/20 text-orange-300 text-xs font-semibold uppercase tracking-wider mb-2 hover:scale-105 transition-all">🎉 Gabriel's Birthday</button>
@@ -299,7 +295,6 @@
                 </div>
             </div>
 
-            <!-- ABA 4: FOTOS -->
             <div id="view-fotos" class="tab-view w-full max-w-xl mx-auto space-y-6 hidden">
                 <div class="text-center">
                     <span class="inline-block px-3.5 py-1 rounded-full bg-sky-500/10 border border-sky-500/20 text-sky-300 text-xs font-medium mb-3">📸 Memórias Fotográficas</span>
@@ -319,7 +314,6 @@
                 </a>
             </div>
 
-            <!-- ABA: LUGARES QUE VISITAMOS (LISTA INTERATIVA MINIMALISTA) -->
             <div id="view-lugares" class="tab-view w-full max-w-4xl mx-auto space-y-6 hidden">
                 <div class="text-center">
                     <span class="inline-block px-3 py-0.5 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-cyan-300 text-xs font-medium mb-3">🌍 Nossas Viagens</span>
@@ -331,12 +325,9 @@
                     <button onclick="adicionarLugar()" class="px-5 py-3 bg-cyan-500/20 text-cyan-300 font-bold rounded-xl hover:bg-cyan-500/30 transition-all shadow-lg active:scale-95">+</button>
                 </div>
 
-                <div id="lista-lugares" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 mt-8">
-                    <!-- Gerado pelo JS -->
-                </div>
+                <div id="lista-lugares" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 mt-8"></div>
             </div>
 
-            <!-- ABA 5: VIMÓRIA GAME -->
             <div id="view-jogo" class="tab-view w-full max-w-2xl mx-auto space-y-4 hidden">
                 <div class="text-center space-y-1">
                     <span class="inline-block px-3 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-xs font-medium">🎮 Mini Game</span>
@@ -360,7 +351,6 @@
                 <div id="memory-grid" class="grid grid-cols-4 sm:grid-cols-6 gap-2 md:gap-3 w-full"></div>
             </div>
 
-            <!-- ABA 6: TALARI BIRD -->
             <div id="view-talari" class="tab-view w-full max-w-md mx-auto space-y-3 hidden">
                 <div class="text-center space-y-1">
                     <span class="inline-block px-3 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs font-medium">🕹️ Arcade</span>
@@ -381,7 +371,6 @@
                 <p class="text-center text-[11px] text-zinc-500">Toque na tela, clique ou aperte Espaço para voar</p>
             </div>
 
-            <!-- ABA NOVA: ROLETA DO CASAL (ATUALIZADA) -->
             <div id="view-roleta" class="tab-view w-full max-w-2xl mx-auto space-y-6 hidden">
                 <div class="text-center">
                     <span class="inline-block px-3 py-0.5 rounded-full bg-pink-500/10 border border-pink-500/20 text-pink-300 text-xs font-medium">🎡 Sorteio</span>
@@ -412,15 +401,11 @@
         </main>
     </div>
 
-    <!-- SDKs do Firebase -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 
     <script>
-        // ==========================================
-        // SISTEMA DO FIREBASE (INICIALIZAÇÃO GLOBAL)
-        // ==========================================
         const firebaseConfig = {
             apiKey: "AIzaSyCbkO3-M-Ulz0Yg_ZuN-jpWVcD1EHmcUm0",
             authDomain: "nosso-tempo-cd9c8.firebaseapp.com",
@@ -434,13 +419,9 @@
         }
         const db = firebase.firestore();
 
-        // ==========================================
-        // SISTEMA DE CONTROLE DE VOLUME (Web Audio API)
-        // ==========================================
         const bgMusic = document.getElementById('bg-music'); 
         const volSlider = document.getElementById('volume-slider');
         const volIcon = document.getElementById('vol-icon');
-        
         let audioCtx, gainNode;
 
         function initWebAudio() {
@@ -460,17 +441,11 @@
 
         function setVolume(val) {
             volSlider.value = val;
-            if (gainNode) {
-                gainNode.gain.value = val;
-            } else {
-                bgMusic.volume = val;
-            }
+            if (gainNode) { gainNode.gain.value = val; } else { bgMusic.volume = val; }
             updateVolIcon(val);
         }
 
-        volSlider.addEventListener('input', (e) => {
-            setVolume(parseFloat(e.target.value));
-        });
+        volSlider.addEventListener('input', (e) => setVolume(parseFloat(e.target.value)));
 
         function updateVolIcon(vol) {
             if (vol === 0) {
@@ -490,9 +465,6 @@
             }
         });
 
-        // ==========================================
-        // SISTEMA DE FOTOS FIREBASE (Avatares)
-        // ==========================================
         function loadAvatares() {
             if(typeof firebase !== 'undefined' && firebase.apps.length > 0) {
                 db.collection("config").doc("avatares").onSnapshot((doc) => {
@@ -502,9 +474,7 @@
                         if(data.Vitoria) document.getElementById('avatar-vitoria').innerHTML = `<img src="${data.Vitoria}" class="w-full h-full object-cover">`;
                     }
                 });
-            } else {
-                setTimeout(loadAvatares, 500); 
-            }
+            } else { setTimeout(loadAvatares, 500); }
         }
         window.addEventListener('load', loadAvatares);
 
@@ -530,9 +500,6 @@
             reader.readAsDataURL(file);
         }
 
-        // ==========================================
-        // LÓGICA DA TRANSIÇÃO NETFLIX + ÁUDIO
-        // ==========================================
         function enterSite(user) {
             const msgElement = document.getElementById('welcome-msg');
             const screenElement = document.getElementById('welcome-screen');
@@ -565,11 +532,7 @@
             }, 1200); 
         }
 
-        // ==========================================
-        // LISTA DE LUGARES FIREBASE
-        // ==========================================
         let lugaresVisitados = [];
-
         function carregarLugares() {
             const lugaresRef = db.collection("config").doc("lugares");
             lugaresRef.onSnapshot((doc) => {
@@ -624,9 +587,6 @@
         
         window.addEventListener('load', carregarLugares);
 
-        // ==========================================
-        // ROLETA DO CASAL (ViSorte)
-        // ==========================================
         let roletaOpcoes = [];
         let currentRotation = 0;
         let isSpinning = false;
@@ -643,11 +603,10 @@
 
             ctx.clearRect(0,0,w,h);
             
-            // SE A ROLETA ESTIVER VAZIA: Desenha um círculo cinza neutro
             if(roletaOpcoes.length === 0) {
                 ctx.beginPath();
                 ctx.arc(cx, cy, r, 0, 2 * Math.PI);
-                ctx.fillStyle = '#27272a'; // Cor de fundo cinza escuro
+                ctx.fillStyle = '#27272a';
                 ctx.fill();
                 ctx.strokeStyle = "#141418";
                 ctx.lineWidth = 4;
@@ -661,7 +620,7 @@
                 return;
             }
             
-            ctx.textBaseline = "alphabetic"; // Reseta o baseline para o normal
+            ctx.textBaseline = "alphabetic";
 
             const sliceAngle = (2 * Math.PI) / roletaOpcoes.length;
             const colors = ['#f43f5e', '#a855f7', '#3b82f6', '#10b981', '#f59e0b', '#ec4899', '#06b6d4', '#6366f1'];
@@ -695,7 +654,7 @@
             if(val && roletaOpcoes.length < 12) { 
                 roletaOpcoes.push(val);
                 input.value = '';
-                document.getElementById('roleta-winner').textContent = ''; // Limpa vencedor
+                document.getElementById('roleta-winner').textContent = ''; 
                 drawWheel();
                 renderRoletaList();
             } else if (roletaOpcoes.length >= 12) {
@@ -714,7 +673,7 @@
         function removeRoletaOption(i) {
             if (isSpinning) return;
             roletaOpcoes.splice(i, 1);
-            document.getElementById('roleta-winner').textContent = ''; // Limpa vencedor
+            document.getElementById('roleta-winner').textContent = ''; 
             drawWheel();
             renderRoletaList();
         }
@@ -728,33 +687,35 @@
             isSpinning = true;
             document.getElementById('roleta-winner').textContent = 'Girando...';
             
-            const spins = Math.floor(Math.random() * 5) + 5;
-            const deg = Math.floor(Math.random() * 360);
-            currentRotation += (spins * 360) + deg;
-            
             const wheel = document.getElementById('wheel-container');
-            wheel.style.transition = 'transform 4s cubic-bezier(0.1, 0.7, 0.1, 1)';
-            wheel.style.transform = `rotate(${currentRotation}deg)`;
+            wheel.style.transition = 'transform 0.1s';
+            wheel.style.transform = `scale(0.95) rotate(${currentRotation}deg)`;
             
             setTimeout(() => {
-                isSpinning = false;
-                const actualDeg = currentRotation % 360;
-                const sliceAngle = 360 / roletaOpcoes.length;
-                const originalAngle = (270 - actualDeg + 360) % 360;
-                const index = Math.floor(originalAngle / sliceAngle);
+                const spins = Math.floor(Math.random() * 5) + 5;
+                const deg = Math.floor(Math.random() * 360);
+                currentRotation += (spins * 360) + deg;
                 
-                const winner = roletaOpcoes[index];
-                document.getElementById('roleta-winner').textContent = `🎉 Saiu: ${winner}! 🎉`;
+                wheel.style.transition = 'transform 4s cubic-bezier(0.1, 0.7, 0.1, 1)';
+                wheel.style.transform = `scale(1) rotate(${currentRotation}deg)`;
                 
-                for(let i=0; i<3; i++) {
-                    setTimeout(() => spawnHearts({ clientX: window.innerWidth / 2, clientY: window.innerHeight / 2 }), i*200);
-                }
-            }, 4000); 
+                setTimeout(() => {
+                    isSpinning = false;
+                    const actualDeg = currentRotation % 360;
+                    const sliceAngle = 360 / roletaOpcoes.length;
+                    const originalAngle = (270 - actualDeg + 360) % 360;
+                    const index = Math.floor(originalAngle / sliceAngle);
+                    
+                    const winner = roletaOpcoes[index];
+                    document.getElementById('roleta-winner').textContent = `🎉 Saiu: ${winner}! 🎉`;
+                    
+                    for(let i=0; i<3; i++) {
+                        setTimeout(() => spawnHearts({ clientX: window.innerWidth / 2, clientY: window.innerHeight / 2 }), i*200);
+                    }
+                }, 4000); 
+            }, 100); 
         }
 
-        // ==========================================
-        // DATAS E CONTADORES
-        // ==========================================
         const dateBeijo = new Date(2023, 7, 21, 0, 0, 0);
         const dateNamoro = new Date(2024, 4, 7, 0, 0, 0);
         const dateNiverVi = new Date(1999, 8, 4, 0, 0, 0); 
@@ -845,7 +806,6 @@
         updateAllTimers();
         setInterval(updateAllTimers, 1000);
 
-        /* --- VIMÓRIA GAME --- */
         let firstCard = null, secondCard = null, lockBoard = false, moves = 0, matchedPairs = 0;
         function initMemoryGame() {
             firstCard = null; secondCard = null; lockBoard = false; moves = 0; matchedPairs = 0;
@@ -895,7 +855,6 @@
         }
         initMemoryGame();
 
-        /* --- TALARI BIRD GAME --- */
         const tCvs = document.getElementById('talari-canvas'), tCtx = tCvs.getContext('2d');
         let tbState = 'idle', tbScore = 0, tbBest = Number(localStorage.getItem('tbBest') || 0), tbFrame = 0;
         document.getElementById('tb-best').textContent = tbBest;
@@ -1011,7 +970,6 @@
         
         requestAnimationFrame(updateAndDrawTalari);
 
-        /* --- NAVEGAÇÃO E EFEITOS --- */
         let currentTab = 'beijo';
         function closePopup(id) { document.getElementById(id).classList.add('hidden'); }
 
