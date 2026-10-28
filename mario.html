@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, orientation=landscape">
+    <title>Super Gabriel: O Resgate</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background-color: #5c94fc; touch-action: none; font-family: 'Courier New', Courier, monospace; }
+        
+        /* O Canvas do Jogo */
+        #game-canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            object-fit: contain; /* Mantém a proporção do jogo sem esticar no celular */
+        }
+
+        /* Controles Touch por cima do Canvas */
+        .touch-btn {
+            background: rgba(255, 255, 255, 0.3);
+            border: 2px solid rgba(255, 255, 255, 0.5);
+            backdrop-filter: blur(4px);
+            border-radius: 50%;
+            color: white;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        .touch-btn:active { background: rgba(255, 255, 255, 0.6); transform: scale(0.95); }
+    </style>
+</head>
+<body>
+
+    <!-- Aviso para girar a tela -->
+    <div id="orientation-warning" class="fixed inset-0 bg-black z-[100] flex flex-col items-center justify-center text-white md:hidden portrait:flex landscape:hidden">
+        <span class="text-6xl mb-4">📱🔄</span>
+        <h2 class="text-xl font-bold text-center px-4">Por favor, gire o celular deitada para jogar!</h2>
+    </div>
+
+    <!-- Botão de Voltar para a Linha do Tempo -->
+    <a href="index.html" class="absolute top-4 left-4 z-50 w-10 h-10 bg-black/40 border border-white/30 rounded-full flex items-center justify-center text-white font-bold backdrop-blur">←</a>
+
+    <canvas id="game-canvas"></canvas>
+
+    <!-- Controles Mobile (Joysticks) -->
+    <div class="fixed inset-0 pointer-events-none z-40 flex justify-between items-end pb-8 px-8 landscape:flex portrait:hidden">
+        
+        <!-- Direcional Esquerdo -->
+        <div class="flex gap-2 pointer-events-auto">
+            <button id="btn-left" class="touch-btn w-16 h-16 text-2xl shadow-lg">◀</button>
+            <div class="flex flex-col justify-end">
+                <button id="btn-down" class="touch-btn w-16 h-16 text-2xl shadow-lg">▼</button>
+            </div>
+            <button id="btn-right" class="touch-btn w-16 h-16 text-2xl shadow-lg">▶</button>
+        </div>
+
+        <!-- Botão de Ação Direito -->
+        <div class="pointer-events-auto pb-4 pr-4">
+            <button id="btn-jump" class="touch-btn w-20 h-20 text-3xl shadow-[0_0_20px_rgba(244,63,94,0.6)] !bg-rose-500/60 !border-rose-400">A</button>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('game-canvas');
+        const ctx = canvas.getContext('2d');
+
+        // Resolução interna do jogo (Estilo Super Nintendo)
+        const GAME_WIDTH = 800;
+        const GAME_HEIGHT = 450;
+        canvas.width = GAME_WIDTH;
+        canvas.height = GAME_HEIGHT;
+
+        // ESTADOS DO JOGO
+        const keys = { left: false, right: false, up: false, down: false };
+
+        // PERSONAGEM (GABRIEL)
+        const player = {
+            x: 50, y: 300, w: 32, h: 48,
+            vx: 0, vy: 0,
+            speed: 5, jumpPower: -12, gravity: 0.6,
+            grounded: false, isCrouching: false,
+            color: '#3b82f6' // Azul provisório
+        };
+
+        // A PRINCESA (VITÓRIA)
+        const princess = {
+            x: 3200, y: 302, w: 32, h: 48, // Fica lá no final da fase
+            color: '#ec4899' // Rosa provisório
+        };
+
+        // CÂMERA (Segue o jogador)
+        let cameraX = 0;
+
+        // O CENÁRIO (Plataformas e Chão)
+        const platforms = [
+            { x: 0, y: 350, w: 1200, h: 100 }, // Chão 1
+            { x: 1350, y: 350, w: 800, h: 100 }, // Chão 2 (Buraco no meio)
+            { x: 2300, y: 350, w: 1000, h: 100 }, // Chão Final
+            { x: 400, y: 250, w: 150, h: 20 }, // Plataforma flutuante
+            { x: 700, y: 180, w: 150, h: 20 }, // Plataforma flutuante alta
+            { x: 1500, y: 220, w: 200, h: 20 } // Plataforma no salto
+        ];
+
+        // EVENTOS DE TECLADO (Para jogar no PC)
+        window.addEventListener('keydown', (e) => {
+            if (e.code === 'ArrowLeft' || e.code === 'KeyA') keys.left = true;
+            if (e.code === 'ArrowRight' || e.code === 'KeyD') keys.right = true;
+            if (e.code === 'ArrowDown' || e.code === 'KeyS') keys.down = true;
+            if (e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'KeyW') keys.up = true;
+        });
+
+        window.addEventListener('keyup', (e) => {
+            if (e.code === 'ArrowLeft' || e.code === 'KeyA') keys.left = false;
+            if (e.code === 'ArrowRight' || e.code === 'KeyD') keys.right = false;
+            if (e.code === 'ArrowDown' || e.code === 'KeyS') keys.down = false;
+            if (e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'KeyW') keys.up = false;
+        });
+
+        // EVENTOS TOUCH (Mobile)
+        function bindTouch(id, keyStr) {
+            const btn = document.getElementById(id);
+            btn.addEventListener('touchstart', (e) => { e.preventDefault(); keys[keyStr] = true; });
+            btn.addEventListener('touchend', (e) => { e.preventDefault(); keys[keyStr] = false; });
+        }
+        bindTouch('btn-left', 'left');
+        bindTouch('btn-right', 'right');
+        bindTouch('btn-down', 'down');
+        bindTouch('btn-jump', 'up');
+
+        // DETECÇÃO DE COLISÃO BÁSICA
+        function checkCollision(rect1, rect2) {
+            return rect1.x < rect2.x + rect2.w &&
+                   rect1.x + rect1.w > rect2.x &&
+                   rect1.y < rect2.y + rect2.h &&
+                   rect1.y + rect1.h > rect2.y;
+        }
+
+        // MOTOR FÍSICO E LÓGICA
+        function update() {
+            // Movimento Horizontal
+            if (keys.left && !keys.down) player.vx = -player.speed;
+            else if (keys.right && !keys.down) player.vx = player.speed;
+            else player.vx = 0;
+
+            // Agachar
+            if (keys.down && player.grounded) {
+                player.isCrouching = true;
+                player.h = 24; // Fica pequenininho
+            } else {
+                player.isCrouching = false;
+                player.h = 48; // Altura normal
+            }
+
+            // Pulo
+            if (keys.up && player.grounded && !keys.down) {
+                player.vy = player.jumpPower;
+                player.grounded = false;
+            }
+
+            // Aplicar Gravidade
+            player.vy += player.gravity;
+
+            // Atualizar posições futuras
+            let nextX = player.x + player.vx;
+            let nextY = player.y + player.vy;
+
+            player.grounded = false;
+
+            // Colisões com o cenário
+            for (let plat of platforms) {
+                // Colisão Vertical (Caindo na plataforma)
+                if (player.vy > 0 && 
+                    player.y + player.h <= plat.y + 10 && 
+                    nextY + player.h >= plat.y &&
+                    player.x + player.w > plat.x && 
+                    player.x < plat.x + plat.w) 
+                {
+                    nextY = plat.y - player.h;
+                    player.vy = 0;
+                    player.grounded = true;
+                }
+            }
+
+            player.x = nextX;
+            player.y = nextY;
+
+            // Caiu no buraco (Game Over)
+            if (player.y > GAME_HEIGHT) {
+                player.x = 50; player.y = 100; // Renasce no começo
+                player.vy = 0;
+            }
+
+            // Bloquear para não voltar para trás da tela
+            if (player.x < 0) player.x = 0;
+
+            // Câmera segue o Gabriel, travada no limite esquerdo
+            cameraX = player.x - GAME_WIDTH / 3;
+            if (cameraX < 0) cameraX = 0;
+        }
+
+        // DESENHAR NA TELA
+        function draw() {
+            // Limpa o céu
+            ctx.fillStyle = '#5c94fc'; // Azul Mario
+            ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+
+            ctx.save();
+            ctx.translate(-cameraX, 0); // Move o mundo com a câmera
+
+            // Desenha as Plataformas (Chão)
+            ctx.fillStyle = '#a0522d'; // Marrom provisório
+            for (let plat of platforms) {
+                ctx.fillRect(plat.x, plat.y, plat.w, plat.h);
+                // Matinho em cima
+                ctx.fillStyle = '#4ade80';
+                ctx.fillRect(plat.x, plat.y, plat.w, 10);
+                ctx.fillStyle = '#a0522d';
+            }
+
+            // Desenha a Princesa Vitória
+            ctx.fillStyle = princess.color;
+            ctx.fillRect(princess.x, princess.y, princess.w, princess.h);
+            
+            // Desenha o Jogador (Gabriel)
+            ctx.fillStyle = player.color;
+            ctx.fillRect(player.x, player.y, player.w, player.h);
+
+            // Se encostar na princesa...
+            if(checkCollision(player, princess)) {
+                ctx.fillStyle = 'rgba(0,0,0,0.5)';
+                ctx.fillRect(cameraX, 0, GAME_WIDTH, GAME_HEIGHT);
+                ctx.fillStyle = '#fff';
+                ctx.font = 'bold 40px Courier New';
+                ctx.textAlign = 'center';
+                ctx.fillText("VOCÊ SALVOU A VITÓRIA! ❤️", cameraX + GAME_WIDTH/2, GAME_HEIGHT/2);
+            }
+
+            ctx.restore();
+        }
+
+        // LOOP INFINITO DO JOGO
+        function loop() {
+            update();
+            draw();
+            requestAnimationFrame(loop);
+        }
+
+        // Inicia o Jogo
+        requestAnimationFrame(loop);
+
+    </script>
+</body>
+</html>
