@@ -70,7 +70,7 @@
             transform: translateX(0) scale(1);
         }
 
-        /* Customização da barra de volume com fundo visível */
+        /* Customização da barra de volume */
         input[type=range] { -webkit-appearance: none; background: #27272a; height: 6px; border-radius: 4px; outline: none; }
         input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 16px; width: 16px; border-radius: 50%; background: #f43f5e; cursor: pointer; border: 2.5px solid #fff; box-shadow: 0 0 5px rgba(0,0,0,0.5); transition: transform 0.1s; }
         input[type=range]::-webkit-slider-thumb:active { transform: scale(1.2); }
@@ -326,7 +326,7 @@
                 </a>
             </div>
 
-            <!-- ABA: LUGARES QUE VISITAMOS -->
+            <!-- ABA: LUGARES QUE VISITAMOS (MAPA 2D REFEITO) -->
             <div id="view-mapa" class="tab-view w-full max-w-4xl mx-auto space-y-4 hidden">
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                     <div>
@@ -427,9 +427,6 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
     
-    <!-- O script do pet.js não é mais carregado aqui para não dar conflito -->
-    <!-- Ele deve ser carregado apenas no ficheiro pet.html -->
-
     <script>
         // ==========================================
         // SISTEMA DE CONTROLE DE VOLUME (Web Audio API)
@@ -652,7 +649,7 @@
         updateAllTimers();
         setInterval(updateAllTimers, 1000);
 
-        /* --- MAPA 2D ESTRITO (Google Maps) --- */
+        /* --- MAPA 2D INTERATIVO COMPLETAMENTE REFEITO --- */
         const visitedPlaces = [
             { name: 'Xerém', state: 'Rio de Janeiro', lat: -22.5481, lng: -43.3056, zoom: 13.5 },
             { name: 'Petrópolis', state: 'Rio de Janeiro', lat: -22.5050, lng: -43.1786, zoom: 13 },
@@ -680,27 +677,39 @@
         function initHDGlobe() {
             if (hdMap) return; 
             
-            // Mapa 2D Estrito
+            // Mapa 2D Estrito usando Raster Tiles super confiáveis do Google
             hdMap = new maplibregl.Map({
                 container: 'hd-globe-map', 
-                center: [-45.5, -24.8], 
-                zoom: 4.2, 
-                pitch: 0,
-                dragRotate: false,
-                dragPitch: false,
+                center: [-43.1769, -22.9035], // Começa centrado no RJ
+                zoom: 5, 
+                pitch: 0, // <-- Travado em 2D perfeitamente plano
+                bearing: 0,
+                dragRotate: false, // <-- Sem rotação 3D
+                dragPitch: false, // <-- Sem inclinação 3D
                 style: {
                     version: 8,
                     sources: {
-                        'sat-tiles': { type: 'raster', tiles: ['https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}'], tileSize: 256, maxzoom: 20 },
-                        'osm-streets': { type: 'raster', tiles: ['https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}'], tileSize: 256, maxzoom: 20 }
+                        'sat-tiles': { 
+                            type: 'raster', 
+                            tiles: ['https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}'], 
+                            tileSize: 256, 
+                            maxzoom: 20 
+                        },
+                        'osm-streets': { 
+                            type: 'raster', 
+                            tiles: ['https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}'], 
+                            tileSize: 256, 
+                            maxzoom: 20 
+                        }
                     },
                     layers: [
-                        { id: 'sat-layer', type: 'raster', source: 'sat-tiles' },
+                        { id: 'sat-layer', type: 'raster', source: 'sat-tiles', layout: { visibility: 'visible' } },
                         { id: 'osm-layer', type: 'raster', source: 'osm-streets', layout: { visibility: 'none' } }
                     ]
                 }
             });
             
+            // Controle simples de Zoom sem bússola (já que não há rotação)
             hdMap.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-left');
             
             visitedPlaces.forEach((p, idx) => {
@@ -709,6 +718,11 @@
                 wrap.innerHTML = `<div class="map-pin-label">${p.name}</div><div class="map-pin-dot"></div>`;
                 wrap.onclick = (e) => { e.stopPropagation(); focusPlace(idx); };
                 new maplibregl.Marker({ element: wrap, anchor: 'bottom' }).setLngLat([p.lng, p.lat]).addTo(hdMap);
+            });
+
+            // O pulo do gato: força o redimensionamento exato quando os tiles do mapa terminam de carregar
+            hdMap.on('load', () => {
+                hdMap.resize();
             });
         }
 
@@ -722,14 +736,15 @@
         function focusPlace(index) {
             const p = visitedPlaces[index];
             showPlaceCard(p);
-            if (hdMap) hdMap.flyTo({ center: [p.lng, p.lat], zoom: p.zoom, pitch: 0, duration: 1800, essential: true });
+            // pitch sempre em 0 para voo suave em 2D
+            if (hdMap) hdMap.flyTo({ center: [p.lng, p.lat], zoom: p.zoom, pitch: 0, bearing: 0, duration: 1800, essential: true });
         }
 
         function flyToRegion(region) {
             document.getElementById('place-card').classList.add('hidden');
             if (!hdMap) return;
-            if (region === 'rj') hdMap.flyTo({ center: [-42.95, -22.72], zoom: 8.8, pitch: 0, duration: 1600 });
-            if (region === 'sc') hdMap.flyTo({ center: [-48.80, -26.86], zoom: 9.5, pitch: 0, duration: 1600 });
+            if (region === 'rj') hdMap.flyTo({ center: [-42.95, -22.72], zoom: 8.8, pitch: 0, bearing: 0, duration: 1600 });
+            if (region === 'sc') hdMap.flyTo({ center: [-48.80, -26.86], zoom: 9.5, pitch: 0, bearing: 0, duration: 1600 });
         }
 
         function resetGlobeCamera() {
@@ -742,7 +757,7 @@
             isStreetStyle = !isStreetStyle;
             hdMap.setLayoutProperty('sat-layer', 'visibility', isStreetStyle ? 'none' : 'visible');
             hdMap.setLayoutProperty('osm-layer', 'visibility', isStreetStyle ? 'visible' : 'none');
-            document.getElementById('btn-map-style').innerHTML = isStreetStyle ? '🛰️ Modo Satélite 2D' : '🗺️ Modo Mapa de Ruas';
+            document.getElementById('btn-map-style').innerHTML = isStreetStyle ? '🛰️ Modo Satélite HD' : '🗺️ Modo Mapa de Ruas';
         }
 
         /* --- VIMÓRIA GAME --- */
