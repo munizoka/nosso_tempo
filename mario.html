@@ -2,69 +2,80 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <!-- Força a tela cheia e impede zoom no celular -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, orientation=landscape">
     <title>Super Gabriel Bros</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
     <style>
-        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background-color: #5c94fc; touch-action: none; font-family: 'Inter', sans-serif; }
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background-color: #5c94fc; touch-action: none; font-family: 'Press Start 2P', cursive; }
         
-        /* O Canvas do Jogo Pixelado */
         #game-canvas {
             display: block;
             width: 100%;
             height: 100%;
             object-fit: cover;
-            image-rendering: pixelated;
+            image-rendering: pixelated; /* Mantém o aspeto retro sem borrar */
         }
 
-        /* Estilo do D-Pad Direcional (Esquerda) */
+        /* D-Pad Estilo Consola Clássica */
+        .dpad-container {
+            display: grid;
+            grid-template-columns: 60px 60px 60px;
+            grid-template-rows: 60px 60px 60px;
+            gap: 4px;
+        }
         .dpad-btn {
-            width: 60px;
-            height: 60px;
-            background: rgba(255, 255, 255, 0.25);
-            border: 2px solid rgba(255, 255, 255, 0.6);
-            backdrop-filter: blur(8px);
-            border-radius: 12px;
-            color: white;
-            font-size: 22px;
+            background: #cbd5e1;
+            border: 4px solid #475569;
+            border-radius: 8px;
             display: flex;
             align-items: center;
             justify-content: center;
+            font-family: sans-serif;
+            font-size: 28px;
+            color: #334155;
+            box-shadow: 0 6px 0 #334155;
             user-select: none;
             -webkit-user-select: none;
-            box-shadow: 0 6px 0 rgba(0,0,0,0.2);
-            transition: all 0.05s linear;
+            transition: transform 0.05s, box-shadow 0.05s;
         }
         .dpad-btn:active {
             transform: translateY(6px);
-            box-shadow: 0 0 0 rgba(0,0,0,0);
-            background: rgba(255, 255, 255, 0.45);
+            box-shadow: 0 0 0 #334155;
+            background: #94a3b8;
         }
+        
+        #btn-up { grid-column: 2; grid-row: 1; border-radius: 12px 12px 4px 4px; }
+        #btn-left { grid-column: 1; grid-row: 2; border-radius: 12px 4px 4px 12px; }
+        #btn-right { grid-column: 3; grid-row: 2; border-radius: 4px 12px 12px 4px; }
+        #btn-down { grid-column: 2; grid-row: 3; border-radius: 4px 4px 12px 12px; }
+        .dpad-center { grid-column: 2; grid-row: 2; background: #cbd5e1; border: none; }
 
-        /* Estilo do Botão A (Direita) */
+        /* Botão A (Pular) */
         .action-btn {
-            width: 80px;
-            height: 80px;
-            background: #f43f5e;
-            border: 4px solid #fda4af;
+            width: 90px;
+            height: 90px;
+            background: #ef4444;
+            border: 6px solid #f87171;
             border-radius: 50%;
             color: white;
-            font-size: 34px;
-            font-weight: 800;
+            font-size: 32px;
             display: flex;
             align-items: center;
             justify-content: center;
             user-select: none;
             -webkit-user-select: none;
-            box-shadow: 0 8px 0 #be123c, 0 15px 20px rgba(0,0,0,0.4);
-            transition: all 0.05s linear;
+            box-shadow: 0 8px 0 #991b1b, 0 15px 25px rgba(0,0,0,0.5);
+            transition: transform 0.05s, box-shadow 0.05s;
         }
         .action-btn:active {
             transform: translateY(8px);
-            box-shadow: 0 0 0 #be123c, 0 5px 10px rgba(0,0,0,0.4);
-            background: #e11d48;
+            box-shadow: 0 0 0 #991b1b, 0 5px 10px rgba(0,0,0,0.5);
+            background: #dc2626;
         }
+
+        /* Top Bar UI */
+        .ui-text { text-shadow: 2px 2px 0 #000, -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000; color: white; font-size: 14px; }
     </style>
 </head>
 <body>
@@ -72,43 +83,40 @@
     <!-- Aviso para girar a tela -->
     <div id="orientation-warning" class="fixed inset-0 bg-black z-[100] flex flex-col items-center justify-center text-white md:hidden portrait:flex landscape:hidden">
         <span class="text-6xl mb-4 animate-bounce">📱🔄</span>
-        <h2 class="text-xl font-bold text-center px-4">Vire o celular deitado para jogar!</h2>
+        <h2 class="text-sm text-center px-4 leading-relaxed font-sans">Gire o celular na horizontal<br>para jogar!</h2>
     </div>
 
-    <!-- Interface Superior (Voltar e Recomeçar) -->
-    <div class="absolute top-4 left-4 right-4 z-50 flex justify-between pointer-events-none">
-        <a href="index.html" class="w-12 h-12 bg-black/40 border border-white/30 rounded-full flex items-center justify-center text-white font-bold backdrop-blur hover:bg-black/60 transition-all pointer-events-auto shadow-lg text-xl">←</a>
+    <!-- UI Superior -->
+    <div class="absolute top-4 left-4 right-4 z-50 flex justify-between items-start pointer-events-none">
+        <a href="index.html" class="w-12 h-12 bg-zinc-800/80 border-2 border-white rounded-full flex items-center justify-center text-white font-sans font-bold backdrop-blur pointer-events-auto shadow-lg text-2xl active:scale-90 transition-transform">←</a>
         
-        <button onclick="reiniciarFase()" class="px-5 py-2 bg-black/40 border border-white/30 rounded-full flex items-center justify-center text-white font-bold backdrop-blur hover:bg-black/60 transition-all pointer-events-auto shadow-lg active:scale-95">
+        <div class="flex gap-6 ui-text items-center mt-2 hidden sm:flex">
+            <span>HP:8900</span>
+            <span>🍄 x10</span>
+            <span>⏱ 00:03:18</span>
+        </div>
+
+        <button onclick="reiniciarFase()" class="px-4 py-3 bg-zinc-800/80 border-2 border-white rounded-xl flex items-center justify-center text-white font-sans font-bold backdrop-blur pointer-events-auto shadow-lg active:scale-95 transition-transform text-sm uppercase">
             🔄 Recomeçar
         </button>
     </div>
 
     <canvas id="game-canvas"></canvas>
 
-    <!-- Controles Touch (Joysticks) Ocultos no PC, visíveis no Mobile -->
-    <div class="fixed inset-0 pointer-events-none z-40 flex justify-between items-end pb-8 px-8 landscape:flex portrait:hidden sm:flex">
+    <!-- Controles Mobile -->
+    <div class="fixed inset-0 pointer-events-none z-40 flex justify-between items-end pb-8 px-10 landscape:flex portrait:hidden sm:flex">
         
-        <!-- D-PAD (Lado Esquerdo) -->
-        <div class="flex flex-col items-center gap-1 pointer-events-auto">
-            <!-- Botão Cima -->
+        <!-- D-PAD Esquerdo -->
+        <div class="dpad-container pointer-events-auto opacity-80 hover:opacity-100 transition-opacity">
+            <div class="dpad-center"></div>
             <button id="btn-up" class="dpad-btn">▲</button>
-            
-            <div class="flex gap-1">
-                <!-- Botão Esquerda -->
-                <button id="btn-left" class="dpad-btn">◀</button>
-                <!-- Centro Vazio do D-Pad -->
-                <div class="w-[60px] h-[60px] bg-white/5 rounded-xl border border-white/10"></div>
-                <!-- Botão Direita -->
-                <button id="btn-right" class="dpad-btn">▶</button>
-            </div>
-            
-            <!-- Botão Baixo (Agachar) -->
+            <button id="btn-left" class="dpad-btn">◀</button>
+            <button id="btn-right" class="dpad-btn">▶</button>
             <button id="btn-down" class="dpad-btn">▼</button>
         </div>
 
-        <!-- Botão A (Lado Direito) -->
-        <div class="pointer-events-auto pb-4 pr-4">
+        <!-- Botão A Direito -->
+        <div class="pointer-events-auto pb-4 opacity-90 hover:opacity-100 transition-opacity">
             <button id="btn-jump" class="action-btn">A</button>
         </div>
     </div>
@@ -117,67 +125,123 @@
         const canvas = document.getElementById('game-canvas');
         const ctx = canvas.getContext('2d');
 
-        const GAME_WIDTH = 600;
-        const GAME_HEIGHT = 350;
+        const GAME_WIDTH = 800;
+        const GAME_HEIGHT = 450;
         canvas.width = GAME_WIDTH;
         canvas.height = GAME_HEIGHT;
 
+        // ==========================================
+        // SISTEMA DE IMAGENS E CHROMA KEY (FUNDO VERDE)
+        // ==========================================
+        const assets = {
+            hero: new Image(),
+            princess: new Image(),
+            enemies: new Image(),
+            castle: new Image(),
+            surprise: new Image(),
+            pipe: new Image(),
+            brick: new Image(),
+            ground: new Image()
+        };
+
+        let assetsLoaded = 0;
+        const totalAssets = 8;
+        let processedAssets = {};
+
+        // Carrega as imagens exatas que você nomeou
+        assets.hero.src = '35.png';
+        assets.princess.src = '36.png';
+        assets.enemies.src = '37.jpg'; // Pode ser JPG, o filtro resolve o verde
+        assets.castle.src = '38.png';
+        assets.surprise.src = '39.png';
+        assets.pipe.src = '40.png';
+        assets.brick.src = '41.png';
+        assets.ground.src = '42.png';
+
+        // Filtro para apagar o fundo verde limão da IA
+        function removeGreenScreen(img) {
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = img.width;
+            tempCanvas.height = img.height;
+            const tCtx = tempCanvas.getContext('2d');
+            tCtx.drawImage(img, 0, 0);
+            
+            try {
+                const imgData = tCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
+                const data = imgData.data;
+                for (let i = 0; i < data.length; i += 4) {
+                    let r = data[i], g = data[i+1], b = data[i+2];
+                    // Se for verde forte (tipo Chroma Key)
+                    if (g > 150 && r < 100 && b < 100) {
+                        data[i+3] = 0; // Fica transparente!
+                    }
+                }
+                tCtx.putImageData(imgData, 0, 0);
+                return tempCanvas;
+            } catch(e) {
+                // Se der erro de CORS rodando local, retorna a imagem original
+                return img;
+            }
+        }
+
+        Object.keys(assets).forEach(key => {
+            assets[key].onload = () => {
+                processedAssets[key] = removeGreenScreen(assets[key]);
+                assetsLoaded++;
+            };
+        });
+
+        // ==========================================
+        // LÓGICA DO JOGO E FÍSICA
+        // ==========================================
         const keys = { left: false, right: false, up: false, down: false };
 
-        // O HERÓI (GABRIEL) - Pulo Buffado para não prender!
         const player = {
-            x: 50, y: 200, w: 24, h: 32,
+            x: 50, y: 100, w: 48, h: 64, // Tamanho base
             vx: 0, vy: 0,
-            speed: 3.8, jumpPower: -11.5, gravity: 0.5,
-            grounded: false, isCrouching: false,
-            color: '#3b82f6'
+            speed: 5, jumpPower: -13, gravity: 0.6,
+            grounded: false, isCrouching: false, direction: 1, // 1 = direita, -1 = esquerda
+            animFrame: 0, animTimer: 0
         };
 
-        const princess = {
-            x: 2800, y: 288, w: 24, h: 32,
-            color: '#ec4899'
-        };
-        const castle = { x: 2850, y: 200, w: 100, h: 120, color: '#94a3b8' };
+        const princess = { x: 3400, y: 316, w: 48, h: 64 };
+        const castle = { x: 3450, y: 130, w: 250, h: 250 };
 
-        // INIMIGOS
         let enemies = [
-            { x: 400, y: 288, w: 24, h: 24, vx: -1, type: 'goomba', alive: true, color: '#b45309' },
-            { x: 900, y: 288, w: 24, h: 24, vx: -1, type: 'goomba', alive: true, color: '#b45309' },
-            { x: 1400, y: 288, w: 24, h: 24, vx: -1.2, type: 'koopa', alive: true, color: '#15803d' },
-            { x: 1450, y: 288, w: 24, h: 24, vx: -1.2, type: 'koopa', alive: true, color: '#15803d' }
+            { x: 600, y: 332, w: 48, h: 48, vx: -1.5, type: 'mushroom', alive: true },
+            { x: 1200, y: 332, w: 48, h: 48, vx: -1.5, type: 'mushroom', alive: true },
+            { x: 1800, y: 332, w: 48, h: 48, vx: -2, type: 'turtle', alive: true },
+            { x: 2200, y: 332, w: 48, h: 48, vx: -2, type: 'turtle', alive: true }
         ];
 
         let cameraX = 0;
         let gameWin = false;
 
-        // O CENÁRIO (Canos encurtados e espaçados para não haver softlock)
+        // MAPA DA FASE (Totalmente revisto contra softlocks)
+        // y: 380 é o chão base. 
         const blocks = [
-            // CHÃO PRINCIPAL
-            { x: 0, y: 320, w: 1100, h: 100, type: 'ground', color: '#854d21' },
-            { x: 1180, y: 320, w: 300, h: 100, type: 'ground', color: '#854d21' },
-            { x: 1550, y: 320, w: 1500, h: 100, type: 'ground', color: '#854d21' },
+            // CHÃO
+            { x: 0, y: 380, w: 1200, h: 70, type: 'ground' },
+            { x: 1300, y: 380, w: 800, h: 70, type: 'ground' }, // Buraco
+            { x: 2250, y: 380, w: 1800, h: 70, type: 'ground' }, // Final
 
-            // CANOS VERDES (Altura máxima y=230 para ser fácil de pular)
-            { x: 450, y: 280, w: 50, h: 40, type: 'pipe', color: '#22c55e' },
-            { x: 650, y: 250, w: 50, h: 70, type: 'pipe', color: '#22c55e' },
-            { x: 850, y: 230, w: 50, h: 90, type: 'pipe', color: '#22c55e' },
-            { x: 1050, y: 230, w: 50, h: 90, type: 'pipe', color: '#22c55e' },
+            // CANOS (Mais baixos para garantir o pulo)
+            { x: 400, y: 300, w: 60, h: 80, type: 'pipe' },
+            { x: 750, y: 260, w: 60, h: 120, type: 'pipe' },
+            { x: 950, y: 260, w: 60, h: 120, type: 'pipe' }, // Espaço de 140px (dá pra pular ou sair)
 
-            // BLOCOS MISTERIOSOS E TIJOLOS
-            { x: 250, y: 210, w: 24, h: 24, type: 'surprise', color: '#eab308' },
+            // BLOCOS AÉREOS
+            { x: 250, y: 220, w: 48, h: 48, type: 'surprise' },
             
-            { x: 350, y: 210, w: 24, h: 24, type: 'brick', color: '#b45309' },
-            { x: 374, y: 210, w: 24, h: 24, type: 'surprise', color: '#eab308' },
-            { x: 398, y: 210, w: 24, h: 24, type: 'brick', color: '#b45309' },
-            { x: 422, y: 210, w: 24, h: 24, type: 'surprise', color: '#eab308' },
-            { x: 446, y: 210, w: 24, h: 24, type: 'brick', color: '#b45309' },
-            { x: 398, y: 100, w: 24, h: 24, type: 'surprise', color: '#eab308' },
-
-            // ESCADINHA
-            { x: 2400, y: 296, w: 24, h: 24, type: 'block', color: '#f87171' },
-            { x: 2424, y: 272, w: 24, h: 48, type: 'block', color: '#f87171' },
-            { x: 2448, y: 248, w: 24, h: 72, type: 'block', color: '#f87171' },
-            { x: 2472, y: 224, w: 24, h: 96, type: 'block', color: '#f87171' },
+            { x: 500, y: 220, w: 48, h: 48, type: 'brick' },
+            { x: 548, y: 220, w: 48, h: 48, type: 'surprise' },
+            { x: 596, y: 220, w: 48, h: 48, type: 'brick' },
+            
+            // ESCADINHA CLÁSSICA (Feita de bricks para subir)
+            { x: 2900, y: 332, w: 48, h: 48, type: 'brick' },
+            { x: 2948, y: 284, w: 48, h: 96, type: 'brick' },
+            { x: 2996, y: 236, w: 48, h: 144, type: 'brick' },
+            { x: 3044, y: 188, w: 48, h: 192, type: 'brick' },
         ];
 
         // Mapeamento de Teclado
@@ -203,75 +267,60 @@
         bindTouch('btn-left', 'left');
         bindTouch('btn-right', 'right');
         bindTouch('btn-down', 'down');
-        bindTouch('btn-up', 'up');    // Opcional no D-pad para pular
-        bindTouch('btn-jump', 'up');  // Botão A principal para pular
+        bindTouch('btn-up', 'up');
+        bindTouch('btn-jump', 'up');
 
         function isColliding(a, b) {
             return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
         }
 
-        // Sistema de Reiniciar
-        function reiniciarFase() {
-            player.x = 50; 
-            player.y = 100;
-            player.vx = 0; 
-            player.vy = 0;
-            cameraX = 0;
-            gameWin = false;
-            // Revive inimigos
+        window.reiniciarFase = function() {
+            player.x = 50; player.y = 100; player.vx = 0; player.vy = 0;
+            cameraX = 0; gameWin = false;
             enemies.forEach(e => { e.alive = true; });
         }
 
         function update() {
-            if(gameWin) return;
+            if(gameWin || assetsLoaded < totalAssets) return;
 
             // Movimento Horizontal
-            if (keys.left && !keys.down) player.vx = -player.speed;
-            else if (keys.right && !keys.down) player.vx = player.speed;
+            if (keys.left && !keys.down) { player.vx = -player.speed; player.direction = -1; }
+            else if (keys.right && !keys.down) { player.vx = player.speed; player.direction = 1; }
             else player.vx = 0;
 
             // Agachar
             if (keys.down && player.grounded) {
-                if(!player.isCrouching) {
-                    player.isCrouching = true;
-                    player.h = 16; 
-                    player.y += 16;
-                }
+                if(!player.isCrouching) { player.isCrouching = true; player.h = 48; player.y += 16; }
             } else if (player.isCrouching) {
-                player.isCrouching = false;
-                player.y -= 16;
-                player.h = 32;
+                player.isCrouching = false; player.y -= 16; player.h = 64;
             }
 
             // Pulo
             if (keys.up && player.grounded && !keys.down) {
-                player.vy = player.jumpPower;
-                player.grounded = false;
+                player.vy = player.jumpPower; player.grounded = false;
             }
 
-            // Aplicar Gravidade
+            // Gravidade
             player.vy += player.gravity;
-
-            // --- RESOLUÇÃO DE COLISÕES SEGURA ---
             player.grounded = false;
 
-            // Mover em X primeiro e resolver
+            // Colisão Eixo X
             player.x += player.vx;
-            if (player.x < cameraX) player.x = cameraX; 
+            if (player.x < cameraX) player.x = cameraX; // Não deixa voltar
 
             for (let b of blocks) {
                 if (isColliding(player, b)) {
-                    if (player.vx > 0) player.x = b.x - player.w; // Parede Direita
-                    else if (player.vx < 0) player.x = b.x + b.w; // Parede Esquerda
+                    if (player.vx > 0) player.x = b.x - player.w;
+                    else if (player.vx < 0) player.x = b.x + b.w;
                     player.vx = 0;
                 }
             }
 
-            // Mover em Y e resolver
+            // Colisão Eixo Y
             player.y += player.vy;
             for (let b of blocks) {
                 if (isColliding(player, b)) {
-                    if (player.vy > 0) { // Caiu no chão
+                    if (player.vy > 0) { // Caiu no bloco
                         player.y = b.y - player.h;
                         player.vy = 0;
                         player.grounded = true;
@@ -282,21 +331,16 @@
                 }
             }
 
-            // Buraco da morte
-            if (player.y > GAME_HEIGHT + 100) {
-                reiniciarFase();
-            }
+            // Morte no buraco
+            if (player.y > GAME_HEIGHT + 200) reiniciarFase();
 
-            // Lógica dos Inimigos
+            // Inimigos
             for (let enemy of enemies) {
                 if (!enemy.alive) continue;
                 
-                enemy.y += 3; // Gravidade do inimigo
+                enemy.y += 4; 
                 for (let b of blocks) {
-                    if (isColliding(enemy, b)) {
-                        enemy.y = b.y - enemy.h;
-                        break;
-                    }
+                    if (isColliding(enemy, b)) { enemy.y = b.y - enemy.h; break; }
                 }
 
                 enemy.x += enemy.vx;
@@ -308,25 +352,47 @@
                 }
 
                 if (isColliding(player, enemy)) {
-                    if (player.vy > 0 && player.y + player.h < enemy.y + 15) {
-                        // Pisou na cabeça
-                        enemy.alive = false;
-                        player.vy = player.jumpPower * 0.7; // Pulo extra (quique)
+                    if (player.vy > 0 && player.y + player.h < enemy.y + 25) {
+                        enemy.alive = false; // Pisou!
+                        player.vy = player.jumpPower * 0.8;
                     } else {
-                        // Sofreu dano
-                        reiniciarFase();
+                        reiniciarFase(); // Dano!
                     }
                 }
             }
 
-            // Vitória
-            if (isColliding(player, princess)) {
-                gameWin = true;
-            }
+            if (isColliding(player, princess)) gameWin = true;
 
-            // Câmera segue
+            // Scroll da Câmera
             if (player.x > cameraX + GAME_WIDTH / 2.5) {
                 cameraX = player.x - GAME_WIDTH / 2.5;
+            }
+
+            // ANIMAR BONECO (GABRIEL)
+            // Lógica baseada nas 4 poses que você pediu: 0=Parado, 1=Andando, 2=Pulando, 3=Agachado
+            if (player.isCrouching) {
+                player.animFrame = 3;
+            } else if (!player.grounded) {
+                player.animFrame = 2;
+            } else if (player.vx !== 0) {
+                player.animTimer++;
+                if (player.animTimer > 8) { player.animFrame = player.animFrame === 1 ? 0 : 1; player.animTimer = 0; }
+            } else {
+                player.animFrame = 0;
+            }
+        }
+
+        // DESENHAR NA TELA
+        function drawImageTile(img, dx, dy, dw, dh, repeatX = false) {
+            if(!img) return;
+            if(repeatX) {
+                // Para o chão de terra repetir infinitamente
+                for(let i = 0; i < dw; i += img.width) {
+                    let drawWidth = Math.min(img.width, dw - i);
+                    ctx.drawImage(img, 0, 0, drawWidth, img.height, dx + i, dy, drawWidth, dh);
+                }
+            } else {
+                ctx.drawImage(img, dx, dy, dw, dh);
             }
         }
 
@@ -334,47 +400,70 @@
             ctx.fillStyle = '#5c94fc';
             ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
 
+            if (assetsLoaded < totalAssets) {
+                ctx.fillStyle = '#fff'; ctx.font = '20px "Press Start 2P"'; ctx.textAlign = 'center';
+                ctx.fillText("CARREGANDO A MAGIA...", GAME_WIDTH/2, GAME_HEIGHT/2);
+                return;
+            }
+
             ctx.save();
             ctx.translate(-cameraX, 0); 
 
+            // Cenário
             for (let b of blocks) {
-                ctx.fillStyle = b.color;
-                ctx.fillRect(b.x, b.y, b.w, b.h);
-                
-                if(b.type === 'ground') {
-                    ctx.fillStyle = '#4ade80';
-                    ctx.fillRect(b.x, b.y, b.w, 8);
-                }
-                if(b.type === 'surprise') {
-                    ctx.fillStyle = '#fff';
-                    ctx.font = 'bold 16px Inter';
-                    ctx.textAlign = 'center';
-                    ctx.fillText('?', b.x + 12, b.y + 18);
-                }
+                if (b.type === 'ground') drawImageTile(processedAssets.ground, b.x, b.y, b.w, b.h, true);
+                if (b.type === 'pipe') drawImageTile(processedAssets.pipe, b.x, b.y, b.w, b.h);
+                if (b.type === 'brick') drawImageTile(processedAssets.brick, b.x, b.y, b.w, b.h);
+                if (b.type === 'surprise') drawImageTile(processedAssets.surprise, b.x, b.y, b.w, b.h);
+                if (b.type === 'block') drawImageTile(processedAssets.brick, b.x, b.y, b.w, b.h);
             }
 
-            ctx.fillStyle = castle.color;
-            ctx.fillRect(castle.x, castle.y, castle.w, castle.h);
-            ctx.fillStyle = princess.color;
-            ctx.fillRect(princess.x, princess.y, princess.w, princess.h);
+            // Castelo e Princesa
+            drawImageTile(processedAssets.castle, castle.x, castle.y, castle.w, castle.h);
+            drawImageTile(processedAssets.princess, princess.x, princess.y, princess.w, princess.h);
             
+            // Inimigos (Mushroom ou Turtle dependendo do tipo)
             for (let enemy of enemies) {
                 if(enemy.alive) {
-                    ctx.fillStyle = enemy.color;
-                    ctx.fillRect(enemy.x, enemy.y, enemy.w, enemy.h);
+                    const img = processedAssets.enemies;
+                    const frameW = img.width / 2; // Corta a imagem ao meio (0=Mushroom, 1=Turtle)
+                    const frameX = enemy.type === 'mushroom' ? 0 : frameW;
+                    
+                    ctx.save();
+                    ctx.translate(enemy.x + enemy.w/2, enemy.y + enemy.h/2);
+                    if (enemy.vx > 0) ctx.scale(-1, 1); // Vira a tartaruga
+                    ctx.drawImage(img, frameX, 0, frameW, img.height, -enemy.w/2, -enemy.h/2, enemy.w, enemy.h);
+                    ctx.restore();
                 }
             }
 
-            ctx.fillStyle = player.color;
-            ctx.fillRect(player.x, player.y, player.w, player.h);
+            // JOGADOR (GABRIEL)
+            const spriteSheet = processedAssets.hero;
+            const frameWidth = spriteSheet.width / 4; // Corta a imagem em 4 pedaços iguais
+            
+            ctx.save();
+            ctx.translate(player.x + player.w/2, player.y + player.h/2);
+            if (player.direction === -1) ctx.scale(-1, 1); // Vira o Gabriel para a esquerda
+            
+            ctx.drawImage(
+                spriteSheet, 
+                player.animFrame * frameWidth, 0, frameWidth, spriteSheet.height, // Fonte (Corte da sprite)
+                -player.w/2, -player.h/2, player.w, player.h // Destino
+            );
+            ctx.restore();
 
+            // Mensagem de Vitória
             if(gameWin) {
                 ctx.fillStyle = 'rgba(0,0,0,0.7)';
                 ctx.fillRect(cameraX, 0, GAME_WIDTH, GAME_HEIGHT);
                 ctx.fillStyle = '#fff';
-                ctx.font = 'bold 30px Inter';
+                ctx.font = '20px "Press Start 2P"';
                 ctx.textAlign = 'center';
-                ctx.fillText("VOCÊ RESGATOU A VITÓRIA! ❤️", cameraX + GAME_WIDTH/2, GAME_HEIGHT/2 - 20);
+                ctx.fillText("VITÓRIA RESGATADA!", cameraX + GAME_WIDTH/2, GAME_HEIGHT/2 - 20);
+                
+                ctx.font = '10px "Press Start 2P"';
+                ctx.fillStyle = '#f43f5e';
+                ctx.fillText("Parabéns, meu herói ❤️", cameraX + GAME_WIDTH/2, GAME_HEIGHT/2 + 20);
             }
 
             ctx.restore();
@@ -386,7 +475,7 @@
             requestAnimationFrame(loop);
         }
 
-        requestAnimationFrame(loop);
+        loop();
     </script>
 </body>
 </html>
