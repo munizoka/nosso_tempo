@@ -952,15 +952,17 @@
 
             if (tab === 'fotos') document.getElementById('fotos-popup').classList.remove('hidden');
             
-            // Força o mapa a recalcular o tamanho até que se ajeite na tela
+           // Força o mapa a recalcular o tamanho com um atraso de 50ms para a aba abrir
             if (tab === 'mapa') {
-                if (!hdMap) initHDGlobe();
-                let renderLoops = 0;
-                const mapResizer = setInterval(() => {
-                    if (hdMap) hdMap.resize();
-                    renderLoops++;
-                    if (renderLoops > 20) clearInterval(mapResizer);
-                }, 25);
+                setTimeout(() => {
+                    if (!hdMap) initHDGlobe();
+                    let renderLoops = 0;
+                    const mapResizer = setInterval(() => {
+                        if (hdMap) hdMap.resize();
+                        renderLoops++;
+                        if (renderLoops > 20) clearInterval(mapResizer);
+                    }, 25);
+                }, 50); 
             }
             
             if (window.innerWidth < 768) toggleSidebar(false);
