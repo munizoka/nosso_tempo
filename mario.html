@@ -582,7 +582,9 @@
         function drawEnemies(){
           for(const e of enemies){if(!e.alive)continue;
             const frame=processedAssets.enemyFrames?.[e.type==='mushroom'?0:1];
-            const facing=e.type==='mushroom'?(e.vx<0?-1:1):(e.vx>0?-1:1);
+            // Ambos os sprites da folha 37.jpg olham para a direita na imagem original.
+            // A direção visual deve acompanhar vx, evitando o 'moonwalk' da tartaruga.
+            const facing=e.vx<0?-1:1;
             drawSpriteOnFeet(frame,e.x+e.w/2,e.y+e.h,e.h,facing);
           }
         }
@@ -593,32 +595,66 @@
         }
         function easeOut(v){const x=Math.max(0,Math.min(1,v));return 1-(1-x)*(1-x);}
         function drawCinematicCharacters(t){
-          // O vilão e o portal são desenhados à direita de Vitória, sobre o castelo.
+          // Cinemática em ordem física correta:
+          // o vilão SAI do portal à direita, vai até Vitoria à esquerda,
+          // captura a princesa e volta COM ELA para a direita, entrando no portal.
           const portalC=princess.x+103, portalY=princess.y-47;
-          const p=easeOut((t-1.8)/1.1);
-          let close=1;
-          if(t>=7.1)close=1-easeOut((t-7.1)/1.2);
-          const scale=Math.max(0,p*close);
-          if(scale>0.005){
-            ctx.save();ctx.translate(portalC,portalY+80);ctx.scale(scale,scale);
+          const princessStartX=princess.x+princess.w/2;
+          const princessStartFoot=princess.y+princess.h;
+          const villainAtPrincess=princessStartX+28;
+          const easeInOut=v=>{
+            const x=Math.max(0,Math.min(1,v));
+            return x*x*(3-2*x);
+          };
+          const portalOpen=easeOut((t-1.8)/1.1);
+          const portalClose=1-easeOut((t-7.1)/1.2);
+          const portalScale=Math.max(0,portalOpen*portalClose);
+          if(portalScale>.005){
+            ctx.save();ctx.translate(portalC,portalY+80);ctx.scale(portalScale,portalScale);
             if(extras.portal)drawObject(extras.portal,-53,-84,106,146);
             else {ctx.fillStyle='#6e29ba';ctx.beginPath();ctx.ellipse(0,0,42,67,0,0,Math.PI*2);ctx.fill();}
             ctx.restore();
           }
-          const villainShow=easeOut((t-3)/.75)*Math.max(0,1-easeOut((t-7)/1));
-          if(villainShow>0){
-            ctx.save();ctx.globalAlpha=villainShow;
-            const floatY=Math.sin(t*3)*5;
-            if(extras.villain)drawObject(extras.villain,portalC-25,portalY-17+floatY,72,94);
-            else {ctx.fillStyle='#201033';ctx.fillRect(portalC-15,portalY,42,70);}
+
+          // t=3.0–4.6: ele avança DA DIREITA PARA A ESQUERDA,
+          // olhando na direção da princesa.
+          const approach=easeInOut((t-3.0)/1.6);
+          // t=4.8–5.3: ele agarra Vitoria e a ergue do chão.
+          const pickup=easeInOut((t-4.8)/.5);
+          // t=5.3–6.9: os dois regressam JUNTOS em direção ao portal.
+          const retreat=easeInOut((t-5.3)/1.6);
+          // Na entrada, os dois encolhem e somem no mesmo instante.
+          const vanish=easeOut((t-6.5)/.65);
+          const captiveScale=1-.58*vanish;
+          const captiveAlpha=1-vanish;
+          const floatY=Math.sin(t*3)*4;
+
+          const villainX=portalC+(villainAtPrincess-portalC)*approach+
+            (portalC-villainAtPrincess)*retreat;
+          const villainY=portalY-17+floatY-13*retreat;
+          const villainVisible=easeOut((t-3)/.5)*captiveAlpha;
+
+          if(villainVisible>.005){
+            ctx.save();ctx.globalAlpha=villainVisible;
+            ctx.translate(villainX,villainY+47);
+            // Aproxima-se olhando para a ESQUERDA e retorna para a DIREITA.
+            // A imagem original tem a frente voltada à direita.
+            ctx.scale(t<5.3?-captiveScale:captiveScale,captiveScale);
+            if(extras.villain)drawObject(extras.villain,-36,-47,72,94);
+            else {ctx.fillStyle='#201033';ctx.fillRect(-20,-40,40,70);}
             ctx.restore();
           }
-          if(t<6.6){
-            const kidnapped=easeOut((t-4.8)/1.8);
-            const princessX=princess.x+princess.w/2+81*kidnapped;
-            const princessFoot=princess.y+princess.h-30*kidnapped;
-            ctx.save();ctx.globalAlpha=1-easeOut((kidnapped-.60)/.38);
-            ctx.translate(princessX,princessFoot);ctx.scale(1-kidnapped*.68,1-kidnapped*.68);
+
+          if(t<7.15 && captiveAlpha>.005){
+            // Ela não se move sozinha ou no sentido contrário: primeiro é
+            // levantada pelo vilão; depois ambos viajam para o portal.
+            const capturedX=princessStartX+17;
+            const princessX=princessStartX+17*pickup+
+              (portalC-capturedX)*retreat;
+            const princessFoot=princessStartFoot-29*pickup-15*retreat;
+            ctx.save();ctx.globalAlpha=captiveAlpha;
+            ctx.translate(princessX,princessFoot);
+            ctx.scale(captiveScale,captiveScale);
             drawSpriteOnFeet(processedAssets.princess,0,0,princess.h);
             ctx.restore();
           }
@@ -633,9 +669,9 @@
             ctx.fillStyle=`rgba(8,0,28,${Math.min(.36,(t-1.6)*.14)})`;
             ctx.fillRect(0,0,GAME_WIDTH,GAME_HEIGHT);
           }
-          if(t<1.8)pixelText('VITÓRIA! FINALMENTE!',75,13,'#fff0b8');
+          if(t<1.8)pixelText('VITORIA! FINALMENTE!',75,13,'#fff0b8');
           else if(t>2.0&&t<4.6)pixelText('O QUE É AQUILO?!',76,13,'#efd3ff');
-          else if(t>=4.7&&t<7.2)pixelText('NÃO! VITÓRIA!',74,16,'#ffd0d0');
+          else if(t>=4.7&&t<7.2)pixelText('NÃO! VITORIA!',74,16,'#ffd0d0');
           else if(t>=7.2&&t<9.7)pixelText('EU VOU TE ENCONTRAR!',80,13,'#fff0b8');
           if(t>=8.9){ctx.fillStyle=`rgba(0,0,0,${Math.min(1,(t-8.9)/1.1)})`;ctx.fillRect(0,0,GAME_WIDTH,GAME_HEIGHT);}
           if(t<9)pixelText('ENTER: PULAR CENA',GAME_HEIGHT-17,8,'#bdc8d8');
