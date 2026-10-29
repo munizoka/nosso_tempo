@@ -107,7 +107,7 @@
     </div>
 
     <script>
-        // SUPER GABRIEL BROS — Fase 1 original + sequestro + começo da Fase 2
+        // SUPER GABRIEL BROS — fase 1 preservada + aparições recorrentes do vilão e Vitoria
         // Todos os arquivos de imagem estão na RAIZ do repositório.
         const canvas = document.getElementById('game-canvas');
         const ctx = canvas.getContext('2d', { alpha: false });
@@ -125,9 +125,11 @@
         };
         const keys = { left: false, right: false, up: false };
         let level = 1;
-        let state = 'playing'; // playing | cutscene | title2 | demoEnd | gameover
+        let state = 'playing'; // playing | cutscene | title2 | forestIntro | forestOutro | chapterEnd | gameover
         let cutsceneStart = 0;
         let cinematicSeconds = 0;
+        let forestSceneStart = 0;
+        let forestSceneSeconds = 0;
         let score = 0;
         let lives = 5;
         let elapsedSeconds = 0;
@@ -250,11 +252,13 @@
               originalLoaded++;
               if(originalLoaded===Object.keys(originalPaths).length){
                 sceneReady=true; previousFrame=performance.now();
-                // Teste opcional: ?teste=final ou ?teste=floresta
+                // Testes opcionais: ?teste=final, ?teste=floresta, ?teste=intro2, ?teste=final2
                 if(testMode==='final'){
                   player.x=princess.x-40; player.y=340; player.grounded=true;
                   cameraX=Math.max(0,princess.x-390); startCutscene();
                 } else if(testMode==='floresta'){showForestTitle();}
+                else if(testMode==='intro2'){showForestTitle();startForest();}
+                else if(testMode==='final2'){showForestTitle();startForest();beginForestScene('forestOutro');}
               }
             } catch(e){ console.error('Erro processando '+path,e); }
           };
@@ -362,18 +366,52 @@
           keys.left=keys.right=keys.up=false;
           setHUD();
         }
+        // Cada fase terá uma aparição de Vitoria e do vilão no começo e no fim.
+        // As cenas nunca alteram pontuação, vidas ou checkpoint.
         function startForest(){
           if(state!=='title2')return;
-          state='playing';level=2;checkpointReached=false;checkpointX=0;
+          level=2;checkpointReached=false;checkpointX=0;
           enemies=level2EnemyTemplate.map(e=>({...e}));
-          resetPosition();setHUD();
+          resetPosition();
+          player.x=105;player.y=340;player.grounded=true;
+          cameraX=0;
+          beginForestScene('forestIntro');setHUD();
+        }
+        function beginForestScene(which){
+          state=which;forestSceneStart=performance.now();forestSceneSeconds=0;
+          keys.left=keys.right=keys.up=false;
+          player.vx=0;player.vy=0;player.direction=1;player.animFrame=0;
+          // No capítulo final, mantém Gabriel em uma posição visível no enquadramento.
+          if(which==='forestOutro'){
+            player.x=FOREST_END-455;player.y=340;player.grounded=true;
+            cameraX=FOREST_END-GAME_WIDTH;
+          }
+        }
+        function finishForestIntro(){
+          if(state!=='forestIntro')return;
+          state='playing';keys.left=keys.right=keys.up=false;
+          player.y=340;player.grounded=true;player.vy=0;
+        }
+        function startForestOutro(){
+          if(level!==2||state!=='playing')return;
+          beginForestScene('forestOutro');
+        }
+        function finishForestOutro(){
+          if(state!=='forestOutro')return;
+          state='chapterEnd';keys.left=keys.right=keys.up=false;
+        }
+        function skipStoryScene(){
+          if(state==='cutscene'){showForestTitle();return true;}
+          if(state==='forestIntro'){finishForestIntro();return true;}
+          if(state==='forestOutro'){finishForestOutro();return true;}
+          return false;
         }
 
         window.addEventListener('keydown', e=>{
           if(['Space','ArrowUp','ArrowLeft','ArrowRight','KeyA','KeyD','KeyW','Enter'].includes(e.code))e.preventDefault();
           if(state==='title2'&&(e.code==='Enter'||e.code==='Space'||e.code==='ArrowUp')){startForest();return;}
-          if(state==='demoEnd'&&e.code==='Enter'){startForest();return;}
-          if(state==='cutscene'&&e.code==='Enter'){showForestTitle();return;}
+          if(['Enter','Space','ArrowUp'].includes(e.code)&&skipStoryScene())return;
+          if(state!=='playing')return;
           if(e.code==='ArrowLeft'||e.code==='KeyA')keys.left=true;
           if(e.code==='ArrowRight'||e.code==='KeyD')keys.right=true;
           if(e.code==='Space'||e.code==='ArrowUp'||e.code==='KeyW')keys.up=true;
@@ -389,6 +427,8 @@
           const press=e=>{
             e.preventDefault();
             if(state==='title2'&&key==='up'){startForest();return;}
+            if(key==='up'&&skipStoryScene())return;
+            if(state!=='playing')return;
             keys[key]=true;
           };
           const release=e=>{e.preventDefault();keys[key]=false;};
@@ -448,6 +488,12 @@
             if(cinematicSeconds>=10.1)showForestTitle();
             return;
           }
+          if(state==='forestIntro'||state==='forestOutro'){
+            forestSceneSeconds=(now-forestSceneStart)/1000;
+            if(state==='forestIntro'&&forestSceneSeconds>=12.7)finishForestIntro();
+            else if(state==='forestOutro'&&forestSceneSeconds>=11.3)finishForestOutro();
+            return;
+          }
           if(state!=='playing')return;
           elapsedSeconds+=dt;
           invulnerable=Math.max(0,invulnerable-dt);
@@ -483,7 +529,7 @@
           updateEnemies();
           if(state!=='playing')return;
           if(level===1&&isColliding(player,princess)){startCutscene();return;}
-          if(level===2 && player.x>=FOREST_END-110){state='demoEnd';}
+          if(level===2 && player.x>=FOREST_END-455){startForestOutro();return;}
           const maxCamera=level===1?3250:FOREST_END-GAME_WIDTH;
           cameraX=Math.max(0,Math.min(maxCamera,player.x-GAME_WIDTH/2.5));
           if(!player.grounded)player.animFrame=2;
@@ -664,17 +710,108 @@
           ctx.fillStyle='rgba(0,0,0,.8)';ctx.fillText(text,GAME_WIDTH/2+2,y+2);
           ctx.fillStyle=color;ctx.fillText(text,GAME_WIDTH/2,y);
         }
+        // Caixa de diálogo centralizada abaixo do HUD — sem cobrir o placar em mobile.
+        // O texto quebra automaticamente em até duas linhas, sem sair do canvas.
+        function drawStoryDialogue(speaker,message,color='#ffe4b5'){
+          const x=65,y=112,w=670,h=104;
+          ctx.save();
+          ctx.fillStyle='rgba(6,10,29,.91)';ctx.fillRect(x,y,w,h);
+          ctx.strokeStyle='#a891d5';ctx.lineWidth=3;ctx.strokeRect(x+1.5,y+1.5,w-3,h-3);
+          ctx.textAlign='left';ctx.textBaseline='alphabetic';
+          ctx.font='11px "Press Start 2P", monospace';
+          ctx.fillStyle=color;ctx.fillText(speaker+':',x+20,y+29);
+          const fontSize=11;
+          ctx.font=`${fontSize}px "Press Start 2P", monospace`;
+          const maxWidth=w-40;
+          const words=message.split(/\s+/);
+          const lines=[];let line='';
+          for(const word of words){
+            const attempt=line?line+' '+word:word;
+            if(ctx.measureText(attempt).width>maxWidth&&line){lines.push(line);line=word;}
+            else line=attempt;
+          }
+          if(line)lines.push(line);
+          ctx.fillStyle='#ffffff';
+          for(let i=0;i<Math.min(2,lines.length);i++)ctx.fillText(lines[i],x+20,y+59+i*24);
+          ctx.restore();
+        }
+        function storyLine(t,lines){
+          return lines.find(line=>t>=line.from&&t<line.to);
+        }
         function drawCinematicText(t){
           if(t>1.6&&t<9.5){
             ctx.fillStyle=`rgba(8,0,28,${Math.min(.36,(t-1.6)*.14)})`;
             ctx.fillRect(0,0,GAME_WIDTH,GAME_HEIGHT);
           }
-          if(t<1.8)pixelText('VITORIA! FINALMENTE!',75,13,'#fff0b8');
-          else if(t>2.0&&t<4.6)pixelText('O QUE É AQUILO?!',76,13,'#efd3ff');
-          else if(t>=4.7&&t<7.2)pixelText('NÃO! VITORIA!',74,16,'#ffd0d0');
-          else if(t>=7.2&&t<9.7)pixelText('EU VOU TE ENCONTRAR!',80,13,'#fff0b8');
+          const line=storyLine(t,[
+            {from:0,to:1.8,speaker:'GABRIEL',message:'VITORIA! FINALMENTE!',color:'#ffe4a0'},
+            {from:2.0,to:4.6,speaker:'GABRIEL',message:'O QUE É AQUILO?!',color:'#ffe4a0'},
+            {from:4.7,to:5.5,speaker:'VITORIA',message:'GABRIEL! ME AJUDA!',color:'#ffadd1'},
+            {from:5.5,to:7.2,speaker:'GABRIEL',message:'NÃO! VITORIA!',color:'#ffe4a0'},
+            {from:7.2,to:9.4,speaker:'GABRIEL',message:'EU VOU TE ENCONTRAR!',color:'#ffe4a0'}
+          ]);
+          if(line)drawStoryDialogue(line.speaker,line.message,line.color);
           if(t>=8.9){ctx.fillStyle=`rgba(0,0,0,${Math.min(1,(t-8.9)/1.1)})`;ctx.fillRect(0,0,GAME_WIDTH,GAME_HEIGHT);}
-          if(t<9)pixelText('ENTER: PULAR CENA',GAME_HEIGHT-17,8,'#bdc8d8');
+          if(t<9.0)pixelText('ENTER OU BOTÃO A: PULAR CENA',GAME_HEIGHT-17,7,'#bdc8d8');
+        }
+        // Encontros recorrentes com Vitoria e o vilão: no início e no final de cada capítulo.
+        function drawForestStoryActors(){
+          const intro=state==='forestIntro';
+          const t=forestSceneSeconds;
+          const portalX=intro?555:FOREST_END-90;
+          const villainHomeX=intro?412:FOREST_END-242;
+          const princessHomeX=intro?357:FOREST_END-305;
+          const escapeStart=intro?7.5:6.9;
+          const escapeEnd=intro?10.4:9.8;
+          const progress=Math.max(0,Math.min(1,(t-escapeStart)/(escapeEnd-escapeStart)));
+          const slide=progress*progress*(3-2*progress);
+          const fade=1-easeOut((t-(intro?9.8:9.3))/1.0);
+          const alpha=Math.max(0,fade);
+          const portalOpen=easeOut((t-(intro?5.7:5.0))/.85);
+          const portalClose=1-easeOut((t-(intro?10.7:10.1))/.9);
+          const portalScale=Math.max(0,portalOpen*portalClose);
+          if(portalScale>.005){
+            ctx.save();ctx.translate(portalX,380);ctx.scale(portalScale,portalScale);
+            if(extras.portal)drawObject(extras.portal,-55,-155,110,155);
+            else {ctx.fillStyle='#6d37bc';ctx.beginPath();ctx.ellipse(0,-79,47,76,0,0,Math.PI*2);ctx.fill();}
+            ctx.restore();
+          }
+          if(alpha<=.005)return;
+          const villainX=villainHomeX+(portalX-villainHomeX)*slide;
+          const princessX=princessHomeX+(portalX-princessHomeX-13)*slide;
+          const shrink=1-.48*easeOut((t-(intro?9.5:9.0))/1.1);
+          const floatY=Math.sin(t*3)*3;
+          ctx.save();ctx.globalAlpha=alpha;
+          ctx.translate(princessX,359+floatY-16*slide);
+          ctx.scale(shrink,shrink);
+          drawSpriteOnFeet(processedAssets.princess,0,0,49);
+          ctx.restore();
+          ctx.save();ctx.globalAlpha=alpha;
+          ctx.translate(villainX,367+floatY-13*slide);
+          ctx.scale(shrink,shrink);
+          if(extras.villain)drawObject(extras.villain,-38,-100,76,100);
+          else{ctx.fillStyle='#211136';ctx.fillRect(-25,-90,50,87);}
+          ctx.restore();
+        }
+        function drawForestStoryText(){
+          const intro=state==='forestIntro';const t=forestSceneSeconds;
+          const dialogue=intro?[
+            {from:0,to:2.5,speaker:'VITORIA',message:'GABRIEL! ELE ME TROUXE PRA ESTA FLORESTA!',color:'#ffadd1'},
+            {from:2.5,to:4.3,speaker:'GABRIEL',message:'VOCÊ DE NOVO?!',color:'#ffe4a0'},
+            {from:4.3,to:6.5,speaker:'GABRIEL',message:'QUEM É QUE TÁ TENTANDO ME TALARICAR?!',color:'#ffe4a0'},
+            {from:6.5,to:8.5,speaker:'VILÃO',message:'SE QUER VITORIA, VENHA BUSCÁ-LA!',color:'#d6a5ff'},
+            {from:8.5,to:10.6,speaker:'VITORIA',message:'GABRIEL! NÃO DESISTA DE MIM!',color:'#ffadd1'},
+            {from:10.6,to:12.7,speaker:'GABRIEL',message:'EU VOU ATRÁS DE VOCÊS!',color:'#ffe4a0'}
+          ]:[
+            {from:0,to:2.5,speaker:'GABRIEL',message:'FINALMENTE! AGORA EU TE PEGUEI!',color:'#ffe4a0'},
+            {from:2.5,to:4.7,speaker:'VITORIA',message:'GABRIEL! ELE VAI FUGIR DE NOVO!',color:'#ffadd1'},
+            {from:4.7,to:6.9,speaker:'VILÃO',message:'VOCÊ AINDA ESTÁ MUITO LONGE DA VERDADE!',color:'#d6a5ff'},
+            {from:6.9,to:8.9,speaker:'GABRIEL',message:'PARE DE TENTAR ME TALARICAR!',color:'#ffe4a0'},
+            {from:8.9,to:11.3,speaker:'GABRIEL',message:'DA PRÓXIMA VEZ VOCÊ NÃO ESCAPA!',color:'#ffe4a0'}
+          ];
+          const line=storyLine(t,dialogue);
+          if(line)drawStoryDialogue(line.speaker,line.message,line.color);
+          pixelText('ENTER OU BOTÃO A: PULAR CENA',GAME_HEIGHT-17,7,'#cdd6e6');
         }
         function drawLevelTwo(){
           drawForestBackground();
@@ -687,8 +824,10 @@
           const flag=checkpointReached?extras.checkpointOn:extras.checkpointOff;
           if(flag)drawObject(flag,1755,312,42,68);
           else {ctx.fillStyle='#8e6db1';ctx.fillRect(1765,325,4,55);}
+          if(state==='forestIntro'||state==='forestOutro')drawForestStoryActors();
           drawEnemies();drawHero();
           ctx.restore();
+          if(state==='forestIntro'||state==='forestOutro')drawForestStoryText();
         }
         function overlay(title,detail,foot){
           ctx.fillStyle='rgba(8,4,22,.77)';ctx.fillRect(0,0,GAME_WIDTH,GAME_HEIGHT);
@@ -702,7 +841,7 @@
           if(level===1)drawLevelOne();else drawLevelTwo();
           if(state==='title2')overlay('FASE 2','A FLORESTA MISTERIOSA','ENTER OU BOTÃO A PARA COMEÇAR');
           if(state==='gameover')overlay('GAME OVER','AS VIDAS ACABARAM','CLIQUE EM RECOMEÇAR');
-          if(state==='demoEnd')overlay('FIM DO TRECHO DE TESTE','A AVENTURA CONTINUA...','RECOMEÇAR PARA JOGAR NOVAMENTE');
+          if(state==='chapterEnd')overlay('VITORIA FOI LEVADA DE NOVO!','O MISTÉRIO CONTINUA...','FASE 3 EM BREVE  |  RECOMEÇAR PARA JOGAR');
         }
         function loop(now){
           const dt=Math.min(.05,(now-previousFrame)/1000);
