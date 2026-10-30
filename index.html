@@ -446,6 +446,9 @@
             firebase.initializeApp(firebaseConfig);
         }
         const db = firebase.firestore();
+        // Compartilha somente a configuracao publica com o modulo Firebase AI Logic.
+        // A chave secreta do Google AI Studio NUNCA deve ser colocada aqui.
+        window.GABIBOT_FIREBASE_CONFIG = firebaseConfig;
 
         // ==========================================
         // GABIBOT: personalidade e interface
@@ -1166,7 +1169,7 @@ Contexto e Personalidade:
 
     <!-- GabiBot com Firebase AI Logic: sem expor a chave do Google AI Studio. -->
     <script type="module">
-        import { getApp } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-app.js";
+        import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-app.js";
         import { initializeAppCheck, ReCaptchaEnterpriseProvider } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-app-check.js";
         import { getAI, getGenerativeModel, GoogleAIBackend } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-ai.js";
 
@@ -1179,7 +1182,11 @@ Contexto e Personalidade:
         let chat = null;
         let loadingError = null;
         try {
-            const app = getApp(); // Mesmo Firebase inicializado na parte compat do HTML.
+            // O SDK modular nao estava encontrando o app inicializado via SDK compat.
+            // Inicialize tambem o app modular com a MESMA configuracao do Firebase.
+            const app = getApps().find(a => a.name === '[DEFAULT]')
+                || initializeApp(window.GABIBOT_FIREBASE_CONFIG);
+            console.info('GabiBot: Firebase modular inicializado:', app.name);
 
             if (RECAPTCHA_ENTERPRISE_SITE_KEY !== 'COLE_AQUI_A_CHAVE_PUBLICA_DO_RECAPTCHA_ENTERPRISE') {
                 initializeAppCheck(app, {
