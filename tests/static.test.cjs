@@ -8,6 +8,7 @@ const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
 const rules=fs.readFileSync(path.join(root,'firestore.rules'),'utf8');
 function check(label,yes){assert.ok(yes,label);console.log('✅ '+label)}
 check('Painel de memórias',html.includes('gb-open-admin')&&html.includes('gabibotSharedMemories'));
+check('Importador privado em lote e validação', html.includes('gb-bulk-file') && html.includes('gbBulkValidar') && html.includes("!isAdmin()") && html.includes('gabibotSharedMemories'));
 check('Histórico opcional e timestamp servidor',html.includes('gabibotChatSettings')&&html.includes('keepHistory')&&html.includes('serverTimestamp()'));
 check('Login Google para edição',html.includes('loginParaEditarConteudo')&&html.includes('solicitarEdicaoAvatar'));
 check('Proteção de gravação na interface',html.includes('if (!podeEditarConteudo())'));

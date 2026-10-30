@@ -503,6 +503,13 @@
                         <span id="gb-memory-feedback" role="status" class="text-xs text-zinc-400"></span>
                     </div>
                 </form>
+                <details id="gb-bulk-import-panel" class="rounded-2xl bg-[#141418] border border-zinc-800 p-4 space-y-3">
+                    <summary class="cursor-pointer select-none font-medium text-indigo-200">📥 Importar várias memórias de uma vez</summary>
+                    <p class="text-sm text-zinc-400 mt-3">Escolha um arquivo JSON com memórias. Confira a prévia e confirme a importação. O arquivo não fica no GitHub; somente os itens que você confirmar são salvos no Firebase.</p>
+                    <input id="gb-bulk-file" type="file" accept=".json,application/json" class="block w-full text-sm text-zinc-300 file:mr-3 file:rounded-lg file:border-0 file:bg-indigo-600 file:px-3 file:py-2 file:text-white" />
+                    <p id="gb-bulk-status" class="text-sm text-zinc-300 whitespace-pre-wrap" role="status">Nenhum arquivo selecionado.</p>
+                    <button id="gb-bulk-import" type="button" disabled class="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-40">Importar memórias confirmadas</button>
+                </details>
                 <div class="flex justify-between items-center flex-wrap gap-2">
                     <h3 class="font-semibold">Memórias cadastradas <span id="gb-memory-count" class="text-zinc-500 text-sm"></span></h3>
                     <button id="gb-refresh-memories" type="button" class="rounded-lg bg-zinc-800 px-3 py-2 text-xs hover:bg-zinc-700">Atualizar lista</button>
@@ -1546,6 +1553,96 @@ Contexto e Personalidade:
                 console.error('GabiBot: apagar histórico:', error);
                 alertMessage('Falha ao apagar o histórico. Verifique as regras e tente novamente.');
             } finally { sending = false; }
+        });
+
+        // Importacao privada em lote: apenas o administrador pode confirmar.
+        // Dados pessoais nunca sao incluídos no HTML ou enviados ao GitHub.
+        let gbBulkPendentes = [];
+        const gbBulkCategorias = new Set(['Relacionamento', 'Datas especiais', 'Viagens', 'Curiosidades', 'Gostos', 'Outros']);
+        function gbBulkId(titulo) {
+            const normal = titulo.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+            const slug = normal.replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 58) || 'memoria';
+            let hash = 2166136261;
+            for (let i = 0; i < titulo.length; i++) {
+                hash ^= titulo.charCodeAt(i);
+                hash = Math.imul(hash, 16777619) >>> 0;
+            }
+            return 'perfil-' + slug + '-' + hash.toString(16).padStart(8, '0');
+        }
+        function gbBulkValidar(item, index) {
+            if (!item || typeof item !== 'object' || Array.isArray(item)) {
+                throw new Error('Memória ' + (index + 1) + ': formato inválido.');
+            }
+            for (const key of ['title', 'content', 'category']) {
+                if (typeof item[key] !== 'string') throw new Error('Memória ' + (index + 1) + ': campo ' + key + ' obrigatório.');
+            }
+            if (item.eventDate != null && typeof item.eventDate !== 'string') {
+                throw new Error('Memória ' + (index + 1) + ': data inválida.');
+            }
+            const mem = {
+                title: item.title.trim(), content: item.content.trim(),
+                category: item.category.trim(), eventDate: (item.eventDate || '').trim()
+            };
+            if (!mem.title || mem.title.length > 100 || !mem.content || mem.content.length > 2000 ||
+                !gbBulkCategorias.has(mem.category) || (mem.eventDate !== '' && !/^\d{4}-\d{2}-\d{2}$/.test(mem.eventDate))) {
+                throw new Error('Memória ' + (index + 1) + ': título (máx. 100), conteúdo (máx. 2000), categoria ou data inválidos.');
+            }
+            return mem;
+        }
+        $('gb-bulk-file').addEventListener('change', async (event) => {
+            const feedback = $('gb-bulk-status');
+            const btn = $('gb-bulk-import');
+            gbBulkPendentes = []; btn.disabled = true;
+            const arquivo = event.target.files && event.target.files[0];
+            if (!arquivo) { feedback.textContent = 'Nenhum arquivo selecionado.'; return; }
+            if (!isAdmin()) { feedback.textContent = 'Somente o administrador pode importar memórias.'; return; }
+            try {
+                if (arquivo.size > 200000) throw new Error('O arquivo é grande demais (máximo 200 KB).');
+                const dados = JSON.parse(await arquivo.text());
+                if (!Array.isArray(dados) || dados.length === 0 || dados.length > 40) {
+                    throw new Error('O arquivo deve conter entre 1 e 40 memórias.');
+                }
+                const itens = dados.map(gbBulkValidar);
+                const ids = itens.map(x => gbBulkId(x.title));
+                if (new Set(ids).size !== ids.length) throw new Error('Existem títulos repetidos no arquivo.');
+                gbBulkPendentes = itens;
+                feedback.textContent = itens.length + ' memórias prontas para importar.\n' + itens.map(x => '• ' + x.title).join('\n');
+                btn.disabled = false;
+            } catch (error) {
+                feedback.textContent = 'Não foi possível carregar: ' + error.message;
+            }
+        });
+        $('gb-bulk-import').addEventListener('click', async () => {
+            if (!isAdmin() || !gbBulkPendentes.length) return;
+            const btn = $('gb-bulk-import'), feedback = $('gb-bulk-status');
+            if (!confirm('Salvar estas ' + gbBulkPendentes.length + ' memórias compartilhadas no Firebase? A Vitória poderá consultá-las no GabiBot.')) return;
+            btn.disabled = true;
+            try {
+                const colecao = firestore.collection('gabibotSharedMemories');
+                const referencias = gbBulkPendentes.map(m => colecao.doc(gbBulkId(m.title)));
+                const anteriores = await Promise.all(referencias.map(r => r.get()));
+                const lote = firestore.batch();
+                let adicionadas = 0, existentes = 0;
+                gbBulkPendentes.forEach((item, i) => {
+                    if (anteriores[i].exists) { existentes++; return; }
+                    lote.set(referencias[i], {
+                        title: item.title, content: item.content, category: item.category, eventDate: item.eventDate,
+                        createdAt: serverTimestamp(), updatedAt: serverTimestamp()
+                    });
+                    adicionadas++;
+                });
+                if (adicionadas) await lote.commit();
+                feedback.textContent = adicionadas + ' memórias adicionadas. ' +
+                    (existentes ? existentes + ' já existiam e foram preservadas. ' : '') +
+                    'As memórias podem ser editadas ou excluídas individualmente abaixo.';
+                gbBulkPendentes = [];
+                $('gb-bulk-file').value = '';
+            } catch (error) {
+                console.error('GabiBot: importação de memórias:', error);
+                feedback.textContent = 'Erro ao importar: ' + (error.message || error) +
+                    '. Verifique seu login de administrador e tente novamente.';
+                btn.disabled = false;
+            }
         });
 
         // Painel ADMIN: somente quem tem role=admin na colecao gabibotAccess.
