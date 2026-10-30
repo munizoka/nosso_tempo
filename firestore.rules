@@ -1,0 +1,78 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function gbAccessPath(uid) {
+      return /databases/$(database)/documents/gabibotAccess/$(uid);
+    }
+    function gbIsSelf(uid) {
+      return request.auth != null && request.auth.uid == uid;
+    }
+    function gbIsMember() {
+      return request.auth != null
+        && exists(gbAccessPath(request.auth.uid))
+        && get(gbAccessPath(request.auth.uid)).data.role in ['admin', 'vitoria'];
+    }
+    function gbIsAdmin() {
+      return request.auth != null
+        && exists(gbAccessPath(request.auth.uid))
+        && get(gbAccessPath(request.auth.uid)).data.role == 'admin';
+    }
+    function gbMemoryFields(data) {
+      return data.keys().hasAll(['title', 'content', 'category', 'eventDate', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['title', 'content', 'category', 'eventDate', 'createdAt', 'updatedAt'])
+        && data.title is string && data.title.size() > 0 && data.title.size() <= 100
+        && data.content is string && data.content.size() > 0 && data.content.size() <= 2000
+        && data.category is string && data.category.size() <= 40
+        && data.eventDate is string && data.eventDate.size() <= 10
+        && data.createdAt is timestamp && data.updatedAt is timestamp;
+    }
+
+    match /config/{docId} {
+      allow get: if docId in ['avatares', 'lugares'];
+      allow list: if false;
+      allow create, update: if docId in ['avatares', 'lugares'] && gbIsMember();
+      allow delete: if docId in ['avatares', 'lugares'] && gbIsAdmin();
+    }
+    match /pets/{userId} {
+      allow get, create, update, delete: if gbIsSelf(userId);
+      allow list: if false;
+    }
+    match /gabibotAccess/{userId} {
+      allow get: if gbIsSelf(userId);
+      allow list, create, update, delete: if false;
+    }
+    match /gabibotSharedMemories/{memoryId} {
+      allow get, list: if gbIsMember();
+      allow create: if gbIsAdmin() && gbMemoryFields(request.resource.data);
+      allow update: if gbIsAdmin() && gbMemoryFields(request.resource.data)
+        && request.resource.data.createdAt == resource.data.createdAt;
+      allow delete: if gbIsAdmin();
+    }
+    match /gabibotChatSettings/{userId} {
+      allow get: if gbIsSelf(userId) && gbIsMember();
+      allow list: if false;
+      allow create, update: if gbIsSelf(userId) && gbIsMember()
+        && request.resource.data.keys().hasAll(['saveHistory', 'updatedAt'])
+        && request.resource.data.keys().hasOnly(['saveHistory', 'updatedAt'])
+        && request.resource.data.saveHistory is bool
+        && request.resource.data.updatedAt is timestamp;
+      allow delete: if gbIsSelf(userId) && gbIsMember();
+    }
+    match /gabibotChats/{userId}/messages/{messageId} {
+      allow get, list, delete: if gbIsSelf(userId) && gbIsMember();
+      allow create: if gbIsSelf(userId) && gbIsMember()
+        && exists(/databases/$(database)/documents/gabibotChatSettings/$(userId))
+        && get(/databases/$(database)/documents/gabibotChatSettings/$(userId)).data.saveHistory == true
+        && request.resource.data.keys().hasAll(['role', 'text', 'seq', 'createdAt'])
+        && request.resource.data.keys().hasOnly(['role', 'text', 'seq', 'createdAt'])
+        && request.resource.data.role in ['user', 'model']
+        && request.resource.data.text is string
+        && request.resource.data.text.size() > 0
+        && request.resource.data.text.size() <= 3500
+        && request.resource.data.seq is int
+        && request.resource.data.createdAt is timestamp;
+      allow update: if false;
+    }
+  }
+}

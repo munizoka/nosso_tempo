@@ -1,0 +1,48 @@
+name: GabiBot - validar regras e site
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'index.html'
+      - 'firestore.rules'
+      - 'tests/**'
+      - 'package.json'
+      - 'firebase.json'
+      - '.firebaserc'
+      - '.github/workflows/gabibot-testes.yml'
+  push:
+    branches:
+      - 'review/gabibot-memorias-privadas-20261030'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  testar:
+    name: Testes de memoria, acesso e timestamp
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Buscar codigo do Pull Request
+        uses: actions/checkout@v4
+      - name: Instalar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Instalar Java para emulador Firestore
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+      - name: Instalar dependencias
+        run: npm install --no-audit --no-fund
+      - name: Verificar sintaxe e estrutura
+        run: npm run test:static
+      - name: Validar regras no emulador local
+        run: npm run test:rules
+      - name: Instalar Playwright para teste de interface isolado
+        run: npm install --no-save playwright@1.57.0 && npx playwright install --with-deps chromium
+      - name: Testar a interface sem acessar o Firebase real
+        run: node tests/browser.test.cjs
