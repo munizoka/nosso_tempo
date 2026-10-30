@@ -22,7 +22,7 @@ permissions:
 jobs:
   testar:
     name: Testes de memoria, acesso e timestamp
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
       - name: Buscar codigo do Pull Request
@@ -30,7 +30,7 @@ jobs:
       - name: Instalar Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: '24'
       - name: Instalar Java para emulador Firestore
         uses: actions/setup-java@v4
         with:
