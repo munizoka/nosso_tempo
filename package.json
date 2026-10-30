@@ -1,0 +1,14 @@
+{
+  "name": "gabibot-firestore-testes",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "test:rules": "firebase emulators:exec --only firestore --project demo-gabibot-seguro \"node tests/rules.test.cjs\"",
+    "test:static": "node tests/static.test.cjs"
+  },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "^6.0.0",
+    "firebase": "^13.1.0",
+    "firebase-tools": "^15.0.0"
+  }
+}
