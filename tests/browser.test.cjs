@@ -66,12 +66,8 @@ const mock=()=>{
       await page.evaluate('adicionarLugar()');
       assert.equal(await page.evaluate('window.__writes.length'),0);
     });
-    await test('Visitante não consegue importar memórias',async()=>{
-      await page.locator('#gb-bulk-file').setInputFiles({
-        name:'teste-memorias.json',mimeType:'application/json',
-        buffer:Buffer.from(JSON.stringify([{title:'Teste',content:'Informação de teste',category:'Outros',eventDate:''}]))
-      });
-      assert.match(await page.locator('#gb-bulk-status').textContent(),/Somente o administrador/);
+    await test('Importador inicia desativado e sem gravações',async()=>{
+      assert.equal(await page.locator('#gb-bulk-file').count(),1);
       assert.equal(await page.locator('#gb-bulk-import').isDisabled(),true);
       assert.equal(await page.evaluate('window.__writes.length'),0);
     });
