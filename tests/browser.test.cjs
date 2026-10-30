@@ -66,6 +66,15 @@ const mock=()=>{
       await page.evaluate('adicionarLugar()');
       assert.equal(await page.evaluate('window.__writes.length'),0);
     });
+    await test('Visitante não consegue importar memórias',async()=>{
+      await page.locator('#gb-bulk-file').setInputFiles({
+        name:'teste-memorias.json',mimeType:'application/json',
+        buffer:Buffer.from(JSON.stringify([{title:'Teste',content:'Informação de teste',category:'Outros',eventDate:''}]))
+      });
+      assert.match(await page.locator('#gb-bulk-status').innerText(),/Somente o administrador/);
+      assert.equal(await page.locator('#gb-bulk-import').isDisabled(),true);
+      assert.equal(await page.evaluate('window.__writes.length'),0);
+    });
     await test('Menu abre GabiBot',async()=>{
       assert.equal(await page.evaluate('switchTab("chat"); !document.getElementById("view-chat").classList.contains("hidden")'),true);
     });
@@ -77,7 +86,7 @@ const mock=()=>{
       assert.equal(await page.evaluate('switchTab("lugares"); !document.getElementById("view-lugares").classList.contains("hidden")'),true);
     });
     await test('Firebase real não recebeu gravações',async()=>assert.equal(await page.evaluate('window.__writes.length'),0));
-    console.log('RESULTADO: '+ok+'/9 testes de interface isolados aprovados.');
+    console.log('RESULTADO: '+ok+'/10 testes de interface isolados aprovados.');
     console.log('OBS: O teste bloqueia Firebase e Gemini reais; não substitui avaliação manual visual com CSS/CDNs.');
   }catch(e){console.error('❌ Teste visual falhou:',e);process.exitCode=1}
   finally{if(browser)await browser.close();await new Promise(resolve=>server.close(resolve))}
