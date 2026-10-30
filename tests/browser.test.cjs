@@ -71,7 +71,7 @@ const mock=()=>{
         name:'teste-memorias.json',mimeType:'application/json',
         buffer:Buffer.from(JSON.stringify([{title:'Teste',content:'Informação de teste',category:'Outros',eventDate:''}]))
       });
-      assert.match(await page.locator('#gb-bulk-status').innerText(),/Somente o administrador/);
+      assert.match(await page.locator('#gb-bulk-status').textContent(),/Somente o administrador/);
       assert.equal(await page.locator('#gb-bulk-import').isDisabled(),true);
       assert.equal(await page.evaluate('window.__writes.length'),0);
     });
