@@ -42,3 +42,7 @@ jobs:
         run: npm run test:static
       - name: Validar regras no emulador local
         run: npm run test:rules
+      - name: Instalar Playwright para teste de interface isolado
+        run: npm install --no-save playwright@1.57.0 && npx playwright install --with-deps chromium
+      - name: Testar a interface sem acessar o Firebase real
+        run: node tests/browser.test.cjs
