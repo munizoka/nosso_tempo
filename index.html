@@ -464,7 +464,8 @@ Contexto e Personalidade:
 - Ele dirige um Nissan Versa 2013 e ama gadgets (comprou um Huawei Pura 80 Pro e S23 Ultra).
 - O seu tom é de um amigo cúmplice. Você defende o Gabriel, mas brinca com as manias dele.
 - Você sabe que ele criou o site 'Super Gabriel Bros', onde ela é a princesa e ele o herói que luta contra vilões 'talaricos'.
-- Seja conciso nas respostas, bem humano, use emojis, e nunca seja rude. Não invente memórias falsas.`;
+- Seja conciso nas respostas, bem humano, use emojis, e nunca seja rude. Não invente memórias falsas.
+- Em conversas normais, prefira 2 a 4 frases (no máximo cerca de 100 palavras); se Vitória pedir detalhes, explique mais.`;
         window.GABIBOT_SYSTEM_PROMPT = systemPrompt;
 
         function appendMessageToUI(sender, text) {
@@ -484,6 +485,7 @@ Contexto e Personalidade:
             });
             container.appendChild(div);
             container.scrollTop = container.scrollHeight;
+            return div; // Permite atualizar a mesma bolha ao receber cada trecho do streaming.
         }
 
         // Implementação real conectada abaixo em <script type="module">.
@@ -1167,7 +1169,7 @@ Contexto e Personalidade:
         })();
     </script>
 
-    <!-- GabiBot com Firebase AI Logic: sem expor a chave do Google AI Studio. -->
+    <!-- GabiBot versão rápida: Flash-Lite + streaming, sem expor a chave do Google AI Studio. -->
     <script type="module">
         import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-app.js";
         import { initializeAppCheck, ReCaptchaEnterpriseProvider } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-app-check.js";
@@ -1200,8 +1202,13 @@ Contexto e Personalidade:
 
             const ai = getAI(app, { backend: new GoogleAIBackend() });
             const model = getGenerativeModel(ai, {
-                model: 'gemini-3.8-flash',
-                systemInstruction: window.GABIBOT_SYSTEM_PROMPT
+                // Flash-Lite tem latência menor e nível de raciocínio MINIMAL por padrão.
+                model: 'gemini-3.5-flash-lite',
+                systemInstruction: window.GABIBOT_SYSTEM_PROMPT,
+                generationConfig: {
+                    maxOutputTokens: 600,
+                    temperature: 0.85
+                }
             });
             chat = model.startChat(); // Mantém o contexto da conversa até recarregar a página.
         } catch (error) {
@@ -1230,10 +1237,54 @@ Contexto e Personalidade:
 
             try {
                 if (!chat) throw loadingError || new Error('Firebase AI Logic não inicializado');
-                const result = await chat.sendMessage(message);
-                const responseText = result.response.text();
-                if (!responseText) throw new Error('A IA não devolveu uma mensagem de texto');
-                appendMessageToUI('bot', responseText);
+                // Streaming: mostra cada trecho assim que ele chega, sem esperar a resposta inteira.
+                const inicio = performance.now();
+                let primeiraParte = null;
+                let resposta = '';
+                let bolha = null;
+                const result = await chat.sendMessageStream(message);
+
+                for await (const chunk of result.stream) {
+                    const parte = chunk.text() || '';
+                    if (!parte) continue;
+                    if (primeiraParte === null) {
+                        primeiraParte = performance.now();
+                        console.info('GabiBot: primeiro texto após ' +
+                            ((primeiraParte - inicio) / 1000).toFixed(2) + ' s');
+                    }
+                    if (!bolha) {
+                        typing.remove();
+                        bolha = appendMessageToUI('bot', '');
+                    }
+                    resposta += parte;
+                    // textContent protege contra HTML injetado pelo modelo.
+                    bolha.textContent = resposta;
+                    messages.scrollTop = messages.scrollHeight;
+                }
+
+                // Garante que a operação foi concluída; também recupera textos sem chunks.
+                const finalResponse = await result.response;
+                if (!resposta) resposta = finalResponse.text() || '';
+                if (!resposta) throw new Error('A IA não devolveu uma mensagem de texto');
+                if (!bolha) {
+                    typing.remove();
+                    bolha = appendMessageToUI('bot', resposta);
+                } else {
+                    // Aplica o mesmo formato seguro de negrito do chat original.
+                    const formatada = document.createElement('div');
+                    String(resposta).split(/(\*\*[^*]+\*\*)/g).forEach(fragment => {
+                        if (fragment.startsWith('**') && fragment.endsWith('**')) {
+                            const strong = document.createElement('strong');
+                            strong.textContent = fragment.slice(2, -2);
+                            formatada.appendChild(strong);
+                        } else {
+                            formatada.appendChild(document.createTextNode(fragment));
+                        }
+                    });
+                    bolha.replaceChildren(...Array.from(formatada.childNodes));
+                }
+                console.info('GabiBot: resposta completa em ' +
+                    ((performance.now() - inicio) / 1000).toFixed(2) + ' s');
             } catch (error) {
                 console.error('GabiBot: erro real da API (confira as configurações de AI Logic e App Check):', error);
                 const code = error?.code ? ` (${String(error.code).slice(0,80)})` : '';
