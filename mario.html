@@ -2,19 +2,37 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, orientation=landscape">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Super Gabriel Bros</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
     <style>
-        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background-color: #5c94fc; touch-action: none; font-family: 'Press Start 2P', cursive; }
-        
-        #game-canvas {
-            display: block;
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            image-rendering: pixelated; 
+        html, body {margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:#131628;touch-action:none;font-family:'Press Start 2P',cursive;}
+        #game-shell {position:fixed;inset:0;display:flex;align-items:center;justify-content:center;overflow:hidden;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);box-sizing:border-box;}
+        #game-canvas {display:block;width:800px;height:450px;max-width:100%;max-height:100%;image-rendering:pixelated;image-rendering:crisp-edges;background:#d7c6a6;touch-action:none;}
+        #game-hud {top:max(8px,env(safe-area-inset-top));left:max(8px,env(safe-area-inset-left));right:max(8px,env(safe-area-inset-right));}
+        .game-control-panel {position:fixed;left:max(10px,env(safe-area-inset-left));right:max(10px,env(safe-area-inset-right));bottom:max(9px,env(safe-area-inset-bottom));z-index:40;pointer-events:none;display:flex;justify-content:space-between;align-items:flex-end;}
+        .game-control-panel button {pointer-events:auto;touch-action:none;}
+        .game-dpad {display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(2,1fr);gap:5px;align-items:end;}
+        .game-dpad #btn-up {grid-column:2;grid-row:1;}
+        .game-dpad #btn-left {grid-column:1;grid-row:2;}
+        .game-dpad #btn-down {grid-column:2;grid-row:2;}
+        .game-dpad #btn-right {grid-column:3;grid-row:2;}
+        #btn-up, #btn-down {display:none;}
+        body.map-mode #btn-up,body.map-mode #btn-down {display:flex;}
+        body.map-mode #ui-score,body.map-mode #ui-lives,body.map-mode #ui-time,body.map-mode #ui-level {display:none;}
+        body.map-mode #btn-jump {background:#6551eb;border-color:#a5b4fc;box-shadow:0 6px 0 #312e81;}
+        @media (pointer:fine) and (min-width:900px) {.game-control-panel {opacity:0;visibility:hidden;}}
+        @media (max-height:540px), (max-width:700px) {
+            .dpad-btn {width:clamp(38px,10dvh,56px)!important;height:clamp(38px,10dvh,56px)!important;border-width:2px!important;font-size:22px!important;box-shadow:0 3px 0 #334155!important;}
+            .action-btn {width:clamp(49px,15dvh,70px)!important;height:clamp(49px,15dvh,70px)!important;border-width:3px!important;font-size:22px!important;box-shadow:0 4px 0 #991b1b!important;}
+            #game-hud a,#game-hud button {min-height:34px;min-width:34px;padding:6px 9px;font-size:11px;}
+            #game-hud .hud-stats {gap:9px;font-size:8px;}
+        }
+        @media (orientation:portrait) and (max-width:800px) {
+            #game-shell {padding-top:58px;padding-bottom:155px;}
+            #game-hud {z-index:55;}
+            .game-control-panel {bottom:max(14px,env(safe-area-inset-bottom));}
         }
 
         /* D-Pad Estilo Minimalista (Apenas Laterais) */
@@ -63,23 +81,21 @@
 </head>
 <body>
 
-    <div id="orientation-warning" class="fixed inset-0 bg-black z-[100] flex flex-col items-center justify-center text-white md:hidden portrait:flex landscape:hidden">
-        <span class="text-6xl mb-4 animate-bounce">📱🔄</span>
-        <h2 class="text-sm text-center px-4 leading-relaxed font-sans">Gire o celular na horizontal<br>para jogar!</h2>
-    </div>
+    <!-- Em modo retrato, o mapa e o jogo continuam funcionais, sem forçar rotação. -->
 
     <!-- Interface Superior (Score, Tempo, Fullscreen e Recomeçar) -->
-    <div class="absolute top-4 left-4 right-4 z-50 flex justify-between items-start pointer-events-none">
+    <div id="game-hud" class="absolute z-50 flex justify-between items-start pointer-events-none">
         <a href="index.html" class="w-12 h-12 bg-zinc-800/80 border-2 border-white rounded-full flex items-center justify-center text-white font-sans font-bold backdrop-blur pointer-events-auto shadow-lg text-2xl active:scale-90 transition-transform">←</a>
         
-        <div class="flex gap-6 ui-text items-center mt-2 hidden sm:flex">
+        <div class="hud-stats flex gap-4 ui-text items-center mt-2 hidden sm:flex">
             <span id="ui-score">SCORE: 0</span>
             <span id="ui-lives">🍄 x5</span>
             <span id="ui-time">⏱ 00:00:00</span>
             <span id="ui-level">FASE: 1</span>
         </div>
 
-        <div class="flex gap-2">
+        <div class="flex gap-2 pointer-events-auto">
+            <button onclick="voltarAoMapa()" class="px-3 py-2 bg-indigo-900/80 border-2 border-white rounded-xl text-white font-sans font-bold shadow-lg text-sm" title="Voltar ao mapa">🗺️ Mapa</button>
             <!-- Botão de Tela Cheia -->
             <button onclick="toggleFullScreen()" class="w-12 h-12 bg-zinc-800/80 border-2 border-white rounded-xl flex items-center justify-center text-white font-sans font-bold backdrop-blur pointer-events-auto shadow-lg active:scale-95 transition-transform text-lg" title="Tela Cheia">
                 🔲
@@ -90,19 +106,21 @@
         </div>
     </div>
 
-    <canvas id="game-canvas"></canvas>
+    <div id="game-shell"><canvas id="game-canvas" aria-label="Super Gabriel Bros: mapa e fases"></canvas></div>
 
     <!-- Controles Mobile -->
-    <div class="fixed inset-0 pointer-events-none z-40 flex justify-between items-end pb-8 px-10 landscape:flex portrait:hidden sm:flex">
+    <div id="mobile-controls" class="game-control-panel">
         
         <!-- Direcionais Limpos (Esquerda/Direita) -->
-        <div class="flex gap-6 pointer-events-auto opacity-80 hover:opacity-100 transition-opacity items-end">
-            <button id="btn-left" class="dpad-btn">◀</button>
-            <button id="btn-right" class="dpad-btn">▶</button>
+        <div class="game-dpad pointer-events-auto opacity-90">
+            <button id="btn-up" class="dpad-btn" aria-label="Mover para cima">▲</button>
+            <button id="btn-left" class="dpad-btn" aria-label="Mover para esquerda">◀</button>
+            <button id="btn-down" class="dpad-btn" aria-label="Mover para baixo">▼</button>
+            <button id="btn-right" class="dpad-btn" aria-label="Mover para direita">▶</button>
         </div>
 
-        <div class="pointer-events-auto pb-4 opacity-90 hover:opacity-100 transition-opacity">
-            <button id="btn-jump" class="action-btn">A</button>
+        <div class="pointer-events-auto opacity-90 hover:opacity-100 transition-opacity">
+            <button id="btn-jump" class="action-btn" aria-label="Pular ou escolher fase">A</button>
         </div>
     </div>
 
@@ -116,6 +134,21 @@
         canvas.width = GAME_WIDTH;
         canvas.height = GAME_HEIGHT;
         ctx.imageSmoothingEnabled = false;
+        // Canvas sempre inteiro na tela (sem object-fit:cover ou corte).
+        function resizeGameCanvas() {
+          const shell=document.getElementById('game-shell');
+          if (!shell) return;
+          const styles=getComputedStyle(shell);
+          const maxWidth=Math.max(1,shell.clientWidth-parseFloat(styles.paddingLeft)-parseFloat(styles.paddingRight));
+          const maxHeight=Math.max(1,shell.clientHeight-parseFloat(styles.paddingTop)-parseFloat(styles.paddingBottom));
+          const scale=Math.min(maxWidth/GAME_WIDTH,maxHeight/GAME_HEIGHT);
+          canvas.style.width=Math.floor(GAME_WIDTH*scale)+'px';
+          canvas.style.height=Math.floor(GAME_HEIGHT*scale)+'px';
+        }
+        window.addEventListener('resize',resizeGameCanvas);
+        window.addEventListener('orientationchange',resizeGameCanvas);
+        if(window.visualViewport)window.visualViewport.addEventListener('resize',resizeGameCanvas);
+        resizeGameCanvas();
 
         const HUD = {
           score: document.getElementById('ui-score'),
@@ -123,9 +156,9 @@
           time: document.getElementById('ui-time'),
           level: document.getElementById('ui-level')
         };
-        const keys = { left: false, right: false, up: false };
+        const keys = { left:false, right:false, up:false, down:false };
         let level = 1;
-        let state = 'playing'; // playing | cutscene | title2 | forestIntro | forestOutro | chapterEnd | gameover
+        let state = 'map'; // map | playing | cutscene | title2 | forestIntro | forestOutro | chapterEnd | gameover
         let cutsceneStart = 0;
         let cinematicSeconds = 0;
         let forestSceneStart = 0;
@@ -142,6 +175,115 @@
         let forestPlatforms = [];
         const FOREST_END = 3400;
         const testMode = new URLSearchParams(window.location.search).get('teste');
+        const MAP_BOUNDS={left:62,right:738,top:99,bottom:376};
+        const mapHead={x:139,y:319,r:17,speed:150};
+        const mapLevels=[
+          {id:1,name:'PRIMEIRA AVENTURA',x:139,y:319,open:true,color:'#ff6158'},
+          {id:2,name:'FLORESTA MISTERIOSA',x:340,y:236,open:true,color:'#fab53c'},
+          {id:3,name:'PRÓXIMA AVENTURA',x:674,y:163,open:false,color:'#89939f'}
+        ];
+        let mapTip='MOVA A CABEÇA E ESCOLHA UMA FASE';
+        function mapClosest() {
+          let nearest=null,best=Infinity;
+          for(const node of mapLevels){const d=Math.hypot(node.x-mapHead.x,node.y-mapHead.y);if(d<best){best=d;nearest=node;}}
+          return best<=42?nearest:null;
+        }
+        function returnToMap() {
+          state='map';keys.left=keys.right=keys.up=keys.down=false;
+          mapTip='MOVA A CABEÇA E ESCOLHA UMA FASE';setHUD();
+        }
+        window.voltarAoMapa=returnToMap;
+        function chooseMapLevel() {
+          if(state!=='map')return;
+          const node=mapClosest();
+          if(!node){mapTip='APROXIME-SE DE UMA FASE';return;}
+          if(!node.open){mapTip='FASE 3 EM BREVE!';return;}
+          level=node.id;
+          state='playing';
+          restartCurrentLevel();
+          if(node.id===2)showForestTitle();
+          else state='playing';
+          setHUD();
+        }
+        function updateMap(dt) {
+          const dx=(keys.right?1:0)-(keys.left?1:0);
+          const dy=(keys.down?1:0)-(keys.up?1:0);
+          const norm=Math.hypot(dx,dy)||1;
+          mapHead.x=Math.max(MAP_BOUNDS.left,Math.min(MAP_BOUNDS.right,mapHead.x+dx/norm*mapHead.speed*dt));
+          mapHead.y=Math.max(MAP_BOUNDS.top,Math.min(MAP_BOUNDS.bottom,mapHead.y+dy/norm*mapHead.speed*dt));
+        }
+        function poly(points,color,stroke,width=3) {
+          ctx.beginPath();ctx.moveTo(points[0][0],points[0][1]);
+          for(let i=1;i<points.length;i++)ctx.lineTo(points[i][0],points[i][1]);ctx.closePath();
+          ctx.fillStyle=color;ctx.fill();if(stroke){ctx.lineWidth=width;ctx.strokeStyle=stroke;ctx.stroke();}
+        }
+        function retroText(str,x,y,size=10,color='#fff',align='center') {
+          ctx.font=size+'px "Press Start 2P",monospace';ctx.textAlign=align;
+          ctx.lineWidth=3;ctx.strokeStyle='#2a2632';ctx.strokeText(str,x,y);
+          ctx.fillStyle=color;ctx.fillText(str,x,y);
+        }
+        function drawMap() {
+          // Cenário original inspirado nos mapas 16-bit (não reutiliza a imagem de referência).
+          ctx.fillStyle='#e3d2b0';ctx.fillRect(0,0,GAME_WIDTH,GAME_HEIGHT);
+          for(let y=12;y<450;y+=43)for(let x=14;x<800;x+=65){
+            if((x+y)%3===0){ctx.fillStyle='#fff8e4';ctx.fillRect(x,y,14,5);ctx.fillRect(x+5,y-5,5,15);}
+          }
+          ctx.fillStyle='#3c2e2c';ctx.fillRect(25,57,750,348);
+          ctx.fillStyle='#4b8ce5';ctx.fillRect(29,61,742,340);
+          for(let y=72;y<389;y+=20)for(let x=42;x<765;x+=32){
+            if((x+y)%5===0){ctx.fillStyle='#b1e2ff';ctx.fillRect(x,y,9,3);}
+          }
+          poly([[92,78],[209,67],[348,81],[407,107],[515,97],[690,96],[744,125],[752,255],[713,343],[627,372],[460,388],[284,375],[162,388],[98,333],[71,239]],'#6fbb38','#305126',9);
+          poly([[101,80],[212,73],[341,89],[404,114],[516,103],[686,104],[738,128],[744,248],[708,337],[625,364],[459,379],[284,366],[165,380],[107,326],[81,235]],'#66d235','#b8f65e',4);
+          // Lago e cachoeira nas laterais.
+          poly([[406,180],[446,152],[508,168],[547,190],[545,220],[591,240],[573,285],[531,314],[476,301],[433,322],[392,293],[409,250]],'#387fe8','#233d78',8);
+          poly([[408,178],[449,161],[502,174],[543,193],[535,219],[584,246],[565,282],[532,305],[475,294],[432,314],[402,291],[418,251]],'#5d9bf5','#b9e7fd',3);
+          ctx.fillStyle='#3999ff';ctx.fillRect(39,63,51,327);
+          for(let y=71;y<380;y+=16){ctx.fillStyle='#bee5fd';ctx.fillRect(48,y,14,3);ctx.fillRect(73,y+5,10,3);}
+          // Caminho amarelado, com um nó para cada fase.
+          const paths=[[[139,319],[227,319],[275,279],[340,236]],[[340,236],[340,176],[390,143],[612,143],[674,163]]];
+          for(const pts of paths){ctx.beginPath();ctx.moveTo(...pts[0]);for(let i=1;i<pts.length;i++)ctx.lineTo(...pts[i]);ctx.strokeStyle='#b38e53';ctx.lineWidth=25;ctx.lineJoin='round';ctx.lineCap='round';ctx.stroke();ctx.strokeStyle='#fae8a9';ctx.lineWidth=18;ctx.stroke();}
+          // Árvores, colinas, canos e torres em pixel art.
+          for(let n=0;n<24;n++){
+            const x=107+((n*127)%599),y=113+((n*73)%237);
+            if(Math.hypot(x-490,y-250)<112||Math.hypot(x-340,y-236)<36||Math.hypot(x-674,y-163)<35)continue;
+            ctx.fillStyle='#275a29';ctx.fillRect(x-9,y+3,25,16);
+            ctx.fillStyle='#258f2a';ctx.fillRect(x-8,y-6,21,20);
+            ctx.fillStyle='#7de047';ctx.fillRect(x-5,y-7,12,7);
+          }
+          for(const [x,y] of [[243,143],[274,172],[618,278],[684,298]]){
+            poly([[x-19,y+12],[x-10,y-13],[x+3,y-27],[x+17,y-12],[x+22,y+12]],'#c59660','#5b4428',4);
+            ctx.fillStyle='#f4ca8a';ctx.fillRect(x-7,y-12,8,12);
+          }
+          for(const [x,y] of [[633,275],[276,349]]){
+            ctx.fillStyle='#1b7036';ctx.fillRect(x-14,y-5,29,29);
+            ctx.fillStyle='#41c943';ctx.fillRect(x-11,y-3,24,25);
+            ctx.fillStyle='#14592b';ctx.fillRect(x-19,y-10,39,12);
+            ctx.fillStyle='#6df45b';ctx.fillRect(x-16,y-9,29,6);
+          }
+          ctx.fillStyle='#47516c';ctx.fillRect(698,112,40,36);ctx.fillStyle='#c0c7d4';ctx.fillRect(699,114,36,13);
+          ctx.fillStyle='#252338';ctx.fillRect(711,130,12,18);
+          for(const n of mapLevels){
+            ctx.fillStyle='#29242b';ctx.fillRect(n.x-13,n.y-8,28,18);
+            ctx.fillStyle=n.color;ctx.fillRect(n.x-10,n.y-10,22,15);
+            ctx.fillStyle='#fff8c6';ctx.fillRect(n.x-5,n.y-7,10,5);
+            if(mapClosest()===n){ctx.strokeStyle='#fff9cd';ctx.lineWidth=2;ctx.strokeRect(n.x-19,n.y-19,38,38);}
+          }
+          const chosen=mapClosest();
+          ctx.fillStyle='#f5e6bf';ctx.fillRect(26,17,748,33);
+          retroText('SUPER GABRIEL BROS  •  MAPA',400,39,13,'#302c2e');
+          ctx.fillStyle='#262238';ctx.fillRect(100,411,600,31);
+          retroText(chosen?(chosen.open?'FASE '+chosen.id+' • '+chosen.name+' • ENTER / A':'FASE 3 • EM BREVE'):mapTip,400,432,8,'#fff8cf');
+          // Apenas a cabeça extraída visualmente pelo recorte circular da imagem 55.jpg.
+          ctx.save();ctx.beginPath();ctx.arc(mapHead.x,mapHead.y,17,0,Math.PI*2);ctx.clip();
+          const head=extras.mapHead;
+          if(head && head.width && head.height){
+            const crop=Math.min(head.width,head.height),sx=(head.width-crop)/2,sy=(head.height-crop)/2;
+            ctx.drawImage(head,sx,sy,crop,crop,mapHead.x-18,mapHead.y-18,36,36);
+          }else{ctx.fillStyle='#eec7a1';ctx.fillRect(mapHead.x-18,mapHead.y-18,36,36);retroText('G',mapHead.x,mapHead.y+5,14,'#35211f');}
+          ctx.restore();ctx.strokeStyle='#fff5bf';ctx.lineWidth=3;ctx.beginPath();ctx.arc(mapHead.x,mapHead.y,18,0,Math.PI*2);ctx.stroke();
+          retroText('▲',mapHead.x,mapHead.y-25,8,'#ffeff4');
+        }
 
         function toggleFullScreen() {
           const doc = document;
@@ -177,7 +319,7 @@
         const extraPaths = {
           sky: '43.jpg', mountains: '44.png', trees: '45.png', giantTree: '46.png',
           forestGround: '47.png', dirt: '48.jpg', wood: '49.png', magic: '50.png',
-          checkpointOff: '51.png', checkpointOn: '52.png', villain: '53.png', portal: '54.png'
+          checkpointOff: '51.png', checkpointOn: '52.png', villain: '53.png', portal: '54.png', mapHead: '55.jpg'
         };
 
         function cropSprite(img) {
@@ -341,6 +483,7 @@
           if(level===2&&checkpointReached)cameraX=Math.max(0,Math.min(FOREST_END-GAME_WIDTH,player.x-320));
         }
         function restartCurrentLevel() {
+          if(state==='map'){mapHead.x=139;mapHead.y=319;return;}
           state='playing';lives=5;score=0;elapsedSeconds=0;invulnerable=0;
           checkpointReached=false;checkpointX=0;
           enemies=(level===1?level1EnemyTemplate:level2EnemyTemplate).map(e=>({...e}));
@@ -401,14 +544,24 @@
           state='chapterEnd';keys.left=keys.right=keys.up=false;
         }
         function skipStoryScene(){
-          if(state==='cutscene'){showForestTitle();return true;}
+          if(state==='cutscene'){returnToMap();return true;}
           if(state==='forestIntro'){finishForestIntro();return true;}
           if(state==='forestOutro'){finishForestOutro();return true;}
           return false;
         }
 
         window.addEventListener('keydown', e=>{
-          if(['Space','ArrowUp','ArrowLeft','ArrowRight','KeyA','KeyD','KeyW','Enter'].includes(e.code))e.preventDefault();
+          if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','KeyA','KeyD','KeyW','KeyS','Enter'].includes(e.code))e.preventDefault();
+          if(state==='map'){
+            if(e.repeat && (e.code==='Enter'||e.code==='Space'))return;
+            if(e.code==='Enter'||e.code==='Space'){chooseMapLevel();return;}
+            if(e.code==='ArrowLeft'||e.code==='KeyA')keys.left=true;
+            if(e.code==='ArrowRight'||e.code==='KeyD')keys.right=true;
+            if(e.code==='ArrowUp'||e.code==='KeyW')keys.up=true;
+            if(e.code==='ArrowDown'||e.code==='KeyS')keys.down=true;
+            return;
+          }
+          if(state==='chapterEnd'&&(e.code==='Enter'||e.code==='Space')){returnToMap();return;}
           if(state==='title2'&&(e.code==='Enter'||e.code==='Space'||e.code==='ArrowUp')){startForest();return;}
           if(['Enter','Space','ArrowUp'].includes(e.code)&&skipStoryScene())return;
           if(state!=='playing')return;
@@ -420,22 +573,30 @@
           if(e.code==='ArrowLeft'||e.code==='KeyA')keys.left=false;
           if(e.code==='ArrowRight'||e.code==='KeyD')keys.right=false;
           if(e.code==='Space'||e.code==='ArrowUp'||e.code==='KeyW')keys.up=false;
+          if(e.code==='ArrowDown'||e.code==='KeyS')keys.down=false;
         });
-        window.addEventListener('blur',()=>{keys.left=keys.right=keys.up=false;});
+        window.addEventListener('blur',()=>{keys.left=keys.right=keys.up=keys.down=false;});
         function bindInput(id,key){
           const el=document.getElementById(id);if(!el)return;
           const press=e=>{
             e.preventDefault();
+            el.setPointerCapture?.(e.pointerId);
+            if(state==='map'){
+              if(id==='btn-jump'){chooseMapLevel();return;}
+              keys[key]=true;return;
+            }
+            if(state==='chapterEnd'&&id==='btn-jump'){returnToMap();return;}
             if(state==='title2'&&key==='up'){startForest();return;}
-            if(key==='up'&&skipStoryScene())return;
+            if(id==='btn-jump'&&skipStoryScene())return;
             if(state!=='playing')return;
             keys[key]=true;
           };
           const release=e=>{e.preventDefault();keys[key]=false;};
           el.addEventListener('pointerdown',press);
-          ['pointerup','pointercancel','pointerleave'].forEach(evt=>el.addEventListener(evt,release));
+          ['pointerup','pointercancel','lostpointercapture'].forEach(evt=>el.addEventListener(evt,release));
         }
-        bindInput('btn-left','left');bindInput('btn-right','right');bindInput('btn-jump','up');
+        bindInput('btn-left','left');bindInput('btn-right','right');
+        bindInput('btn-up','up');bindInput('btn-down','down');bindInput('btn-jump','up');
 
         function updateMovingPlatforms(t){
           // Movimento senoidal previsível. Um jogador em cima é transportado junto.
@@ -482,10 +643,12 @@
           }
         }
         function update(dt,now){
+          document.body.classList.toggle('map-mode',state==='map');
           if(!sceneReady)return;
+          if(state==='map'){updateMap(dt);return;}
           if(state==='cutscene'){
             cinematicSeconds=(now-cutsceneStart)/1000;
-            if(cinematicSeconds>=10.1)showForestTitle();
+            if(cinematicSeconds>=10.1)returnToMap();
             return;
           }
           if(state==='forestIntro'||state==='forestOutro'){
@@ -838,16 +1001,18 @@
         function draw(){
           ctx.imageSmoothingEnabled=false;
           if(!sceneReady){ctx.fillStyle='#5c94fc';ctx.fillRect(0,0,GAME_WIDTH,GAME_HEIGHT);pixelText('CARREGANDO A MAGIA...',GAME_HEIGHT/2,12);return;}
+          if(state==='map'){drawMap();return;}
           if(level===1)drawLevelOne();else drawLevelTwo();
           if(state==='title2')overlay('FASE 2','A FLORESTA MISTERIOSA','ENTER OU BOTÃO A PARA COMEÇAR');
           if(state==='gameover')overlay('GAME OVER','AS VIDAS ACABARAM','CLIQUE EM RECOMEÇAR');
-          if(state==='chapterEnd')overlay('VITORIA FOI LEVADA DE NOVO!','O MISTÉRIO CONTINUA...','FASE 3 EM BREVE  |  RECOMEÇAR PARA JOGAR');
+          if(state==='chapterEnd')overlay('VITORIA FOI LEVADA DE NOVO!','O MISTÉRIO CONTINUA...','FASE 3 EM BREVE  |  ENTER / A: MAPA');
         }
         function loop(now){
           const dt=Math.min(.05,(now-previousFrame)/1000);
           previousFrame=now;update(dt,now);draw();requestAnimationFrame(loop);
         }
         setHUD();
+        document.body.classList.add('map-mode');
         requestAnimationFrame(loop);
     </script>
 </body>
