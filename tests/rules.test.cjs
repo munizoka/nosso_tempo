@@ -91,6 +91,24 @@ async function principal() {
   await verificar('SGB estranho não altera save de Gabriel',()=>assertFails(setDoc(doc(estranho,jogo()),saveJogo())));
   await verificar('SGB limita nomes a três slots',()=>assertFails(setDoc(doc(admin,jogo('slot4')),saveJogo('slot4'))));
   await verificar('SGB rejeita atributo extra',()=>assertFails(setDoc(doc(admin,jogo('slot2')),{...saveJogo('slot2'),publico:true})));
+  await verificar('SGB hambúrguer + poder válido podem ir para a nuvem',()=>{
+    const save=saveJogo('slot2');
+    save.payload.inventory.consumables.burger=2;
+    save.payload.superRemaining=8.5;
+    return assertSucceeds(setDoc(doc(admin,jogo('slot2')),save));
+  });
+  await verificar('SGB bloqueia quantidade inválida de hambúrguer',()=>{
+    const save=saveJogo('slot2');
+    save.payload.inventory.consumables.burger=-3;
+    save.payload.superRemaining=8;
+    return assertFails(setDoc(doc(admin,jogo('slot2')),save));
+  });
+  await verificar('SGB bloqueia duração impossível do poder',()=>{
+    const save=saveJogo('slot2');
+    save.payload.inventory.consumables.burger=1;
+    save.payload.superRemaining=500;
+    return assertFails(setDoc(doc(admin,jogo('slot2')),save));
+  });
   await verificar('SGB outro usuário cria próprio slot',()=>assertSucceeds(setDoc(doc(estranho,'superGabrielSaves/'+ESTRANHO+'/slots/slot1'),saveJogo())));
   console.log('\nRESULTADO: '+(total-falhas)+'/'+total+' testes aprovados.');
   if(falhas)process.exitCode=1;
