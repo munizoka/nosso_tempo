@@ -1080,6 +1080,139 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           renderInventory();setHUD();closeMainMenu();menuMessage('');
         }
 
+
+        function renderSlotButtons(){
+          const host=document.getElementById('sgb-slots-list');
+          if(!host)return;
+          host.replaceChildren();
+          for(let i=0;i<3;i++){
+            const save=slotTable[i],button=document.createElement('button');
+            button.type='button';button.className='sgb-menu-btn'+(!save?' secondary':'');
+            const head=document.createElement('span');head.className='sgb-slot-name';
+            head.textContent='ESPAÇO '+(i+1)+(save?.legacy?' • LEGADO':'');
+            button.appendChild(head);
+            const meta=document.createElement('span');meta.className='sgb-slot-meta';
+            meta.textContent=save?'Fase '+save.level+' • '+save.difficulty.toUpperCase()+' • '+new Date(save.savedAt).toLocaleDateString('pt-BR'):
+              'VAZIO • NOVA AVENTURA';
+            button.appendChild(meta);
+            button.disabled=slotMode==='load'&&!save;
+            button.onclick=()=>slotMode==='new'?startNewCampaign(i):loadCampaign(i);
+            host.appendChild(button);
+          }
+        }
+        function sgbMenuPage(page){
+          menuPage=page;
+          const visible=page==='new'||page==='load'?'slots':page;
+          for(const name of ['home','slots','options','cloud']){
+            const el=document.getElementById('sgb-menu-'+name);
+            if(el)el.hidden=name!==visible;
+          }
+          if(visible==='slots'){
+            slotMode=page;
+            document.getElementById('sgb-slots-title').textContent=page==='new'?'NOVO JOGO • ESCOLHA ESPAÇO':'CARREGAR JOGO';
+            renderSlotButtons();
+          }
+          const sel=document.getElementById('sgb-difficulty');
+          if(sel)sel.value=difficulty;
+          const resume=document.getElementById('sgb-resume'),save=document.getElementById('sgb-save');
+          if(resume)resume.hidden=activeSlot===null||state==='menu';
+          if(save)save.hidden=activeSlot===null||state==='menu';
+          updateCloudUser();
+        }
+        window.sgbMenuPage=sgbMenuPage;
+        function closeMainMenu(){
+          if(activeSlot===null||state==='menu')return;
+          menuOpen=false;document.getElementById('sgb-menu').hidden=true;
+          document.body.classList.remove('sgb-menu-active');
+          keys.left=keys.right=keys.up=keys.down=false;
+        }
+        window.sgbResume=closeMainMenu;
+        window.sgbOpenMenu=function(){
+          if(inventoryOpen)window.toggleInventario();
+          menuOpen=true;keys.left=keys.right=keys.up=keys.down=false;
+          document.getElementById('sgb-menu').hidden=false;
+          document.body.classList.add('sgb-menu-active');
+          menuMessage('');sgbMenuPage('home');
+        };
+        window.sgbSave=function(){saveCurrentSlot(true);sgbMenuPage('home');};
+        window.sgbSetDifficulty=function(value){
+          if(!DIFFICULTIES.includes(value))return;
+          difficulty=value;
+          try{localStorage.setItem(GAME_OPTIONS_KEY,JSON.stringify({difficulty}));}catch(e){}
+          if(activeSlot!==null)saveCurrentSlot(false);
+          menuMessage('Dificuldade: '+value.toUpperCase());
+        };
+        window.sgbExit=function(){window.location.assign('index.html');};
+        const CLOUD_FIREBASE_CONFIG={
+          apiKey:'AIzaSyCbkO3-M-Ulz0Yg_ZuN-jpWVcD1EHmcUm0',
+          authDomain:'nosso-tempo-cd9c8.firebaseapp.com',
+          projectId:'nosso-tempo-cd9c8',
+          storageBucket:'nosso-tempo-cd9c8.firebasestorage.app',
+          messagingSenderId:'812792210449',
+          appId:'1:812792210449:web:df98d32608446979ae7db0'
+        };
+        function cloudServices(){
+          if(typeof firebase==='undefined')throw new Error('Firebase indisponível; verifique sua conexão.');
+          const app=firebase.apps.length?firebase.app():firebase.initializeApp(CLOUD_FIREBASE_CONFIG);
+          return {auth:firebase.auth(app),db:firebase.firestore(app)};
+        }
+        function cloudUser(){
+          try{return cloudServices().auth.currentUser;}catch(e){return null;}
+        }
+        function updateCloudUser(){
+          const user=cloudUser(),el=document.getElementById('sgb-cloud-user');
+          if(el)el.textContent=user?'Conectado: '+(user.email||user.uid):
+            'Entre com Google para acessar seus saves privados.';
+        }
+        window.sgbCloudLogin=async function(){
+          try{
+            const {auth}=cloudServices();
+            await auth.signInWithPopup(new firebase.auth.GoogleAuthProvider());
+            updateCloudUser();menuMessage('Conectado. Escolha enviar ou baixar.');
+          }catch(e){menuMessage('Login não concluído: '+(e?.message||e));}
+        };
+        window.sgbCloudUpload=async function(){
+          try{
+            const user=cloudUser();if(!user)throw new Error('Entre com Google primeiro.');
+            if(activeSlot===null)throw new Error('Crie ou carregue um save antes de enviar.');
+            if(!window.confirm('Substituir a cópia na nuvem do espaço '+(activeSlot+1)+'?'))return;
+            if(!saveCurrentSlot(false))throw new Error('Erro no save local.');
+            const {db}=cloudServices();
+            await db.collection('superGabrielSaves').doc(user.uid).collection('slots').doc('slot'+(activeSlot+1)).set({
+              version:1,slotId:'slot'+(activeSlot+1),payload:slotTable[activeSlot],
+              updatedAt:firebase.firestore.FieldValue.serverTimestamp()
+            });
+            menuMessage('Espaço '+(activeSlot+1)+' salvo na nuvem!');
+          }catch(e){menuMessage('Envio não concluído: '+(e?.message||e));}
+        };
+        window.sgbCloudDownload=async function(){
+          try{
+            const user=cloudUser();if(!user)throw new Error('Entre com Google primeiro.');
+            const {db}=cloudServices();
+            const docs=await Promise.all([1,2,3].map(n=>db.collection('superGabrielSaves').doc(user.uid).collection('slots').doc('slot'+n).get()));
+            const found=docs.map(d=>d.exists?sanitiseSave(d.data()?.payload):null);
+            if(!found.some(Boolean))return menuMessage('Ainda não há saves nesta conta.');
+            if(!window.confirm('Baixar os saves e substituir os espaços locais correspondentes?'))return;
+            try{localStorage.setItem(GAME_SAVE_KEY+'-backup-'+Date.now(),JSON.stringify(slotTable));}catch(e){}
+            found.forEach((save,i)=>{if(save)slotTable[i]=save;});
+            if(!writeSlotTable())throw new Error('Armazenamento local indisponível.');
+            // Não deixar uma partida ativa antiga sobrescrever a cópia recebida.
+            activeSlot=null;state='menu';inventoryOpen=false;
+            inventory.story.splice(0);
+            for(const id of CONSUMABLE_IDS)inventory.consumables[id]=0;
+            inventoryUnlocked=false;renderInventory();
+            sgbMenuPage('load');menuMessage('Saves baixados. Escolha um espaço para carregar.');
+          }catch(e){menuMessage('Download não concluído: '+(e?.message||e));}
+        };
+        try{cloudServices().auth.onAuthStateChanged(updateCloudUser);}catch(e){}
+        window.addEventListener('keydown',e=>{
+          if(e.code!=='Escape'||inventoryOpen)return;
+          if(menuOpen&&activeSlot!==null&&state!=='menu')closeMainMenu();
+          else if(!menuOpen&&state!=='menu')window.sgbOpenMenu();
+        });
+        document.body.classList.add('sgb-menu-active');
+        sgbMenuPage('home');
+
         function resetPosition(){
           player.x=level===1?50:level===2?(checkpointReached?checkpointX:50):(skyCheckpointReached?skyCheckpointX:50);
           player.y=100;player.vx=0;player.vy=0;player.grounded=false;
