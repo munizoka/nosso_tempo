@@ -154,7 +154,7 @@
         };
         const keys = { left:false, right:false, up:false, down:false };
         let level = 1;
-        let state = 'map'; // map | playing | cutscene | title2 | forestIntro | forestOutro | chapterEnd | gameover
+        let state = 'map'; // map | playing | cutscene | title2 | forestIntro | forestTotemCharge | forestOutro | chapterEnd | gameover
         let cutsceneStart = 0;
         let cinematicSeconds = 0;
         let forestSceneStart = 0;
@@ -174,7 +174,13 @@
         const MAP_BOUNDS={left:62,right:738,top:99,bottom:376};
         const mapHead={x:139,y:319,r:17,speed:150};
         const levelComplete={1:false,2:false};
+        // Totem da Floresta: 57.png (apagado) e 56.png (aceso).
+        // A zona de ativação fica no chão, após o último obstáculo.
         const FOREST_GOAL_X=FOREST_END-430;
+        const FOREST_TOTEM_X=FOREST_GOAL_X+40;
+        const FOREST_TOTEM_CHARGE_MS=1350;
+        let forestTotemActivated=false;
+        let forestTotemActivatedAt=0;
         const mapLevels=[
           {id:1,name:'PRIMEIRA AVENTURA',x:139,y:319,open:true,color:'#ff6158'},
           {id:2,name:'FLORESTA MISTERIOSA',x:340,y:236,open:true,color:'#fab53c'},
@@ -353,7 +359,8 @@
         const extraPaths = {
           sky: '43.jpg', mountains: '44.png', trees: '45.png', giantTree: '46.png',
           forestGround: '47.png', dirt: '48.jpg', wood: '49.png', magic: '50.png',
-          checkpointOff: '51.png', checkpointOn: '52.png', villain: '53.png', portal: '54.png', mapHead: '55.jpg'
+          checkpointOff: '51.png', checkpointOn: '52.png', villain: '53.png', portal: '54.png', mapHead: '55.jpg',
+          totemOn: '56.png', totemOff: '57.png'
         };
 
         function cropSprite(img) {
@@ -476,9 +483,9 @@
         ];
         const level1EnemyTemplate=[
           {x:600,y:348,w:32,h:32,vx:-1.5,type:'mushroom',alive:true},
-          {x:1200,y:348,w:32,h:32,vx:-1.5,type:'mushroom',alive:true},
+          {x:1130,y:348,w:32,h:32,vx:-1.5,type:'mushroom',alive:true},
           {x:1800,y:348,w:32,h:32,vx:-2,type:'turtle',alive:true},
-          {x:2200,y:348,w:32,h:32,vx:-2,type:'turtle',alive:true}
+          {x:2350,y:348,w:32,h:32,vx:-2,type:'turtle',alive:true}
         ];
         const level2Blocks=[
           {x:0,y:380,w:550,h:160,type:'forestGround'},
@@ -520,6 +527,7 @@
           if(state==='map'){mapHead.x=139;mapHead.y=319;return;}
           state='playing';lives=5;score=0;elapsedSeconds=0;invulnerable=0;
           checkpointReached=false;checkpointX=0;
+          forestTotemActivated=false;forestTotemActivatedAt=0;
           enemies=(level===1?level1EnemyTemplate:level2EnemyTemplate).map(e=>({...e}));
           for(const b of level2Blocks)if(b.moving){b.x=b.baseX;b.y=b.baseY;}
           resetPosition();setHUD();
@@ -548,6 +556,7 @@
         function startForest(){
           if(state!=='title2')return;
           level=2;checkpointReached=false;checkpointX=0;
+          forestTotemActivated=false;forestTotemActivatedAt=0;
           enemies=level2EnemyTemplate.map(e=>({...e}));
           resetPosition();
           player.x=105;player.y=340;player.grounded=true;
@@ -560,6 +569,8 @@
           player.vx=0;player.vy=0;player.direction=1;player.animFrame=0;
           // No capítulo final, mantém Gabriel em uma posição visível no enquadramento.
           if(which==='forestOutro'){
+            // Também liga o totem quando a cena final é aberta diretamente pelo atalho de testes.
+            forestTotemActivated=true;
             player.x=FOREST_END-455;player.y=340;player.grounded=true;
             cameraX=FOREST_END-GAME_WIDTH;
           }
@@ -570,8 +581,18 @@
           player.y=340;player.grounded=true;player.vy=0;
         }
         function startForestOutro(){
-          if(level!==2||state!=='playing')return;
+          if(level!==2 || (state!=='playing'&&state!=='forestTotemCharge'))return;
+          forestTotemActivated=true;
           beginForestScene('forestOutro');
+        }
+        function activateForestTotem(now){
+          if(level!==2||state!=='playing'||forestTotemActivated)return;
+          forestTotemActivated=true;
+          forestTotemActivatedAt=now;
+          state='forestTotemCharge';
+          player.vx=0;player.vy=0;
+          keys.left=keys.right=keys.up=keys.down=false;
+          cameraX=Math.max(0,Math.min(FOREST_END-GAME_WIDTH,FOREST_TOTEM_X-GAME_WIDTH*.60));
         }
         function finishForestOutro(){
           if(state!=='forestOutro')return;
@@ -582,6 +603,7 @@
         function skipStoryScene(){
           if(state==='cutscene'){levelComplete[1]=true;returnToMap();return true;}
           if(state==='forestIntro'){finishForestIntro();return true;}
+          if(state==='forestTotemCharge'){startForestOutro();return true;}
           if(state==='forestOutro'){finishForestOutro();return true;}
           return false;
         }
@@ -646,29 +668,47 @@
             if(standing){player.x+=b.x-oldX;player.y+=b.y-oldY;}
           }
         }
+        function hasFloorAhead(enemy,terrain){
+          // Consulta a borda dianteira e 5px abaixo dos pés; não depende do tamanho dos buracos.
+          // Funciona nos dois mundos e impede que o inimigo ande para o vazio.
+          const nextX=enemy.x+enemy.vx;
+          const footX=enemy.vx>0?nextX+enemy.w+4:nextX-4;
+          const footY=enemy.y+enemy.h+5;
+          return terrain.some(b=>
+            (b.type==='ground'||b.type==='forestGround'||b.type==='pipe'||
+             b.type==='brick'||b.type==='surprise'||b.type==='wood'||b.type==='magic') &&
+            footX>=b.x && footX<b.x+b.w &&
+            footY>=b.y && footY<b.y+b.h
+          );
+        }
         function updateEnemies(){
           const terrain=activeBlocks();
           for(const enemy of enemies){
             if(!enemy.alive)continue;
-            // A gravidade dos inimigos cai sobre blocos mas nunca sobe neles por baixo.
             const oldBottom=enemy.y+enemy.h;
             enemy.y+=4;
+            let grounded=false;
             for(const b of terrain){
-              if(enemy.vx!==0&&isColliding(enemy,b)&&oldBottom<=b.y+3){enemy.y=b.y-enemy.h;break;}
+              if(isColliding(enemy,b)&&oldBottom<=b.y+3){
+                enemy.y=b.y-enemy.h;
+                grounded=true;
+                break;
+              }
             }
-            const nextX=enemy.x+enemy.vx;
             let turned=false;
-            if(level===2){
-              const nextFootX=nextX+(enemy.vx<0?0:enemy.w);
-              const ahead=terrain.some(b=>b.type==='forestGround'&&nextFootX>b.x&&nextFootX<b.x+b.w&&Math.abs((enemy.y+enemy.h)-b.y)<6);
-              if(!ahead){enemy.vx*=-1;turned=true;}
+            // Antes da movimentação horizontal: olhar o chão *à frente*.
+            // A verificação só é aplicada quando há apoio, para não oscilar enquanto cai.
+            if(grounded && enemy.vx!==0 && !hasFloorAhead(enemy,terrain)){
+              enemy.vx*=-1;
+              turned=true;
             }
             if(!turned)enemy.x+=enemy.vx;
             for(const b of terrain){
               if(b.type!=='ground'&&b.type!=='forestGround'&&isColliding(enemy,b)){
                 if(enemy.vx<0)enemy.x=b.x+b.w;
                 else enemy.x=b.x-enemy.w;
-                enemy.vx*=-1;break;
+                enemy.vx*=-1;
+                break;
               }
             }
             if(invulnerable<=0&&isColliding(player,enemy)){
@@ -685,6 +725,11 @@
           if(state==='cutscene'){
             cinematicSeconds=(now-cutsceneStart)/1000;
             if(cinematicSeconds>=10.1){levelComplete[1]=true;returnToMap();}
+            return;
+          }
+          if(state==='forestTotemCharge'){
+            // Permite ver o sprite 56.png aceso antes de começar a cena final.
+            if(now-forestTotemActivatedAt>=FOREST_TOTEM_CHARGE_MS)startForestOutro();
             return;
           }
           if(state==='forestIntro'||state==='forestOutro'){
@@ -728,7 +773,10 @@
           updateEnemies();
           if(state!=='playing')return;
           if(level===1&&isColliding(player,princess)){startCutscene();return;}
-          if(level===2 && player.x>=FOREST_GOAL_X-55){startForestOutro();return;}
+          if(level===2 && player.grounded &&
+             player.x+player.w>=FOREST_TOTEM_X-18 && player.x<FOREST_TOTEM_X+52){
+            activateForestTotem(now);return;
+          }
           const maxCamera=level===1?3250:FOREST_END-GAME_WIDTH;
           cameraX=Math.max(0,Math.min(maxCamera,player.x-GAME_WIDTH/2.5));
           if(!player.grounded)player.animFrame=2;
@@ -1013,21 +1061,38 @@
           if(line)drawStoryDialogue(line.speaker,line.message,line.color);
           pixelText('ENTER OU BOTÃO A: PULAR CENA',GAME_HEIGHT-17,7,'#cdd6e6');
         }
-        function drawForestGoalMarker(){
-          const gx=FOREST_GOAL_X, baseY=298;
+        function drawForestTotem(){
+          const x=FOREST_TOTEM_X,groundY=380;
+          const img=forestTotemActivated?extras.totemOn:extras.totemOff;
           ctx.save();
-          ctx.globalAlpha=.95;
-          ctx.fillStyle='rgba(181,118,255,.18)';
-          ctx.beginPath();ctx.ellipse(gx+14,356,54,15,0,0,Math.PI*2);ctx.fill();
-          ctx.strokeStyle='#6d3bb8';ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(gx+14,300);ctx.lineTo(gx+14,355);ctx.stroke();
-          ctx.fillStyle='#d8c1ff';ctx.fillRect(gx+8,304,12,10);
-          ctx.fillStyle='#7f39d8';ctx.fillRect(gx+20,304,12,10);
-          ctx.fillStyle='#f2deff';ctx.beginPath();ctx.moveTo(gx+14,282);ctx.lineTo(gx+30,304);ctx.lineTo(gx-2,304);ctx.closePath();ctx.fill();
-          for(let i=0;i<4;i++){
-            ctx.fillStyle='rgba(211,175,255,.55)';
-            ctx.fillRect(gx-24+i*16,292-(i%2)*8,8,8);
+          const pulse=.5+.5*Math.sin(performance.now()/190);
+          // Aura abaixo do objeto; só fica intensa depois da ativação.
+          ctx.fillStyle=forestTotemActivated?'rgba(178,99,255,'+(.18+pulse*.19)+')':'rgba(75,64,102,.16)';
+          ctx.beginPath();ctx.ellipse(x,groundY-4,50+12*pulse,11+4*pulse,0,0,Math.PI*2);ctx.fill();
+          if(img&&img.width&&img.height){
+            // Preserva a proporção da arte, mesmo quando a imagem tem margens transparentes.
+            const scale=Math.min(103/img.width,111/img.height);
+            const w=Math.round(img.width*scale),h=Math.round(img.height*scale);
+            if(forestTotemActivated){
+              ctx.shadowColor='#c189ff';ctx.shadowBlur=16+12*pulse;
+            }
+            ctx.drawImage(img,Math.round(x-w/2),groundY-h,w,h);
+            ctx.shadowBlur=0;
+          }else{
+            // Placeholder até ambos os PNGs terminarem de carregar.
+            ctx.fillStyle=forestTotemActivated?'#7c44c5':'#463e57';
+            ctx.fillRect(x-20,groundY-83,40,83);
+            ctx.fillStyle=forestTotemActivated?'#e1b8ff':'#726880';
+            ctx.fillRect(x-10,groundY-65,20,30);
           }
-          retroText('FIM',gx+14,275,7,'#ffdca0');
+          if(forestTotemActivated){
+            ctx.fillStyle='rgba(220,175,255,'+(.45+.35*pulse)+')';
+            for(let i=0;i<5;i++){
+              const theta=i*1.256+performance.now()/650;
+              ctx.fillRect(Math.round(x+30*Math.cos(theta)),
+                Math.round(groundY-60+41*Math.sin(theta)),4,4);
+            }
+          }
           ctx.restore();
         }
 
@@ -1042,11 +1107,15 @@
           const flag=checkpointReached?extras.checkpointOn:extras.checkpointOff;
           if(flag)drawObject(flag,1755,312,42,68);
           else {ctx.fillStyle='#8e6db1';ctx.fillRect(1765,325,4,55);}
-          drawForestGoalMarker();
+          drawForestTotem();
           if(state==='forestIntro'||state==='forestOutro')drawForestStoryActors();
           drawEnemies();drawHero();
           ctx.restore();
           if(state==='forestIntro'||state==='forestOutro')drawForestStoryText();
+          if(state==='forestTotemCharge'){
+            ctx.fillStyle='rgba(15,6,35,.75)';ctx.fillRect(185,71,430,58);
+            pixelText('TOTEM DESPERTADO!',106,13,'#e4b5ff');
+          }
         }
         function overlay(title,detail,foot){
           ctx.fillStyle='rgba(8,4,22,.77)';ctx.fillRect(0,0,GAME_WIDTH,GAME_HEIGHT);
