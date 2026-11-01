@@ -106,3 +106,39 @@ check('Investida derrota inimigos e corvos',mario.includes('enemy.alive=false;sc
 check('Power-up pausa e volta com seu tempo de duração',mario.includes('superRemaining:Math.max(0,superPower.until-elapsedSeconds)')&&mario.includes('superPower.until=elapsedSeconds+data.superRemaining')&&mario.includes('if(!inventoryOpen&&!menuOpen){'));
 check('Blocos coletados permanecem únicos no save',mario.includes('collectedPickups.add(drop.id)')&&mario.includes("collectedPickups.has(questionId(b))")&&mario.includes('collectedPickups=new Set();'));
 check('Firestore continua isolado e aceita burger + poder temporário',rules.includes("'jump','burger'")&&rules.includes("'superRemaining'")&&rules.includes('gbIsSelf(userId)'));
+
+
+check('Botao B vertical acima do A',mario.includes('flex-direction:column;align-items:center') &&
+ mario.indexOf('id="btn-dash"')<mario.indexOf('id="btn-jump" class="action-btn"'));
+check('Barra de Super Forca usa o tempo ativo do jogo',mario.includes('id="sgb-super-meter"') &&
+ mario.includes('remaining/SUPER_DURATION*100')&&mario.includes('superPower.until-elapsedSeconds'));
+check('Sprites opcionais de cinco poses para os dois inimigos',[
+ '84 bolota idle.png','85 bolota walk 1.png','86 bolota walk 2.png',
+ '87 bolota dead.png','88 bolota espanto.png','89 turtle espanto.png',
+ '90 turtle dead.png','91 turtle walk 1.png','92 turtle idle.png','93 turtle walk 2.png'
+].every(asset=>mario.includes(asset))&&mario.includes("img.onerror=()=>"));
+check('Patrulha, alerta e perseguicao com memoria',mario.includes("enemy.aiState='alert'") &&
+ mario.includes("enemy.aiState='chase'")&&mario.includes('enemy.patrolSpeed*1.25') &&
+ mario.includes('enemy.alertUntil=elapsedSeconds+.42'));
+check('Perseguicao respeita chao e bloqueios',mario.includes('!hasFloorAhead(enemy,terrain)')&&
+ mario.includes("enemy.vx=0; // Perseguição não força a queda em buracos.")&&
+ mario.includes('function enemyCanSpotHero(enemy,terrain)'));
+check('Sprites e particulas de inimigos derrotados',mario.includes('fallenEnemies.push(')&&
+ mario.includes('processedAssets.mobFrames?.[e.type]?.dead')&&mario.includes('defeatEnemy(enemy,150)')&&
+ mario.includes('defeatEnemy(enemy,100)'));
+check('Efeitos dos blocos e checkpoints',mario.includes('drawCombatFxWorld()')&&
+ mario.includes('function checkpointChime()')&&
+ mario.includes("['#ffe88a','#fff7bb','#dbaa64']")&&
+ mario.includes('skyCheckpointReached=true;skyCheckpointX=1650;score+=250;setHUD();'));
+const spotSource=mario.match(/        function enemyCanSpotHero\(enemy,terrain\)\{[\s\S]*?\n        \}/)?.[0];
+check('Deteccao de inimigos extraivel para regressao',!!spotSource);
+function spotWithPlayer(player){
+ return new Function('player',spotSource+'\nreturn enemyCanSpotHero;')(player);
+}
+const sampleEnemy={x:80,y:348,w:32,h:32,vx:1.5};
+check('Inimigo avista Gabriel somente a frente',spotWithPlayer({x:175,y:348,w:32,h:32})(sampleEnemy,[])===true &&
+ spotWithPlayer({x:25,y:348,w:32,h:32})(sampleEnemy,[])===false);
+check('Inimigo nao ve Gabriel atras de parede ou longe',spotWithPlayer({x:175,y:348,w:32,h:32})(
+ sampleEnemy,[{x:145,y:335,w:25,h:70,type:'brick'}])===false &&
+ spotWithPlayer({x:450,y:348,w:32,h:32})(sampleEnemy,[])===false);
+
