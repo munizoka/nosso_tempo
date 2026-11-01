@@ -77,6 +77,38 @@
         .action-btn:active { transform: translateY(8px); box-shadow: 0 0 0 #991b1b, 0 5px 10px rgba(0,0,0,0.5); background: #dc2626; }
 
         .ui-text { text-shadow: 2px 2px 0 #000, -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000; color: white; font-size: 14px; }
+
+/* Inventário pixel art responsivo. Camada independente do Canvas. */
+#inventory-button{display:none;align-items:center;gap:3px;background:#291d39;border:2px solid #b69460;border-radius:9px;padding:3px 8px;color:#fff;cursor:pointer;image-rendering:pixelated;}
+#inventory-button.inventory-visible{display:inline-flex}
+#inventory-button img{width:32px;height:32px;object-fit:contain;image-rendering:pixelated}
+#inventory-count{font:700 13px system-ui,sans-serif}
+#inventory-panel{position:fixed;inset:0;z-index:100;display:none;align-items:center;justify-content:center;padding:clamp(7px,2vw,22px);background:rgba(7,5,17,.84);box-sizing:border-box;touch-action:pan-y}
+#inventory-panel.inventory-open{display:flex}
+.inventory-window{width:min(760px,98vw);max-height:calc(100dvh - 18px);overflow-y:auto;box-sizing:border-box;background:#191727;color:#f6e9ce;border:5px solid #6d5869;outline:3px solid #d4af75;outline-offset:-10px;box-shadow:0 15px 0 #130f20,0 25px 55px #050409;border-radius:6px;padding:clamp(14px,3vw,27px);font-family:system-ui, sans-serif}
+.inventory-head{display:flex;gap:12px;align-items:center;justify-content:space-between;margin-bottom:15px}
+.inventory-head h2{font:700 clamp(14px,2.6vw,19px) 'Press Start 2P',monospace;color:#f9da91;line-height:1.6;margin:0}
+.inventory-close,.inv-action{background:#382a48;color:#fff;border:2px solid #b6a1c9;border-radius:5px;padding:8px 12px;cursor:pointer;font:bold 13px system-ui,sans-serif}
+.inv-section-title{font:700 12px 'Press Start 2P',monospace;color:#d4bbec;line-height:1.6;margin:13px 0 9px}
+.inv-grid{display:grid;grid-template-columns:repeat(9,minmax(0,1fr));gap:4px}
+.inv-slot{position:relative;aspect-ratio:1;min-width:0;padding:2px;background:#302d39;border:3px solid #6f6870;box-shadow:inset 2px 2px 0 #46424c,inset -2px -2px 0 #201c27;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.inv-slot.story{border-color:#8b71af;background:#33273e}
+.inv-slot:focus-visible,.inv-slot.selected{outline:2px solid #ffe28a;outline-offset:-2px;border-color:#e0bb62;background:#50405c}
+.inv-slot:disabled{cursor:default;opacity:.65}
+.inv-slot img{max-width:95%;max-height:95%;object-fit:contain;image-rendering:pixelated}
+.inv-emoji{font-size:clamp(13px,2.8vw,29px);line-height:1}
+.inv-qty{position:absolute;right:1px;bottom:0;color:white;background:#17121ecc;font:bold 12px system-ui,sans-serif;padding:0 2px}
+.inv-detail{min-height:113px;margin-top:16px;border:3px solid #65546d;background:#211d31;padding:12px;display:flex;align-items:flex-start;gap:12px}
+#inv-detail-icon{font-size:32px;min-width:40px;text-align:center}
+#inv-detail-title{color:#f5dd9a;font-weight:800;margin-bottom:4px}
+#inv-detail-text{font-size:13px;line-height:1.55;color:#e1dbe9}
+.inv-actions{display:flex;gap:9px;margin-top:10px;flex-wrap:wrap}
+.inv-action.primary{background:#5346a2;border-color:#d6c5ff}
+.inv-action.danger{background:#562432;border-color:#bd6a80}
+.inv-action:disabled{opacity:.45;cursor:not-allowed}
+#item-toast{position:fixed;z-index:65;top:65px;left:50%;transform:translateX(-50%);display:none;max-width:90%;padding:10px 15px;background:#231d3c;color:#ffeca7;border:2px solid #b99b64;border-radius:6px;font:700 12px system-ui,sans-serif;text-align:center;pointer-events:none}
+@media(max-width:560px){.inventory-window{padding:13px 10px}.inv-grid{gap:2px}.inv-slot{border-width:2px}.inv-detail{padding:9px}.inventory-head h2{font-size:12px}.inv-section-title{font-size:9px}}
+
     </style>
 </head>
 <body>
@@ -95,7 +127,7 @@
         </div>
 
         <div class="flex gap-2 pointer-events-auto">
-            <button onclick="toggleInventario()" id="inventory-button" title="Inventário de pistas (tecla I)" aria-label="Abrir inventário" aria-expanded="false" class="px-3 py-2 bg-amber-950/90 border-2 border-amber-200 rounded-xl text-white font-sans font-bold shadow-lg text-sm">🎒 <span id="inventory-count">0</span></button>
+            <button onclick="toggleInventario()" id="inventory-button" title="Inventário (tecla I)" aria-label="Abrir inventário" aria-expanded="false"><img src="68.png" alt="" onerror="this.onerror=null;this.src='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGAAAABgCAMAAADVRocKAAABgFBMVEXg5N+Qm6XdzaakoOGl2uGVe9CzlWOkp6SRd7amoqrHk2PDu7vEq5fBwbnZ4eEAAAAJAgdlSEouGi9MNElNNjlGKzk2JDNWRUtELEVmUm1lTGZvVVGKdWoFBAQ6J0ZoWI5JOmZ5aGkTFRdVRTyFaWcmFBg7NFFWSnJXVo6IaVi4ubdtdK3Fycfl5eb09PQYFis4NDhwY1lpZ5J1dncoKChTWHBsTYxqZKampqjSt4rV19cjCxk2PWtNIWdXWaRWYm9bZ6+BXVyHcVuli262trbDpW7FxccaDSIRERQZG0AUIzYiDCEnQW4qWmxNIpFLSatbWVNqeJJygLaHXHCCWo2LV6ychHW5m266poyptbususjav3PQ0NDlypXp1J0HMDIRXnocjLochMM+HYg7KhorXpU+bbE9dqMrfso3is5TTYlLZoNfephOjJlSgrNRlK9OkMpfrcRiNZxmSj9/c11/f39jidRllqdjk/VpoIt3xNZzw/5n2u2OYDyPZ6aDeYRU55x9AAAAgHRSTlP///////v/H/9C/yL/HSIA/v///v7//v///////9n/////+f////////8p/xclEfr/////yf///yn/J////////////xf/K//X/////////////////////////xv///////////////////////////////8C/////////////0uJ4lkAAAPASURBVHja7dhXcxs3EABgklLsdC+wi3KFx95Fsal3WZYd995Leu+9x389i5Mykzdr5uC3www1xwfth8UCuJUKZ17yKORADuRADuRADuRADuRANuAcwDsvEzgNf78ev+0bgOPBj/VHvR5t+AUAFGLnylb7FBNQeDgeD/0BZZ43Qf1R58pfHxfaAUExXr758C1fQBmEhsrdlfmv65998Gvpk3Zhd7eBRW9FXiMppdneLlRerX/7e+H9T9+9On/1vSK0+r6AWotXKNxeuXsH4Kf5zy/NFf787fqXoM97AvqIkVKAK9CMm/T9N3/sXLv2wxzX3FcGZ5a0INlsNvcjQmqNrs99CEZrveTvoC1RpDb3BREq3YBBAlopDT6vijKQ3txHJC0F9VTLSln2eheVJ6ClVlxrBoTbVeAZaMSx5rMWgSSE2gQaMfgFOHhsakSQHumeMb4z4DUBaALVox7BpEGgYckjMCLVYuI4A04BDOi6P6AsSUjkGvC8XX0NAywcL9Ir2QHQQmqE2XwwA9QSYoYaDakXPGWwQSSUoCLcoF0ghdJtJjgLuv/iBE4CLICLH8GMKzAmUkJxcNStiYRzXjJ4AkJEQsBspg2g4AsDGiQ1ROAHeKNuXHxhWno8loYBoXiNkCshYdEDMIRINIUITGzIJeAAmHDwHpf6SXZgEdL5iwCMqPFiiR+ZSGdvQElY8AGk8S/UhBklwrgvKSBBos0ODEEJ8U8YTkfPa3IUhOHt20KoqKbwsrSofAA84zCw0+nFSxerQTB3xyXQBEWXNcpEQj8j0GegGGBJ3drrDipJNXD7iS8jErWmtDqBjYwAR+IEHqjVQdKerrajIGSBS8CMJKstDLMCrsCVmAbJ03U96B5Wg9AIcKxoKeXWKDsQLnerTz8qtdsPUB92XApGMaBqmqwHgBzQxWeNX77bKpSSyvJXgTgaSikfgEIRVlZ3zGNzo9Tb2utOb6YngeOjtlpmB9Aas1K5ZdYfH9Jgb7WSVpkbC0TuMqQHwPW9Ab55CtcPzt63HD900yfDCZC12YHzwDPt3CO78+zgi/h+ECLfpXy4+QffFFbCa5kPmrQ2qXYqlfV73SqGlrs7VIabSAlpAlkP2s9rgIjGdKoHqlOt8jO/Mnn/IDe/1iIMF7Pepqe5lXAET9uFZ0BKVJZ7ACuTCy9+45zoncz3ZjqSND7KdGwigpc3mis0xzsirEozcNuT25c1b51dHZyh9dHHPXIT5rGz++8P2f+N8kl/L/93Tg7kQA7kQA7kQA6ccPwL/WBcH7ihz1IAAAAASUVORK5CYII='"><span style="display:none">🎒</span><span id="inventory-count">0</span></button>
             <button onclick="voltarAoMapa()" class="px-3 py-2 bg-indigo-900/80 border-2 border-white rounded-xl text-white font-sans font-bold shadow-lg text-sm" title="Voltar ao mapa">🗺️ Mapa</button>
             <button onclick="reiniciarFase()" class="px-4 py-3 bg-zinc-800/80 border-2 border-white rounded-xl flex items-center justify-center text-white font-sans font-bold backdrop-blur pointer-events-auto shadow-lg active:scale-95 transition-transform text-sm uppercase">
                 🔄 Recomeçar
@@ -104,16 +136,27 @@
     </div>
 
     <div id="game-shell"><canvas id="game-canvas" aria-label="Super Gabriel Bros: mapa e fases"></canvas></div>
-    <section id="inventory-panel" role="dialog" aria-label="Inventário de pistas" aria-modal="true" style="display:none;position:fixed;z-index:90;inset:0;background:rgba(0,0,0,.72);align-items:center;justify-content:center;padding:20px;">
-      <div style="width:min(460px,95vw);background:#151324;color:#fff;border:3px solid #c6a86f;border-radius:14px;padding:24px;font-family:system-ui,sans-serif;box-shadow:0 20px 80px #000;">
-        <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;">
-          <strong style="font-size:19px;">🎒 Inventário de Gabriel</strong>
-          <button id="inventory-close" onclick="toggleInventario()" aria-label="Fechar inventário" style="background:#322b45;border-radius:9px;color:white;padding:7px 12px;cursor:pointer;">✕</button>
+    <section id="inventory-panel" role="dialog" aria-modal="true" aria-labelledby="inventory-title">
+      <div class="inventory-window">
+        <div class="inventory-head"><h2 id="inventory-title">🎒 INVENTÁRIO</h2>
+          <button id="inventory-close" class="inventory-close" onclick="toggleInventario()" aria-label="Fechar inventário">✕ FECHAR</button>
         </div>
-        <p id="inventory-description" style="font-size:14px;line-height:1.6;margin-top:18px;">Nenhuma pista encontrada ainda.</p>
-        <p style="font-size:12px;color:#b6b0c6;margin-top:14px;">Pistas de história ficam guardadas neste navegador.</p>
+        <div class="inv-section-title">📜 ITENS DE HISTÓRIA</div>
+        <div id="inv-story-grid" class="inv-grid" role="group" aria-label="Nove espaços de história"></div>
+        <div class="inv-section-title">🧪 CONSUMÍVEIS</div>
+        <div id="inv-consumable-grid" class="inv-grid" role="group" aria-label="Nove espaços de consumíveis"></div>
+        <div class="inv-detail">
+          <div id="inv-detail-icon"></div>
+          <div style="flex:1">
+            <div id="inv-detail-title">Selecione um item</div>
+            <div id="inv-detail-text">As pistas não podem ser descartadas nem usadas. Consumíveis oferecem bônus ao herói.</div>
+            <div id="inv-actions" class="inv-actions"></div>
+          </div>
+        </div>
+        <p style="font-size:11px;color:#a8a0b9;margin-top:12px">JOGO PAUSADO • Tecla I ou ESC para fechar</p>
       </div>
     </section>
+    <div id="item-toast" role="status" aria-live="polite"></div>
 
     <!-- Controles Mobile -->
     <div id="mobile-controls" class="game-control-panel">
@@ -174,6 +217,7 @@
         let lives = 5;
         let elapsedSeconds = 0;
         let previousFrame = performance.now();
+        let gameNow = previousFrame; // Relógio virtual: NÃO avança com o inventário aberto.
         let cameraX = 0;
         let sceneReady = false;
         let checkpointReached = false;
@@ -195,6 +239,8 @@
         const SKY_DRINK_FLIGHT_MS=2750;
         const SKY_DRINK_ROLL_MS=850;
         const SKY_OUTRO_POSTSCENE_MS=3900;
+        const SKY_DRINK_TRANSFER_START=SKY_DRINK_DROP_START+(SKY_DRINK_FLIGHT_MS+SKY_DRINK_ROLL_MS)/1000;
+        const SKY_DRINK_TRANSFER_DURATION=1.75;
         let skyAltarActivated=false,skyAltarActivatedAt=0,skySceneStart=0,skySceneSeconds=0;
         let skyCheckpointReached=false,skyCheckpointX=0;
         let skyBirds=[];
@@ -205,31 +251,188 @@
         const FOREST_TOTEM_CHARGE_MS=1350;
         const FOREST_CLUE_X=FOREST_END-170;
         const FOREST_OUTRO_DURATION=21.7;
-        const INVENTORY_KEY='super-gabriel-bros-pistas-v1';
-        let inventoryOpen=false;
-        let hasVillainMedallion=false;
-        try{hasVillainMedallion=JSON.parse(localStorage.getItem(INVENTORY_KEY)||'false')===true;}
-        catch(e){hasVillainMedallion=false;}
-        function renderInventory(){
-          const count=document.getElementById('inventory-count');
-          const description=document.getElementById('inventory-description');
-          if(count)count.textContent=hasVillainMedallion?'1':'0';
-          if(description)description.textContent=hasVillainMedallion
-            ?'PISTA 01 — MEDALHÃO RACHADO. Caiu do manto do vilão quando ele fugiu da Floresta Misteriosa. Possui uma runa em forma de vento. Ainda não sabemos quem é o dono.'
-            :'Nenhuma pista encontrada ainda. Explore os finais das fases para descobrir mais.';
+        // Inventário modular, em versão local (sem alterar Firebase).
+        const INVENTORY_KEY='super-gabriel-bros-inventario-v2';
+        const OLD_CLUE_KEY='super-gabriel-bros-pistas-v1';
+        const INVENTORY_UNLOCK_KEY='super-gabriel-bros-inventario-desbloqueado-v1';
+        const ITEM_CATALOG={
+          medallion:{id:'medallion',kind:'story',name:'Medalhão Rachado',icon:'🔮',description:'Pista 01: encontrado na Floresta Misteriosa. Uma runa de vento marca sua superfície. Não pode ser usado nem descartado.',origin:'Fim da Fase 2'},
+          drink:{id:'drink',kind:'story',name:'Drink Misterioso',asset:'67.png',icon:'🍹',description:'Pista 02: caiu do portal do vilão no Templo dos Ventos. O que esse copo revela sobre ele?',origin:'Fim da Fase 3'},
+          life:{id:'life',kind:'consumable',name:'Cogumelo de Vida',icon:'🍄',description:'Concede uma vida extra imediatamente (limite: 99).'},
+          shield:{id:'shield',kind:'consumable',name:'Escudo Protetor',icon:'🛡️',description:'Protege de um ataque inimigo. Não protege contra cair no abismo.'},
+          speed:{id:'speed',kind:'consumable',name:'Poção de Velocidade',icon:'⚡',description:'Aumenta a velocidade durante 12 segundos de jogo.'},
+          jump:{id:'jump',kind:'consumable',name:'Poção de Superpulo',icon:'🧪',description:'Aumenta a altura do salto durante 12 segundos de jogo.'}
+        };
+        const CONSUMABLE_IDS=['life','shield','speed','jump'];
+        const STORY_IDS=['medallion','drink'];
+        function loadInventory(){
+          let saved=null;
+          try{saved=JSON.parse(localStorage.getItem(INVENTORY_KEY)||'null');}catch(e){}
+          const story=Array.isArray(saved?.story)?saved.story.filter(id=>STORY_IDS.includes(id)):[];
+          // Migração da pista legada, sem apagar a chave antiga.
+          try{if(localStorage.getItem(OLD_CLUE_KEY)==='true'&&!story.includes('medallion'))story.push('medallion');}catch(e){}
+          const consumables={};
+          for(const id of CONSUMABLE_IDS){
+            const raw=saved?.consumables?.[id];
+            consumables[id]=Number.isSafeInteger(raw)?Math.max(0,Math.min(99,raw)):0;
+          }
+          return {version:2,story,consumables};
         }
-        function giveVillainMedallion(){
-          if(hasVillainMedallion)return;
-          hasVillainMedallion=true;
-          try{localStorage.setItem(INVENTORY_KEY,'true');}catch(e){/* Continua na sessão. */}
+        const inventory=loadInventory();
+        let inventoryOpen=false,selectedInvItem=null;
+        let inventoryUnlocked=false;
+        try{inventoryUnlocked=localStorage.getItem(INVENTORY_UNLOCK_KEY)==='true';}catch(e){}
+        if(inventory.story.includes('drink'))inventoryUnlocked=true;
+        const activeBuffs={shield:0,speedUntil:0,jumpUntil:0};
+        const worldPickups=[]; // Cadastro futuro: registerLevelPickup({id,level,x,y,itemId})
+        let collectedPickups=new Set();
+        let itemToastUntil=0,itemToastMessage='';
+        function persistInventory(){
+          try{localStorage.setItem(INVENTORY_KEY,JSON.stringify(inventory));}catch(e){console.warn('Inventário sem persistência local',e);}
+        }
+        function showItemToast(message){
+          itemToastMessage=message;itemToastUntil=gameNow+3500;
+          const toast=document.getElementById('item-toast');
+          if(toast){toast.textContent=message;toast.style.display='block';}
+        }
+        function updateToast(){
+          const toast=document.getElementById('item-toast');
+          if(toast&&toast.style.display==='block'&&gameNow>=itemToastUntil)toast.style.display='none';
+        }
+        function unlockInventory(){
+          inventoryUnlocked=true;
+          try{localStorage.setItem(INVENTORY_UNLOCK_KEY,'true');}catch(e){}
+          updateInventoryButton();
+        }
+        function updateInventoryButton(){
+          const button=document.getElementById('inventory-button');
+          if(!button)return;
+          const visible=inventoryUnlocked||level===3;
+          button.classList.toggle('inventory-visible',visible);
+          // Quantidade de itens encontrados, incluindo pilhas de consumíveis.
+          const count=document.getElementById('inventory-count');
+          if(count)count.textContent=String(inventory.story.length+Object.values(inventory.consumables).reduce((n,v)=>n+v,0));
+        }
+        function giveStoryItem(id){
+          if(ITEM_CATALOG[id]?.kind!=='story')return false;
+          if(inventory.story.includes(id))return false;
+          inventory.story.push(id);
+          if(id==='medallion'){
+            try{localStorage.setItem(OLD_CLUE_KEY,'true');}catch(e){}
+          }
+          persistInventory();renderInventory();showItemToast('PISTA ENCONTRADA: '+ITEM_CATALOG[id].name);
+          return true;
+        }
+        function giveVillainMedallion(){giveStoryItem('medallion');}
+        function addConsumable(id,amount=1){
+          if(ITEM_CATALOG[id]?.kind!=='consumable'||!Number.isSafeInteger(amount)||amount<=0)return false;
+          const old=inventory.consumables[id]||0;
+          const next=Math.min(99,old+amount);
+          if(next===old)return false;
+          inventory.consumables[id]=next;
+          persistInventory();renderInventory();showItemToast('ITEM OBTIDO: '+ITEM_CATALOG[id].name+' x'+(next-old));
+          return true;
+        }
+        // Registra itens futuros; nada aparece nas fases antes de planejarmos sua posição.
+        function registerLevelPickup({id,level:pickupLevel,x,y,itemId}){
+          if(!id||!Number.isInteger(pickupLevel)||!Number.isFinite(x)||!Number.isFinite(y)||ITEM_CATALOG[itemId]?.kind!=='consumable')return false;
+          if(worldPickups.some(p=>p.id===id))return false;
+          worldPickups.push({id,level:pickupLevel,x,y,itemId,w:26,h:26});return true;
+        }
+        function updateLevelPickups(){
+          if(state!=='playing')return;
+          for(const pickup of worldPickups){
+            if(pickup.level!==level||collectedPickups.has(pickup.id)||!isColliding(player,pickup))continue;
+            if(addConsumable(pickup.itemId,1))collectedPickups.add(pickup.id);
+          }
+        }
+        function drawLevelPickups(){
+          ctx.save();ctx.translate(-Math.round(cameraX),0);
+          for(const item of worldPickups){
+            if(item.level!==level||collectedPickups.has(item.id))continue;
+            ctx.fillStyle='#f6db8a';ctx.fillRect(item.x-3,item.y-3,32,32);
+            ctx.fillStyle='#2f2450';ctx.fillRect(item.x,item.y,26,26);
+            ctx.font='20px sans-serif';ctx.textAlign='center';ctx.fillText(ITEM_CATALOG[item.itemId].icon,item.x+13,item.y+21);
+          }
+          ctx.restore();
+        }
+        function itemUsable(id){
+          if(state!=='playing')return false;
+          if((inventory.consumables[id]||0)<1)return false;
+          if(id==='life')return lives<99;
+          if(id==='shield')return activeBuffs.shield===0;
+          if(id==='speed')return elapsedSeconds>=activeBuffs.speedUntil;
+          if(id==='jump')return elapsedSeconds>=activeBuffs.jumpUntil;
+          return false;
+        }
+        function useInventoryItem(id){
+          if(!inventoryOpen||!itemUsable(id))return false;
+          if(id==='life'){lives=Math.min(99,lives+1);setHUD();}
+          else if(id==='shield')activeBuffs.shield=1;
+          else if(id==='speed')activeBuffs.speedUntil=elapsedSeconds+12;
+          else if(id==='jump')activeBuffs.jumpUntil=elapsedSeconds+12;
+          inventory.consumables[id]--;
+          persistInventory();renderInventory();
+          showItemToast('BÔNUS ATIVADO: '+ITEM_CATALOG[id].name);
+          return true;
+        }
+        function discardInventoryItem(id){
+          if(!inventoryOpen||ITEM_CATALOG[id]?.kind!=='consumable'||!(inventory.consumables[id]>0))return false;
+          if(!window.confirm('Descartar 1 '+ITEM_CATALOG[id].name+'?'))return false;
+          inventory.consumables[id]--;persistInventory();renderInventory();return true;
+        }
+        function setInventorySelection(id){
+          selectedInvItem=ITEM_CATALOG[id]?id:null;
           renderInventory();
         }
+        function renderInventory(){
+          updateInventoryButton();
+          for(const [kind,gridId,ids] of [['story','inv-story-grid',STORY_IDS],['consumable','inv-consumable-grid',CONSUMABLE_IDS]]){
+            const grid=document.getElementById(gridId);if(!grid)continue;
+            grid.replaceChildren();
+            for(let n=0;n<9;n++){
+              const id=ids[n],item=id?ITEM_CATALOG[id]:null;
+              const owned=item&&(kind==='story'?inventory.story.includes(id):inventory.consumables[id]>0);
+              const slot=document.createElement('button');slot.type='button';
+              slot.className='inv-slot '+kind+(selectedInvItem===id&&owned?' selected':'');
+              slot.setAttribute('aria-label',owned?item.name:'Espaço vazio');
+              if(!owned){slot.disabled=true;slot.textContent=' ';grid.appendChild(slot);continue;}
+              if(item.asset){
+                const img=document.createElement('img');img.src=item.asset;img.alt='';
+                img.onerror=()=>{img.replaceWith(document.createTextNode(item.icon));};
+                slot.appendChild(img);
+              }else{
+                const icon=document.createElement('span');icon.className='inv-emoji';icon.textContent=item.icon;slot.appendChild(icon);
+              }
+              if(kind==='consumable'){
+                const qty=document.createElement('span');qty.className='inv-qty';qty.textContent=String(inventory.consumables[id]);slot.appendChild(qty);
+              }
+              slot.onclick=()=>setInventorySelection(id);grid.appendChild(slot);
+            }
+          }
+          if(selectedInvItem&&!((ITEM_CATALOG[selectedInvItem].kind==='story'&&inventory.story.includes(selectedInvItem))||
+              (ITEM_CATALOG[selectedInvItem].kind==='consumable'&&inventory.consumables[selectedInvItem]>0)))selectedInvItem=null;
+          const item=selectedInvItem?ITEM_CATALOG[selectedInvItem]:null;
+          const heading=document.getElementById('inv-detail-title'),info=document.getElementById('inv-detail-text'),icon=document.getElementById('inv-detail-icon'),actions=document.getElementById('inv-actions');
+          if(heading)heading.textContent=item?.name||'Selecione um item';
+          if(info)info.textContent=item?(item.description+(item.origin?' • Origem: '+item.origin:'')):'Clique em um espaço ocupado para ver detalhes.';
+          if(icon)icon.textContent=item?.icon||'';
+          if(actions){
+            actions.replaceChildren();
+            if(item?.kind==='story'){
+              const tag=document.createElement('span');tag.textContent='🔒 Item permanente — não pode ser usado ou descartado';tag.style.fontSize='12px';tag.style.color='#c6a5f7';actions.appendChild(tag);
+            }else if(item?.kind==='consumable'){
+              const use=document.createElement('button');use.className='inv-action primary';use.textContent='USAR';use.disabled=!itemUsable(item.id);use.onclick=()=>useInventoryItem(item.id);actions.appendChild(use);
+              const discard=document.createElement('button');discard.className='inv-action danger';discard.textContent='DESCARTAR 1';discard.onclick=()=>discardInventoryItem(item.id);actions.appendChild(discard);
+            }
+          }
+        }
         window.toggleInventario=function(){
-          if(!inventoryOpen&&!['map','playing','chapterEnd','gameover','title2','title3'].includes(state))return;
+          if(!inventoryOpen&&!(inventoryUnlocked||level===3))return;
           inventoryOpen=!inventoryOpen;
-          const panel=document.getElementById('inventory-panel');
-          const button=document.getElementById('inventory-button');
-          if(panel)panel.style.display=inventoryOpen?'flex':'none';
+          keys.left=keys.right=keys.up=keys.down=false;
+          const panel=document.getElementById('inventory-panel'),button=document.getElementById('inventory-button');
+          if(panel)panel.classList.toggle('inventory-open',inventoryOpen);
           if(button)button.setAttribute('aria-expanded',String(inventoryOpen));
           if(inventoryOpen){renderInventory();document.getElementById('inventory-close')?.focus();}
           else button?.focus();
@@ -505,7 +708,7 @@
               else processedAssets[key]=trimTransparent(clean);
               originalLoaded++;
               if(originalLoaded===Object.keys(originalPaths).length){
-                sceneReady=true; previousFrame=performance.now();
+                sceneReady=true; previousFrame=performance.now(); gameNow=previousFrame;
                 // Testes opcionais: ?teste=final, ?teste=floresta, ?teste=intro2, ?teste=final2
                 if(testMode==='final'){
                   player.x=princess.x-40; player.y=340; player.grounded=true;
@@ -647,14 +850,20 @@
           forestTotemActivated=false;forestTotemActivatedAt=0;
           skyAltarActivated=false;skyAltarActivatedAt=0;
           skyCheckpointReached=false;skyCheckpointX=0;
+          activeBuffs.shield=0;activeBuffs.speedUntil=0;activeBuffs.jumpUntil=0;
+          collectedPickups=new Set();
           enemies=(level===1?level1EnemyTemplate:level===2?level2EnemyTemplate:[]).map(e=>({...e}));
           skyBirds=freshSkyBirds();
           for(const b of [...level2Blocks,...level3Blocks])if(b.moving){b.x=b.baseX;b.y=b.baseY;}
           resetPosition();setHUD();
         }
         window.reiniciarFase=restartCurrentLevel;
-        function loseLife(){
+        function loseLife(reason='enemy'){
           if(state!=='playing')return;
+          if(reason!=='fall'&&activeBuffs.shield>0){
+            activeBuffs.shield--;invulnerable=1.25;
+            showItemToast('ESCUDO PROTEGEU GABRIEL!');return;
+          }
           lives--;
           if(lives<=0){state='gameover';setHUD();return;}
           enemies=(level===1?level1EnemyTemplate:level===2?level2EnemyTemplate:[]).map(e=>({...e}));
@@ -663,12 +872,12 @@
         }
         function startCutscene(){
           if(state!=='playing'||level!==1)return;
-          state='cutscene';cutsceneStart=performance.now();cinematicSeconds=0;
+          state='cutscene';cutsceneStart=gameNow;cinematicSeconds=0;
           player.vx=0;player.vy=0;keys.left=false;keys.right=false;keys.up=false;
           player.direction=1;player.animFrame=0;
         }
         function showSkyTitle(){
-          level=3;state='title3';cameraX=0;
+          level=3;state='title3';cameraX=0;unlockInventory();
           keys.left=keys.right=keys.up=keys.down=false;
           setHUD();
         }
@@ -682,7 +891,7 @@
           beginSkyScene('skyIntro');setHUD();
         }
         function beginSkyScene(which){
-          state=which;skySceneStart=performance.now();skySceneSeconds=0;
+          state=which;skySceneStart=gameNow;skySceneSeconds=0;
           keys.left=keys.right=keys.up=keys.down=false;
           player.vx=0;player.vy=0;player.direction=1;
           if(which==='skyOutro'){
@@ -706,6 +915,7 @@
         }
         function finishSkyOutro(){
           if(state!=='skyOutro')return;
+          giveStoryItem('drink');
           levelComplete[3]=true;state='chapterEnd';
           keys.left=keys.right=keys.up=keys.down=false;
           mapTip='FASE 3 CONCLUÍDA!';
@@ -729,7 +939,7 @@
           beginForestScene('forestIntro');setHUD();
         }
         function beginForestScene(which){
-          state=which;forestSceneStart=performance.now();forestSceneSeconds=0;
+          state=which;forestSceneStart=gameNow;forestSceneSeconds=0;
           keys.left=keys.right=keys.up=false;
           player.vx=0;player.vy=0;player.direction=1;player.animFrame=0;
           // No capítulo final, mantém Gabriel em uma posição visível no enquadramento.
@@ -811,6 +1021,7 @@
           const el=document.getElementById(id);if(!el)return;
           const press=e=>{
             e.preventDefault();
+            if(inventoryOpen)return;
             el.setPointerCapture?.(e.pointerId);
             if(state==='map'){
               if(id==='btn-jump'){chooseMapLevel();return;}
@@ -911,6 +1122,7 @@
         function update(dt,now){
           document.body.classList.toggle('map-mode',state==='map');
           if(!sceneReady||inventoryOpen)return;
+          updateToast();
           if(state==='map'){updateMap(dt);return;}
           if(state==='cutscene'){
             cinematicSeconds=(now-cutsceneStart)/1000;
@@ -931,6 +1143,8 @@
             if(state==='skyIntro'&&skySceneSeconds>=skyDialogueDuration())finishSkyIntro();
             else if(state==='skyOutro'){
               updateSkyOutroFacing();
+              if(skySceneSeconds>=SKY_DRINK_TRANSFER_START+SKY_DRINK_TRANSFER_DURATION)
+                giveStoryItem('drink');
               if(skySceneSeconds>=skyDialogueDuration()+SKY_OUTRO_POSTSCENE_MS/1000)finishSkyOutro();
             }
             return;
@@ -950,8 +1164,9 @@
           if(state!=='playing')return;
           elapsedSeconds+=dt;
           invulnerable=Math.max(0,invulnerable-dt);
-          if(keys.left){player.vx=-player.speed;player.direction=-1;}
-          else if(keys.right){player.vx=player.speed;player.direction=1;}
+          const effectiveSpeed=player.speed*(elapsedSeconds<activeBuffs.speedUntil?1.5:1);
+          if(keys.left){player.vx=-effectiveSpeed;player.direction=-1;}
+          else if(keys.right){player.vx=effectiveSpeed;player.direction=1;}
           else player.vx=0;
           // Ventos atuam somente dentro da faixa visível da rajada.
           if(level===3){
@@ -962,7 +1177,10 @@
             }
             player.vx=Math.max(-7,Math.min(7,player.vx));
           }
-          if(keys.up&&player.grounded){player.vy=player.jumpPower;player.grounded=false;}
+          if(keys.up&&player.grounded){
+            player.vy=player.jumpPower*(elapsedSeconds<activeBuffs.jumpUntil?1.3:1);
+            player.grounded=false;
+          }
           if(level===2||level===3)updateMovingPlatforms(elapsedSeconds);
           const terrain=activeBlocks();
           player.vy=Math.min(player.vy+player.gravity,16);
@@ -996,7 +1214,7 @@
               else if(player.vy<0){player.y=b.y+b.h;player.vy=0;}
             }
           }
-          if(player.y>GAME_HEIGHT+200){loseLife();return;}
+          if(player.y>GAME_HEIGHT+200){loseLife('fall');return;}
           if(level===3&&!skyCheckpointReached&&player.x+player.w>1650&&player.x<1720&&player.y+player.h>330){
             skyCheckpointReached=true;skyCheckpointX=1650;score+=250;setHUD();
           }
@@ -1004,6 +1222,7 @@
              player.x<1825 && player.y+player.h>305){
             checkpointReached=true;checkpointX=1730;score+=250;setHUD();
           }
+          updateLevelPickups();
           if(level===3)updateSkyBirds(elapsedSeconds);
           else updateEnemies();
           if(state!=='playing')return;
@@ -1106,7 +1325,7 @@
         function drawSpeakingSprite(sprite,centerX,footY,height,character,facing=1){
           drawSpriteOnFeet(sprite,centerX,footY,height,facing);
           if(activeDialogueSpeaker()!==character||!sprite?.width||!sprite?.height)return;
-          const open=Math.floor(performance.now()/165)%2===0;
+          const open=Math.floor(gameNow/165)%2===0;
           const w=Math.max(1,Math.round(height*sprite.width/sprite.height));
           ctx.save();ctx.translate(Math.round(centerX),Math.round(footY));
           if(facing===-1)ctx.scale(-1,1);
@@ -1448,7 +1667,7 @@
           const x=FOREST_TOTEM_X,groundY=380;
           const img=forestTotemActivated?extras.totemOn:extras.totemOff;
           ctx.save();
-          const pulse=.5+.5*Math.sin(performance.now()/190);
+          const pulse=.5+.5*Math.sin(gameNow/190);
           // Aura abaixo do objeto; só fica intensa depois da ativação.
           ctx.fillStyle=forestTotemActivated?'rgba(178,99,255,'+(.18+pulse*.19)+')':'rgba(75,64,102,.16)';
           ctx.beginPath();ctx.ellipse(x,groundY-4,50+12*pulse,11+4*pulse,0,0,Math.PI*2);ctx.fill();
@@ -1471,7 +1690,7 @@
           if(forestTotemActivated){
             ctx.fillStyle='rgba(220,175,255,'+(.45+.35*pulse)+')';
             for(let i=0;i<5;i++){
-              const theta=i*1.256+performance.now()/650;
+              const theta=i*1.256+gameNow/650;
               ctx.fillRect(Math.round(x+30*Math.cos(theta)),
                 Math.round(groundY-60+41*Math.sin(theta)),4,4);
             }
@@ -1584,7 +1803,7 @@
         function drawSkyAltar(){
           const image=skyAltarActivated?extras.skyAltarOn:extras.skyAltarOff;
           const x=SKY_ALTAR_X, foot=380, h=112, w=84;
-          ctx.save();const pulse=(1+Math.sin(performance.now()/200))*.5;
+          ctx.save();const pulse=(1+Math.sin(gameNow/200))*.5;
           if(skyAltarActivated){
             ctx.fillStyle='rgba(147,244,255,'+(.22+.18*pulse)+')';
             ctx.beginPath();ctx.ellipse(x,foot-33,56+pulse*10,65+pulse*7,0,0,Math.PI*2);ctx.fill();
@@ -1690,6 +1909,8 @@
           return {x,foot,angle,travel:rollProgress,phase:rollProgress>=1?'stopped':'roll'};
         }
         function drawSkyDrink(){
+          // Depois do salto, o drink deixa o mundo e viaja até o inventário do HUD.
+          if(skySceneSeconds>=SKY_DRINK_TRANSFER_START)return;
           const pose=getSkyDrinkPose(skySceneSeconds);
           if(!pose)return;
           // Discretas partículas claras reforçam a parábola, sem usar as
@@ -1716,6 +1937,32 @@
             ctx.fillStyle='#7d2fc6';ctx.fillRect(-9,-22,18,14);
             ctx.fillStyle='#3c2358';ctx.fillRect(-12,-31,24,4);
             ctx.fillStyle='#fff3d1';ctx.fillRect(8,-41,3,14);
+          }
+          ctx.restore();
+        }
+        // Efeito em coordenadas de tela (fora da câmera) até o botão 68.png.
+        function drawSkyDrinkTransfer(){
+          if(state!=='skyOutro'||skySceneSeconds<SKY_DRINK_TRANSFER_START)return;
+          const progress=Math.min(1,(skySceneSeconds-SKY_DRINK_TRANSFER_START)/SKY_DRINK_TRANSFER_DURATION);
+          if(progress>=1)return;
+          const ease=easeOut(progress);
+          const button=document.getElementById('inventory-button');
+          const canvasRect=canvas.getBoundingClientRect?.(),buttonRect=button?.getBoundingClientRect?.();
+          const targetX=canvasRect?.width&&buttonRect?.width?
+            ((buttonRect.left+buttonRect.width/2-canvasRect.left)/canvasRect.width)*GAME_WIDTH:GAME_WIDTH-67;
+          const targetY=canvasRect?.height&&buttonRect?.height?
+            ((buttonRect.top+buttonRect.height/2-canvasRect.top)/canvasRect.height)*GAME_HEIGHT:24;
+          const originX=(SKY_ALTAR_X-132)-cameraX;
+          const originY=339;
+          const x=originX+(targetX-originX)*ease;
+          const y=originY+(targetY-originY)*ease-Math.sin(Math.PI*progress)*74;
+          const size=40-23*ease;
+          ctx.save();
+          ctx.globalAlpha=1-.1*ease;
+          ctx.shadowColor='#e5b6ff';ctx.shadowBlur=8+15*progress;
+          if(extras.villainDrink)drawObject(extras.villainDrink,x-size/2,y-size/2,size,size);
+          else{
+            ctx.fillStyle='#a778f5';ctx.fillRect(x-size/2,y-size/2,size,size);
           }
           ctx.restore();
         }
@@ -1749,9 +1996,10 @@
           drawHero();
           ctx.restore();
           ctx.restore();
+          if(state==='skyOutro')drawSkyDrinkTransfer();
           if(state==='skyIntro'||state==='skyOutro')drawSkyStoryText();
           if(state==='skyOutro'&&skySceneSeconds>=skyDialogueDuration()){
-            pixelText('ALGO CAIU DO PORTAL...',GAME_HEIGHT-44,9,'#ffe9b0');
+            pixelText(inventory.story.includes('drink')?'PISTA GUARDADA NO INVENTARIO!':'ALGO CAIU DO PORTAL...',GAME_HEIGHT-44,8,'#ffe9b0');
           }
           if(state==='skyAltarCharge'){
             ctx.fillStyle='rgba(7,32,62,.76)';ctx.fillRect(186,72,430,57);
@@ -1770,6 +2018,7 @@
           if(!sceneReady){ctx.fillStyle='#5c94fc';ctx.fillRect(0,0,GAME_WIDTH,GAME_HEIGHT);pixelText('CARREGANDO A MAGIA...',GAME_HEIGHT/2,12);return;}
           if(state==='map'){drawMap();return;}
           if(level===1)drawLevelOne();else if(level===2)drawLevelTwo();else drawLevelThree();
+          if(state==='playing')drawLevelPickups();
           if(state==='title2')overlay('FASE 2','A FLORESTA MISTERIOSA','ENTER OU BOTÃO A PARA COMEÇAR');
           if(state==='title3')overlay('FASE 3','O TEMPLO DOS VENTOS','ENTER OU BOTÃO A PARA COMEÇAR');
           if(state==='gameover')overlay('GAME OVER','AS VIDAS ACABARAM','CLIQUE EM RECOMEÇAR');
@@ -1779,8 +2028,15 @@
           }
         }
         function loop(now){
-          const dt=Math.min(.05,(now-previousFrame)/1000);
-          previousFrame=now;update(dt,now);draw();requestAnimationFrame(loop);
+          const dt=Math.min(.05,Math.max(0,(now-previousFrame)/1000));
+          previousFrame=now;
+          if(!inventoryOpen){
+            gameNow+=dt*1000;
+            update(dt,gameNow);draw();
+          }
+          // Quando inventário abre, não chamamos update nem draw:
+          // timers, IA, vento, plataformas, cutscenes e efeitos ficam congelados.
+          requestAnimationFrame(loop);
         }
         setHUD();
         document.body.classList.add('map-mode');
