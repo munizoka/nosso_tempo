@@ -77,6 +77,38 @@
         .action-btn:active { transform: translateY(8px); box-shadow: 0 0 0 #991b1b, 0 5px 10px rgba(0,0,0,0.5); background: #dc2626; }
 
         .ui-text { text-shadow: 2px 2px 0 #000, -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000; color: white; font-size: 14px; }
+
+/* Inventário pixel art responsivo. Camada independente do Canvas. */
+#inventory-button{display:none;align-items:center;gap:3px;background:#291d39;border:2px solid #b69460;border-radius:9px;padding:3px 8px;color:#fff;cursor:pointer;image-rendering:pixelated;}
+#inventory-button.inventory-visible{display:inline-flex}
+#inventory-button img{width:32px;height:32px;object-fit:contain;image-rendering:pixelated}
+#inventory-count{font:700 13px system-ui,sans-serif}
+#inventory-panel{position:fixed;inset:0;z-index:100;display:none;align-items:center;justify-content:center;padding:clamp(7px,2vw,22px);background:rgba(7,5,17,.84);box-sizing:border-box;touch-action:pan-y}
+#inventory-panel.inventory-open{display:flex}
+.inventory-window{width:min(760px,98vw);max-height:calc(100dvh - 18px);overflow-y:auto;box-sizing:border-box;background:#191727;color:#f6e9ce;border:5px solid #6d5869;outline:3px solid #d4af75;outline-offset:-10px;box-shadow:0 15px 0 #130f20,0 25px 55px #050409;border-radius:6px;padding:clamp(14px,3vw,27px);font-family:system-ui, sans-serif}
+.inventory-head{display:flex;gap:12px;align-items:center;justify-content:space-between;margin-bottom:15px}
+.inventory-head h2{font:700 clamp(14px,2.6vw,19px) 'Press Start 2P',monospace;color:#f9da91;line-height:1.6;margin:0}
+.inventory-close,.inv-action{background:#382a48;color:#fff;border:2px solid #b6a1c9;border-radius:5px;padding:8px 12px;cursor:pointer;font:bold 13px system-ui,sans-serif}
+.inv-section-title{font:700 12px 'Press Start 2P',monospace;color:#d4bbec;line-height:1.6;margin:13px 0 9px}
+.inv-grid{display:grid;grid-template-columns:repeat(9,minmax(0,1fr));gap:4px}
+.inv-slot{position:relative;aspect-ratio:1;min-width:0;padding:2px;background:#302d39;border:3px solid #6f6870;box-shadow:inset 2px 2px 0 #46424c,inset -2px -2px 0 #201c27;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.inv-slot.story{border-color:#8b71af;background:#33273e}
+.inv-slot:focus-visible,.inv-slot.selected{outline:2px solid #ffe28a;outline-offset:-2px;border-color:#e0bb62;background:#50405c}
+.inv-slot:disabled{cursor:default;opacity:.65}
+.inv-slot img{max-width:95%;max-height:95%;object-fit:contain;image-rendering:pixelated}
+.inv-emoji{font-size:clamp(13px,2.8vw,29px);line-height:1}
+.inv-qty{position:absolute;right:1px;bottom:0;color:white;background:#17121ecc;font:bold 12px system-ui,sans-serif;padding:0 2px}
+.inv-detail{min-height:113px;margin-top:16px;border:3px solid #65546d;background:#211d31;padding:12px;display:flex;align-items:flex-start;gap:12px}
+#inv-detail-icon{font-size:32px;min-width:40px;text-align:center}
+#inv-detail-title{color:#f5dd9a;font-weight:800;margin-bottom:4px}
+#inv-detail-text{font-size:13px;line-height:1.55;color:#e1dbe9}
+.inv-actions{display:flex;gap:9px;margin-top:10px;flex-wrap:wrap}
+.inv-action.primary{background:#5346a2;border-color:#d6c5ff}
+.inv-action.danger{background:#562432;border-color:#bd6a80}
+.inv-action:disabled{opacity:.45;cursor:not-allowed}
+#item-toast{position:fixed;z-index:65;top:65px;left:50%;transform:translateX(-50%);display:none;max-width:90%;padding:10px 15px;background:#231d3c;color:#ffeca7;border:2px solid #b99b64;border-radius:6px;font:700 12px system-ui,sans-serif;text-align:center;pointer-events:none}
+@media(max-width:560px){.inventory-window{padding:13px 10px}.inv-grid{gap:2px}.inv-slot{border-width:2px}.inv-detail{padding:9px}.inventory-head h2{font-size:12px}.inv-section-title{font-size:9px}}
+
     </style>
 </head>
 <body>
@@ -95,7 +127,7 @@
         </div>
 
         <div class="flex gap-2 pointer-events-auto">
-            <button onclick="toggleInventario()" id="inventory-button" title="Inventário de pistas (tecla I)" aria-label="Abrir inventário" aria-expanded="false" class="px-3 py-2 bg-amber-950/90 border-2 border-amber-200 rounded-xl text-white font-sans font-bold shadow-lg text-sm">🎒 <span id="inventory-count">0</span></button>
+            <button onclick="toggleInventario()" id="inventory-button" title="Inventário (tecla I)" aria-label="Abrir inventário" aria-expanded="false"><img src="68.png" alt="" onerror="this.style.display='none';this.nextElementSibling.style.display='inline'"><span style="display:none">🎒</span><span id="inventory-count">0</span></button>
             <button onclick="voltarAoMapa()" class="px-3 py-2 bg-indigo-900/80 border-2 border-white rounded-xl text-white font-sans font-bold shadow-lg text-sm" title="Voltar ao mapa">🗺️ Mapa</button>
             <button onclick="reiniciarFase()" class="px-4 py-3 bg-zinc-800/80 border-2 border-white rounded-xl flex items-center justify-center text-white font-sans font-bold backdrop-blur pointer-events-auto shadow-lg active:scale-95 transition-transform text-sm uppercase">
                 🔄 Recomeçar
@@ -104,16 +136,27 @@
     </div>
 
     <div id="game-shell"><canvas id="game-canvas" aria-label="Super Gabriel Bros: mapa e fases"></canvas></div>
-    <section id="inventory-panel" role="dialog" aria-label="Inventário de pistas" aria-modal="true" style="display:none;position:fixed;z-index:90;inset:0;background:rgba(0,0,0,.72);align-items:center;justify-content:center;padding:20px;">
-      <div style="width:min(460px,95vw);background:#151324;color:#fff;border:3px solid #c6a86f;border-radius:14px;padding:24px;font-family:system-ui,sans-serif;box-shadow:0 20px 80px #000;">
-        <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;">
-          <strong style="font-size:19px;">🎒 Inventário de Gabriel</strong>
-          <button id="inventory-close" onclick="toggleInventario()" aria-label="Fechar inventário" style="background:#322b45;border-radius:9px;color:white;padding:7px 12px;cursor:pointer;">✕</button>
+    <section id="inventory-panel" role="dialog" aria-modal="true" aria-labelledby="inventory-title">
+      <div class="inventory-window">
+        <div class="inventory-head"><h2 id="inventory-title">🎒 INVENTÁRIO</h2>
+          <button id="inventory-close" class="inventory-close" onclick="toggleInventario()" aria-label="Fechar inventário">✕ FECHAR</button>
         </div>
-        <p id="inventory-description" style="font-size:14px;line-height:1.6;margin-top:18px;">Nenhuma pista encontrada ainda.</p>
-        <p style="font-size:12px;color:#b6b0c6;margin-top:14px;">Pistas de história ficam guardadas neste navegador.</p>
+        <div class="inv-section-title">📜 ITENS DE HISTÓRIA</div>
+        <div id="inv-story-grid" class="inv-grid" role="group" aria-label="Nove espaços de história"></div>
+        <div class="inv-section-title">🧪 CONSUMÍVEIS</div>
+        <div id="inv-consumable-grid" class="inv-grid" role="group" aria-label="Nove espaços de consumíveis"></div>
+        <div class="inv-detail">
+          <div id="inv-detail-icon"></div>
+          <div style="flex:1">
+            <div id="inv-detail-title">Selecione um item</div>
+            <div id="inv-detail-text">As pistas não podem ser descartadas nem usadas. Consumíveis oferecem bônus ao herói.</div>
+            <div id="inv-actions" class="inv-actions"></div>
+          </div>
+        </div>
+        <p style="font-size:11px;color:#a8a0b9;margin-top:12px">JOGO PAUSADO • Tecla I ou ESC para fechar</p>
       </div>
     </section>
+    <div id="item-toast" role="status" aria-live="polite"></div>
 
     <!-- Controles Mobile -->
     <div id="mobile-controls" class="game-control-panel">
