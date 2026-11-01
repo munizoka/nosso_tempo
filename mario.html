@@ -377,18 +377,9 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
         const CONSUMABLE_IDS=['life','shield','speed','jump'];
         const STORY_IDS=['medallion','drink'];
         function loadInventory(){
-          let saved=null;
-          try{saved=JSON.parse(localStorage.getItem(INVENTORY_KEY)||'null');}catch(e){}
-          const story=Array.isArray(saved?.story)?saved.story.filter(id=>STORY_IDS.includes(id)):[];
-          // Inventário vazio por padrão: cada slot recebe seu próprio estado.
-          // Dados legados só são importados em um slot de recuperação, nunca
-          // carregados automaticamente em um "Novo Jogo".
-          const consumables={};
-          for(const id of CONSUMABLE_IDS){
-            const raw=saved?.consumables?.[id];
-            consumables[id]=Number.isSafeInteger(raw)?Math.max(0,Math.min(99,raw)):0;
-          }
-          return {version:2,story,consumables};
+          // A versão de saves usa inventário em branco até o jogador escolher
+          // um slot. O arquivo antigo é migrado isoladamente para o espaço 1.
+          return {version:2,story:[],consumables:{life:0,shield:0,speed:0,jump:0}};
         }
         const inventory=loadInventory();
         let activeSlot=null;
