@@ -28,3 +28,17 @@ for(const match of html.matchAll(/<script([^>]*)>([\s\S]*?)<\/script>/g)){
  count++;
 }
 console.log('✅ Sintaxe: '+count+' scripts. Para testar permissões execute npm run test:rules.');
+
+
+const mario=fs.readFileSync(path.join(root,'mario.html'),'utf8');
+const gameScript=mario.match(/<script>([\s\S]*?)<\/script>/)?.[1];
+check('Super Gabriel Bros contém JavaScript',!!gameScript);
+new Function(gameScript); // sintaxe do motor da plataforma
+check('Inventário com dezoito espaços',mario.includes('inv-story-grid')&&mario.includes('inv-consumable-grid')&&mario.includes('for(let n=0;n<9;n++)'));
+check('Sprite 68 e categorias RPG',mario.includes('68.png')&&mario.includes('ITENS DE HISTÓRIA')&&mario.includes('CONSUMÍVEIS'));
+check('Relógio virtual congela na pausa',mario.includes('if(!inventoryOpen){')&&mario.includes('gameNow+=dt*1000')&&mario.includes('if(inventoryOpen)return'));
+check('Consumíveis integrados a escudo, vidas e bônus temporários',mario.includes('function useInventoryItem(')&&mario.includes('activeBuffs.shield')&&mario.includes('activeBuffs.jumpUntil')&&mario.includes('activeBuffs.speedUntil'));
+check('Coleta única e persistência',mario.includes('collectedPickups.has(pickup.id)')&&mario.includes('function persistInventory(')&&mario.includes('localStorage.setItem(INVENTORY_KEY'));
+check('Pistas não podem ser descartadas',mario.includes("ITEM_CATALOG[id]?.kind!=='consumable'")&&mario.includes("ITEM_CATALOG[id]?.kind!=='story'"));
+check('Drink 67 na Fase 3 via animação ao inventário',mario.includes('drawSkyDrinkTransfer')&&mario.includes("giveStoryItem('drink')")&&mario.includes("villainDrink: '67.png'"));
+check('Inventário disponível a partir da Fase 3',mario.includes('function unlockInventory(')&&mario.includes("level=3;state='title3';cameraX=0;unlockInventory()"));
