@@ -1183,6 +1183,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
             score:Math.floor(clamp(data.score,0,9999999,0)),
             lives:Math.floor(clamp(data.lives,1,99,5)),
             elapsedSeconds:clamp(data.elapsedSeconds,0,999999,0),
+            superRemaining:clamp(data.superRemaining,0,SUPER_DURATION,0),
             player:{x:clamp(data.player?.x,0,3900,50),y:clamp(data.player?.y,-100,390,100),direction:data.player?.direction===-1?-1:1},
             checkpoint:{reached:data.checkpoint?.reached===true,x:clamp(data.checkpoint?.x,0,3900,0)},
             skyCheckpoint:{reached:data.skyCheckpoint?.reached===true,x:clamp(data.skyCheckpoint?.x,0,3900,0)},
@@ -1233,6 +1234,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           return sanitiseSave({
             version:1,savedAt:Date.now(),difficulty,level,
             phase:state==='playing'?'playing':'map',score,lives,elapsedSeconds,
+            superRemaining:Math.max(0,superPower.until-elapsedSeconds),
             player:{x:player.x,y:player.y,direction:player.direction},
             checkpoint:{reached:checkpointReached,x:checkpointX},
             skyCheckpoint:{reached:skyCheckpointReached,x:skyCheckpointX},
@@ -1274,6 +1276,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           for(const id of CONSUMABLE_IDS)inventory.consumables[id]=data.inventory.consumables[id];
           inventoryUnlocked=data.inventoryUnlocked;selectedInvItem=null;inventoryOpen=false;
           score=data.score;lives=data.lives;elapsedSeconds=data.elapsedSeconds;
+          superPower.until=elapsedSeconds+data.superRemaining;superPower.dashUntil=0;superPower.cooldownUntil=0;
           checkpointReached=data.checkpoint.reached;checkpointX=data.checkpoint.x;
           skyCheckpointReached=data.skyCheckpoint.reached;skyCheckpointX=data.skyCheckpoint.x;
           collectedPickups=new Set(data.collectedPickups);
