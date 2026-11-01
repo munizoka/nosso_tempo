@@ -105,6 +105,23 @@
         .action-btn:active { transform: translateY(8px); box-shadow: 0 0 0 #991b1b, 0 5px 10px rgba(0,0,0,0.5); background: #dc2626; }
 
         .ui-text { text-shadow: 2px 2px 0 #000, -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000; color: white; font-size: 14px; }
+        /* Vidas em pixel art e feedback de dano; atualização apenas quando muda o estado. */
+        .sgb-hearts{display:inline-flex;align-items:center;gap:2px;vertical-align:middle;white-space:nowrap}
+        .sgb-heart{height:clamp(14px,2.2vw,19px);width:clamp(14px,2.2vw,19px);object-fit:contain;image-rendering:pixelated;filter:drop-shadow(1px 1px 0 #110c1f)}
+        .sgb-heart.empty{opacity:.22;filter:grayscale(1) brightness(.9)}
+        .sgb-heart.hurt{animation:sgb-heart-hit .42s steps(3,end) both}
+        .sgb-heart-overflow{font:700 10px system-ui,sans-serif;margin-left:3px}
+        @keyframes sgb-heart-hit{0%{transform:scale(1.25);filter:brightness(2) drop-shadow(0 0 5px red)}
+          45%{transform:translate(-2px,2px) scale(1.12)}80%{transform:translate(2px,-1px) scale(.9)}100%{transform:scale(.65);opacity:0}}
+        .sgb-action-stack{display:flex;align-items:flex-end;gap:10px}
+        #btn-dash{display:none;align-items:center;justify-content:center;width:clamp(43px,12dvh,66px);height:clamp(43px,12dvh,66px);
+          margin-bottom:5px;background:linear-gradient(160deg,#ffe28b,#b886e9);border:3px solid #fff0b5;border-radius:50%;
+          color:#252038;font:900 21px system-ui,sans-serif;box-shadow:0 5px 0 #68518a,0 0 15px rgba(255,203,87,.35);
+          cursor:pointer;touch-action:none;user-select:none;-webkit-user-select:none}
+        #btn-dash.sgb-dash-visible{display:flex}
+        #btn-dash:active{transform:translateY(4px) scale(.96);box-shadow:0 1px 0 #68518a}
+        @media(prefers-reduced-motion:reduce){.sgb-heart.hurt{animation:none}}
+
 
 /* Inventário pixel art responsivo. Camada independente do Canvas. */
 #inventory-button{display:none;align-items:center;gap:3px;background:#291d39;border:2px solid #b69460;border-radius:9px;padding:3px 8px;color:#fff;cursor:pointer;image-rendering:pixelated;}
@@ -266,7 +283,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
         
         <div class="hud-stats flex gap-4 ui-text items-center mt-2 hidden sm:flex">
             <span id="ui-score">SCORE: 0</span>
-            <span id="ui-lives">🍄 x5</span>
+            <span id="ui-lives" aria-label="Vidas">🍄 x5</span>
             <span id="ui-time">⏱ 00:00:00</span>
             <span id="ui-level">FASE: 1</span>
         </div>
@@ -360,7 +377,8 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
             <button id="btn-right" class="dpad-btn" aria-label="Mover para direita">▶︎</button>
         </div>
 
-        <div class="pointer-events-auto opacity-90 hover:opacity-100 transition-opacity">
+        <div class="pointer-events-auto opacity-90 hover:opacity-100 transition-opacity sgb-action-stack">
+            <button id="btn-dash" aria-label="Investida Super Gabriel" title="Investida (X)" type="button">B</button>
             <button id="btn-jump" class="action-btn" aria-label="Pular ou escolher fase">A</button>
         </div>
     </div>
@@ -432,6 +450,11 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
         let checkpointReached = false;
         let checkpointX = 0;
         let invulnerable = 0;
+        // Power-up 79: tempos em segundos ATIVOS, suspensos com inventário/menu abertos.
+        const SUPER_DURATION=12, DASH_DURATION=.52, DASH_COOLDOWN=.95;
+        const superPower={until:0,dashUntil:0,cooldownUntil:0,facing:1};
+        const burgerDrops=[],questionBlocksHit=new Set();
+        let damagedHeartUntil=0,damagedHeartIndex=-1,lastHeartSignature='';
         let forestPlatforms = [];
         const FOREST_END = 3400;
         const testMode = new URLSearchParams(window.location.search).get('teste');
@@ -470,14 +493,15 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           life:{id:'life',kind:'consumable',name:'Cogumelo de Vida',icon:'🍄',description:'Concede uma vida extra imediatamente (limite: 99).'},
           shield:{id:'shield',kind:'consumable',name:'Escudo Protetor',icon:'🛡️',description:'Protege de um ataque inimigo. Não protege contra cair no abismo.'},
           speed:{id:'speed',kind:'consumable',name:'Poção de Velocidade',icon:'⚡',description:'Aumenta a velocidade durante 12 segundos de jogo.'},
-          jump:{id:'jump',kind:'consumable',name:'Poção de Superpulo',icon:'🧪',description:'Aumenta a altura do salto durante 12 segundos de jogo.'}
+          jump:{id:'jump',kind:'consumable',name:'Poção de Superpulo',icon:'🧪',description:'Aumenta a altura do salto durante 12 segundos de jogo.'},
+          burger:{id:'burger',kind:'consumable',name:'Hambúrguer da Super Força',asset:'79.png',icon:'🍔',description:'Transforma Gabriel por 12 segundos de jogo e libera a investida: X no computador ou botão B no celular.'}
         };
-        const CONSUMABLE_IDS=['life','shield','speed','jump'];
+        const CONSUMABLE_IDS=['life','shield','speed','jump','burger'];
         const STORY_IDS=['medallion','drink'];
         function loadInventory(){
           // A versão de saves usa inventário em branco até o jogador escolher
           // um slot. O arquivo antigo é migrado isoladamente para o espaço 1.
-          return {version:2,story:[],consumables:{life:0,shield:0,speed:0,jump:0}};
+          return {version:2,story:[],consumables:{life:0,shield:0,speed:0,jump:0,burger:0}};
         }
         const inventory=loadInventory();
         let activeSlot=null;
@@ -560,6 +584,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           if(id==='shield')return activeBuffs.shield===0;
           if(id==='speed')return elapsedSeconds>=activeBuffs.speedUntil;
           if(id==='jump')return elapsedSeconds>=activeBuffs.jumpUntil;
+          if(id==='burger')return elapsedSeconds>=superPower.until;
           return false;
         }
         function useInventoryItem(id){
@@ -568,6 +593,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           else if(id==='shield')activeBuffs.shield=1;
           else if(id==='speed')activeBuffs.speedUntil=elapsedSeconds+12;
           else if(id==='jump')activeBuffs.jumpUntil=elapsedSeconds+12;
+          else if(id==='burger'){superPower.until=elapsedSeconds+SUPER_DURATION;superPower.dashUntil=0;superPower.cooldownUntil=0;}
           inventory.consumables[id]--;
           persistInventory();renderInventory();
           showItemToast('BÔNUS ATIVADO: '+ITEM_CATALOG[id].name);
@@ -613,7 +639,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           const heading=document.getElementById('inv-detail-title'),info=document.getElementById('inv-detail-text'),icon=document.getElementById('inv-detail-icon'),actions=document.getElementById('inv-actions');
           if(heading)heading.textContent=item?.name||'Selecione um item';
           if(info)info.textContent=item?(item.description+(item.origin?' • Origem: '+item.origin:'')):'Clique em um espaço ocupado para ver detalhes.';
-          if(icon)icon.textContent=item?.icon||'';
+          if(icon){icon.replaceChildren();if(item?.asset){const img=document.createElement('img');img.src=item.asset;img.alt='';img.style.cssText='width:42px;height:42px;object-fit:contain;image-rendering:pixelated';img.onerror=()=>{icon.textContent=item.icon||'';};icon.appendChild(img);}else icon.textContent=item?.icon||'';}
           if(actions){
             actions.replaceChildren();
             if(item?.kind==='story'){
@@ -807,15 +833,41 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           retroText('▲',mapHead.x,mapHead.y-25,8,'#ffeff4');
         }
 
+        function isSuperGabriel(){return elapsedSeconds<superPower.until;}
+        function isDashing(){return elapsedSeconds<superPower.dashUntil;}
+        function updateDashButton(){
+          const button=document.getElementById('btn-dash');if(!button)return;
+          const show=isSuperGabriel()&&state==='playing'&&!menuOpen&&!inventoryOpen;
+          button.classList.toggle('sgb-dash-visible',show);
+          button.disabled=!show||elapsedSeconds<superPower.cooldownUntil;
+          button.setAttribute('aria-hidden',String(!show));
+        }
         function setHUD() {
           HUD.score.textContent = `SCORE: ${score}`;
-          HUD.lives.textContent = `🍄 x${Math.max(0, lives)}`;
           if (HUD.level) HUD.level.textContent = `FASE: ${level}`;
+          const showDamage=elapsedSeconds<damagedHeartUntil;
+          const signature=[lives,gameLives(),showDamage?damagedHeartIndex:-1].join(':');
+          if(HUD.lives&&signature!==lastHeartSignature){
+            const count=Math.min(5,Math.max(gameLives(),Math.min(5,lives)));
+            let markup='<span class="sgb-hearts">';
+            for(let i=0;i<count;i++){
+              const hit=showDamage&&i===damagedHeartIndex;
+              const full=i<lives;
+              markup+='<img alt="" aria-hidden="true" class="sgb-heart'+(hit?' hurt':!full?' empty':'')+
+                '" src="'+(hit?'83.png':'80.png')+'">';
+            }
+            if(lives>5)markup+='<span class="sgb-heart-overflow">+'+(lives-5)+'</span>';
+            markup+='</span>';
+            HUD.lives.innerHTML=markup;
+            HUD.lives.setAttribute('aria-label',lives+' vidas');
+            lastHeartSignature=signature;
+          }
           const sec = Math.floor(elapsedSeconds);
           const h = String(Math.floor(sec / 3600)).padStart(2,'0');
           const m = String(Math.floor((sec % 3600) / 60)).padStart(2,'0');
-          const s = String(sec % 60).padStart(2,'0');
-          HUD.time.textContent = `⏱ ${h}:${m}:${s}`;
+          const t = String(sec % 60).padStart(2,'0');
+          HUD.time.textContent = `⏱ ${h}:${m}:${t}`;
+          updateDashButton();
         }
 
         // Os sprites originais precisam do recorte do fundo verde, mas as novas
@@ -832,7 +884,8 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           sky: '43.jpg', mountains: '44.png', trees: '45.png', giantTree: '46.png',
           forestGround: '47.png', dirt: '48.jpg', wood: '49.png', magic: '50.png',
           checkpointOff: '51.png', checkpointOn: '52.png', villain: '53.png', portal: '54.png', mapHead: '55.jpg',
-          totemOn: '56.png', totemOff: '57.png', skyTemple: '58.png', skyGround: '59.png', skyPlatform: '60.png', skyCrow: '61.png', skyAltarOff: '62.png', skyAltarOn: '63.png', windShort: '64.png', windLong: '65.png', windUp: '66.png', villainDrink: '67.png'
+          totemOn: '56.png', totemOff: '57.png', skyTemple: '58.png', skyGround: '59.png', skyPlatform: '60.png', skyCrow: '61.png', skyAltarOff: '62.png', skyAltarOn: '63.png', windShort: '64.png', windLong: '65.png', windUp: '66.png', villainDrink: '67.png',
+          superHero:'78.png', burger:'79.png', heart:'80.png', dashHero:'81.png', dashSuper:'82.png', heartHit:'83.png'
         };
 
         function cropSprite(img) {
@@ -932,7 +985,15 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
         Object.entries(extraPaths).forEach(([key,path])=>{
           const img=new Image();
           extras[key]=null;
-          img.onload=()=>{extras[key]=(['sky','mountains','trees','skyTemple'].includes(key)?img:cropSprite(img));};
+          img.onload=()=>{
+            try{
+              if(key==='superHero'){
+                const sheet=cropSprite(img);
+                processedAssets.superHeroFrames=makeFrames(sheet,4);
+                extras[key]=sheet;
+              }else extras[key]=(['sky','mountains','trees','skyTemple'].includes(key)?img:cropSprite(img));
+            }catch(error){console.error('Falha ao processar '+path,error);}
+          };
           img.onerror=()=>{ if(key!=='dirt')console.warn('Não foi possível carregar '+path); };
           img.src=path;
         });
@@ -1040,6 +1101,58 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
         let enemies=level1EnemyTemplate.map(e=>({...e}));
         function activeBlocks(){return level===1?level1Blocks:(level===2?level2Blocks:level3Blocks);}
         function isColliding(a,b){return a.x<b.x+b.w&&a.x+a.w>b.x&&a.y<b.y+b.h&&a.y+a.h>b.y;}
+        function questionId(b){return 'burger:1:'+Math.round(b.x)+':'+Math.round(b.y);}
+        function hitQuestionBlock(b){
+          if(level!==1||b.type!=='surprise')return;
+          const id=questionId(b);
+          if(collectedPickups.has(id)||questionBlocksHit.has(id))return;
+          questionBlocksHit.add(id);b.bumpUntil=elapsedSeconds+.18;
+          // Sobe do ? e desliza para a direita, aterrissando em chão seguro.
+          burgerDrops.push({id,x:b.x+b.w/2-15,y:b.y-12,w:30,h:30,phase:'rise',
+            peak:b.y-42,drift:0,vy:0});
+          showItemToast('BLOCO SURPRESA: HAMBÚRGUER!');
+        }
+        function updateBurgerDrops(dt){
+          for(let i=burgerDrops.length-1;i>=0;i--){
+            const drop=burgerDrops[i];
+            if(drop.phase==='rise'){
+              drop.y-=105*dt;
+              if(drop.y<=drop.peak){drop.y=drop.peak;drop.phase='fall';}
+            }else if(drop.phase==='fall'){
+              drop.drift=Math.min(82,drop.drift+95*dt);
+              drop.x+=95*dt*(drop.drift<82?1:0);
+              drop.vy=Math.min(250,drop.vy+460*dt);
+              drop.y+=drop.vy*dt;
+              const floor=level1Blocks.find(b=>b.type==='ground'&&drop.x+drop.w/2>=b.x&&drop.x+drop.w/2<b.x+b.w);
+              if(floor&&drop.y+drop.h>=floor.y){drop.y=floor.y-drop.h;drop.phase='idle';}
+            }
+            if(isColliding(player,drop) && (inventory.consumables.burger||0)<99){
+              collectedPickups.add(drop.id);
+              if(addConsumable('burger',1)){
+                burgerDrops.splice(i,1);
+                // Exceção intencional ao desbloqueio da fase 3:
+                // o inventário abre ao ganhar o primeiro consumível.
+                unlockInventory();
+              }else collectedPickups.delete(drop.id);
+            }
+          }
+        }
+        function drawBurgerDrops(){
+          for(const drop of burgerDrops){
+            if(extras.burger)drawObject(extras.burger,drop.x,drop.y,drop.w,drop.h);
+            else{ctx.fillStyle='#e7a34f';ctx.fillRect(drop.x,drop.y,drop.w,drop.h);}
+          }
+        }
+        function trySuperDash(){
+          if(menuOpen||inventoryOpen||state!=='playing'||!isSuperGabriel()||
+             isDashing()||elapsedSeconds<superPower.cooldownUntil)return false;
+          superPower.facing=player.direction||1;
+          superPower.dashUntil=elapsedSeconds+DASH_DURATION;
+          superPower.cooldownUntil=elapsedSeconds+DASH_COOLDOWN;
+          player.direction=superPower.facing;
+          showItemToast('SUPER INVESTIDA!');
+          return true;
+        }
 
 
         // Três saves locais separados. Nenhum é carregado automaticamente.
@@ -1139,6 +1252,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           level=1;state='playing';score=0;elapsedSeconds=0;
           inventory.story.splice(0);for(const id of CONSUMABLE_IDS)inventory.consumables[id]=0;
           inventoryUnlocked=false;inventoryOpen=false;selectedInvItem=null;
+          collectedPickups=new Set();
           for(const n of [1,2,3])levelComplete[n]=false;
           restartCurrentLevel();
           state='map';mapHead.x=139;mapHead.y=319;
@@ -1398,7 +1512,10 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           skyAltarActivated=false;skyAltarActivatedAt=0;
           skyCheckpointReached=false;skyCheckpointX=0;
           activeBuffs.shield=0;activeBuffs.speedUntil=0;activeBuffs.jumpUntil=0;
-          collectedPickups=new Set();
+          superPower.until=superPower.dashUntil=superPower.cooldownUntil=0;
+          damagedHeartUntil=0;damagedHeartIndex=-1;lastHeartSignature='';
+          burgerDrops.length=0;questionBlocksHit.clear();
+          // collectedPickups é do slot: reiniciar não pode duplicar hambúrguer coletado.
           enemies=(level===1?level1EnemyTemplate:level===2?level2EnemyTemplate:[]).map(e=>({...e}));
           skyBirds=freshSkyBirds();
           for(const b of [...level2Blocks,...level3Blocks])if(b.moving){b.x=b.baseX;b.y=b.baseY;}
@@ -1412,6 +1529,9 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
             showItemToast('ESCUDO PROTEGEU GABRIEL!');return;
           }
           lives--;
+          damagedHeartIndex=Math.max(0,Math.min(4,lives));
+          damagedHeartUntil=elapsedSeconds+.62;
+          superPower.dashUntil=0;
           if(lives<=0){state='gameover';setHUD();if(activeSlot!==null)saveCurrentSlot(false);return;}
           enemies=(level===1?level1EnemyTemplate:level===2?level2EnemyTemplate:[]).map(e=>({...e}));
           skyBirds=freshSkyBirds();
@@ -1542,7 +1662,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           if(menuOpen)return;
           if(e.code==='KeyI'){e.preventDefault();window.toggleInventario();return;}
           if(inventoryOpen){if(e.code==='Escape'){e.preventDefault();window.toggleInventario();}return;}
-          if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','KeyA','KeyD','KeyW','KeyS','Enter'].includes(e.code))e.preventDefault();
+          if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','KeyA','KeyD','KeyW','KeyS','KeyX','Enter'].includes(e.code))e.preventDefault();
           if(state==='map'){
             if(e.repeat && (e.code==='Enter'||e.code==='Space'))return;
             if(e.code==='Enter'||e.code==='Space'){chooseMapLevel();return;}
@@ -1557,6 +1677,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           if(state==='title3'&&(e.code==='Enter'||e.code==='Space'||e.code==='ArrowUp')){startSkyLevel();return;}
           if(['Enter','Space','ArrowUp'].includes(e.code)&&skipStoryScene())return;
           if(state!=='playing')return;
+          if(e.code==='KeyX'&&!e.repeat){trySuperDash();return;}
           if(e.code==='ArrowLeft'||e.code==='KeyA')keys.left=true;
           if(e.code==='ArrowRight'||e.code==='KeyD')keys.right=true;
           if(e.code==='Space'||e.code==='ArrowUp'||e.code==='KeyW')keys.up=true;
@@ -1591,6 +1712,9 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
         }
         bindInput('btn-left','left');bindInput('btn-right','right');
         bindInput('btn-up','up');bindInput('btn-down','down');bindInput('btn-jump','up');
+        document.getElementById('btn-dash')?.addEventListener('pointerdown',e=>{
+          e.preventDefault();trySuperDash();
+        });
 
         function updateMovingPlatforms(t){
           // Movimento senoidal previsível. Um jogador em cima é transportado junto.
@@ -1647,6 +1771,9 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
                 break;
               }
             }
+            if(isDashing()&&isColliding(player,enemy)){
+              enemy.alive=false;score+=150;setHUD();continue;
+            }
             if(invulnerable<=0&&isColliding(player,enemy)){
               if(player.vy>0&&player.y+player.h<=enemy.y+20){
                 enemy.alive=false;player.vy=player.jumpPower*0.8;score+=100;setHUD();
@@ -1663,6 +1790,9 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
               bird.x=Math.max(bird.baseX-bird.range,Math.min(bird.baseX+bird.range,bird.x));
             }
             bird.y=bird.baseY+Math.sin(t*2.5+bird.phase)*24;
+            if(isDashing()&&isColliding(player,bird)){
+              bird.alive=false;score+=180;setHUD();continue;
+            }
             if(invulnerable<=0&&isColliding(player,bird)){
               if(player.vy>0&&player.y+player.h<bird.y+18){
                 bird.alive=false;player.vy=player.jumpPower*.72;score+=150;setHUD();
@@ -1717,11 +1847,12 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           if(activeSlot!==null){saveAccumulator+=dt;if(saveAccumulator>=15){saveAccumulator=0;saveCurrentSlot(false);}}
           invulnerable=Math.max(0,invulnerable-dt);
           const effectiveSpeed=player.speed*(elapsedSeconds<activeBuffs.speedUntil?1.5:1);
-          if(keys.left){player.vx=-effectiveSpeed;player.direction=-1;}
+          if(isDashing()){player.vx=superPower.facing*13;player.direction=superPower.facing;}
+          else if(keys.left){player.vx=-effectiveSpeed;player.direction=-1;}
           else if(keys.right){player.vx=effectiveSpeed;player.direction=1;}
           else player.vx=0;
           // Ventos atuam somente dentro da faixa visível da rajada.
-          if(level===3){
+          if(level===3&&!isDashing()){
             for(const gust of skyWindZones){
               const inWind=player.x+player.w>gust.x&&player.x<gust.x+gust.w&&
                 player.y+player.h>gust.y&&player.y<gust.y+gust.h;
@@ -1729,7 +1860,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
             }
             player.vx=Math.max(-7,Math.min(7,player.vx));
           }
-          if(keys.up&&player.grounded){
+          if(keys.up&&player.grounded&&!isDashing()){
             player.vy=player.jumpPower*(elapsedSeconds<activeBuffs.jumpUntil?1.3:1);
             player.grounded=false;
           }
@@ -1753,6 +1884,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
               if(player.vx>0)player.x=b.x-player.w;
               else if(player.vx<0)player.x=b.x+b.w;
               player.vx=0;
+              if(isDashing())superPower.dashUntil=elapsedSeconds;
             }
           }
           const oldFootY=player.y+player.h;
@@ -1763,7 +1895,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
             if(b.type==='skyPlatform' && !(player.vy>=0&&oldFootY<=b.y+7))continue;
             if(isColliding(player,b)){
               if(player.vy>0){player.y=b.y-player.h;player.vy=0;player.grounded=true;}
-              else if(player.vy<0){player.y=b.y+b.h;player.vy=0;}
+              else if(player.vy<0){if(b.type==='surprise')hitQuestionBlock(b);player.y=b.y+b.h;player.vy=0;}
             }
           }
           if(player.y>GAME_HEIGHT+200){loseLife('fall');return;}
@@ -1775,6 +1907,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
             checkpointReached=true;checkpointX=1730;score+=250;setHUD();
           }
           updateLevelPickups();
+          if(level===1)updateBurgerDrops(dt);
           if(level===3)updateSkyBirds(elapsedSeconds);
           else updateEnemies();
           if(state!=='playing')return;
@@ -1788,7 +1921,8 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           }
           const maxCamera=level===1?3250:(level===2?FOREST_END-GAME_WIDTH:SKY_END-GAME_WIDTH);
           cameraX=Math.max(0,Math.min(maxCamera,player.x-GAME_WIDTH/2.5));
-          if(!player.grounded)player.animFrame=2;
+          if(isDashing())player.animFrame=1;
+          else if(!player.grounded)player.animFrame=2;
           else if(player.vx!==0){player.animTimer++;
             if(player.animTimer>8){player.animFrame=player.animFrame===1?0:1;player.animTimer=0;}}
           else player.animFrame=0;
@@ -1967,11 +2101,17 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           ctx.save();ctx.translate(-Math.round(cameraX),0);
           for(const b of level1Blocks){
             if(b.type==='ground')drawOriginalGround(b);
-            else drawObject(processedAssets[b.type],b.x,b.y,b.w,b.h);
+            else if(b.type==='surprise'&&collectedPickups.has(questionId(b)))
+              drawObject(processedAssets.brick,b.x,b.y,b.w,b.h);
+            else if(b.type==='surprise'&&questionBlocksHit.has(questionId(b)))
+              drawObject(processedAssets.brick,b.x,b.y,b.w,b.h);
+            else drawObject(processedAssets[b.type],b.x,
+              b.y-(b.bumpUntil>elapsedSeconds?Math.sin(((b.bumpUntil-elapsedSeconds)/.18)*Math.PI)*7:0),b.w,b.h);
           }
           drawObject(processedAssets.castle,castle.x,castle.y,castle.w,castle.h);
           if(state==='cutscene')drawCinematicCharacters(cinematicSeconds);
           else drawSpriteOnFeet(processedAssets.princess,princess.x+princess.w/2,princess.y+princess.h,princess.h);
+          drawBurgerDrops();
           drawEnemies();
           drawHero();
           ctx.restore();
@@ -1991,8 +2131,13 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           // Nos diálogos e nas telas de fim de fase, nunca herdar o frame de
           // corrida ou salto do último instante de jogo. A boca segue animada.
           const frame=state==='playing'?Math.min(3,player.animFrame):0;
-          const sprite=processedAssets.heroFrames?.[frame]||processedAssets.heroFrames?.[0];
-          drawSpeakingSprite(sprite,player.x+player.w/2,player.y+player.h,player.h,'GABRIEL',player.direction);
+          const normal=processedAssets.heroFrames?.[frame]||processedAssets.heroFrames?.[0];
+          const powerful=processedAssets.superHeroFrames?.[frame]||processedAssets.superHeroFrames?.[0];
+          const sprite=(state==='playing'&&isDashing()?
+            (isSuperGabriel()?extras.dashSuper:extras.dashHero):
+            (isSuperGabriel()?powerful:null))||normal;
+          const size=state==='playing'&&isDashing()?48:player.h;
+          drawSpeakingSprite(sprite,player.x+player.w/2,player.y+player.h,size,'GABRIEL',player.direction);
         }
         function easeOut(v){const x=Math.max(0,Math.min(1,v));return 1-(1-x)*(1-x);}
         function drawCinematicCharacters(t){
@@ -2136,14 +2281,17 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           const princessX=princessHomeX+(portalX-princessHomeX-13)*slide;
           const shrink=1-.48*easeOut((t-(intro?9.5:9.0))/1.1);
           const floatY=Math.sin(t*3)*3;
+          // Durante a conversa, ambos encaram Gabriel; na fuga voltam ao portal.
+          const princessFacing=slide>.12?(portalX>princessX?1:-1):(player.x<princessX?-1:1);
+          const villainFacing=slide>.12?(portalX>villainX?1:-1):(player.x<villainX?-1:1);
           ctx.save();ctx.globalAlpha=alpha;
           ctx.translate(princessX,359+floatY-16*slide);
           ctx.scale(shrink,shrink);
-          drawSpeakingSprite(processedAssets.princess,0,0,49,'VITORIA');
+          drawSpeakingSprite(processedAssets.princess,0,0,49,'VITORIA',princessFacing);
           ctx.restore();
           ctx.save();ctx.globalAlpha=alpha;
           ctx.translate(villainX,367+floatY-13*slide);
-          ctx.scale(shrink,shrink);
+          ctx.scale(shrink*villainFacing,shrink);
           if(extras.villain)drawObject(extras.villain,-38,-100,76,100);
           else{ctx.fillStyle='#211136';ctx.fillRect(-25,-90,50,87);}
           ctx.restore();
