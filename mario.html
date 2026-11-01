@@ -1874,6 +1874,17 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           return !terrain.some(tile=>tile.type!=='ground'&&tile.type!=='forestGround'&&tile.type!=='skyPlatform'&&
             tile.x<b&&tile.x+tile.w>a&&tile.y<eyeY&&tile.y+tile.h>eyeY);
         }
+        const ENEMY_LOST_SIGHT_SECONDS=10;
+        // Na perseguição, a visão pode mudar de lado sem precisar de outro espanto.
+        // Paredes, distância ou diferença grande de altura interrompem o contato.
+        function enemyHasVisualContact(enemy,terrain){
+          const ex=enemy.x+enemy.w/2,px=player.x+player.w/2;
+          const eyeY=enemy.y+enemy.h*.48;
+          if(Math.abs(px-ex)>300||Math.abs((player.y+player.h/2)-eyeY)>65)return false;
+          const a=Math.min(ex,px),b=Math.max(ex,px);
+          return !terrain.some(tile=>tile.type!=='ground'&&tile.type!=='forestGround'&&tile.type!=='skyPlatform'&&
+            tile.x<b&&tile.x+tile.w>a&&tile.y<eyeY&&tile.y+tile.h>eyeY);
+        }
         function defeatEnemy(enemy,points){
           enemy.alive=false;score+=points;setHUD();
           fallenEnemies.push({type:enemy.type,x:enemy.x,y:enemy.y,w:enemy.w,h:enemy.h,
@@ -1886,6 +1897,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
             if(!enemy.alive)continue;
             if(!enemy.aiState)enemy.aiState='patrol';
             if(!enemy.patrolSpeed)enemy.patrolSpeed=Math.abs(enemy.vx)||1.5;
+            if(!enemy.patrolDirection)enemy.patrolDirection=enemy.vx<0?-1:1;
             const oldBottom=enemy.y+enemy.h;
             enemy.y+=4;
             let grounded=false;
@@ -1896,6 +1908,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
             }
             if(enemy.aiState==='patrol'&&enemyCanSpotHero(enemy,terrain)){
               enemy.aiState='alert';enemy.alertUntil=elapsedSeconds+.42;
+              enemy.lastSeenAt=elapsedSeconds;
               enemy.facing=enemy.vx<0?-1:1;
               enemy.vx=0;
             }
@@ -1904,10 +1917,17 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
               if(elapsedSeconds>=enemy.alertUntil)enemy.aiState='chase';
             }
             if(enemy.aiState==='chase'){
-              const dx=player.x+player.w/2-(enemy.x+enemy.w/2);
-              const dir=Math.abs(dx)>6?Math.sign(dx):0;
-              if(dir)enemy.facing=dir;
-              enemy.vx=dir*enemy.patrolSpeed*1.25;
+              if(enemyHasVisualContact(enemy,terrain))enemy.lastSeenAt=elapsedSeconds;
+              if(elapsedSeconds-(enemy.lastSeenAt??elapsedSeconds)>=ENEMY_LOST_SIGHT_SECONDS){
+                enemy.aiState='patrol';
+                enemy.vx=enemy.patrolDirection*enemy.patrolSpeed;
+                enemy.facing=enemy.patrolDirection;
+              }else{
+                const dx=player.x+player.w/2-(enemy.x+enemy.w/2);
+                const dir=Math.abs(dx)>6?Math.sign(dx):0;
+                if(dir)enemy.facing=dir;
+                enemy.vx=dir*enemy.patrolSpeed*1.25;
+              }
             }
             if(enemy.aiState==='patrol'&&enemy.vx)enemy.facing=Math.sign(enemy.vx);
             let blocked=false;
