@@ -239,6 +239,8 @@
         const SKY_DRINK_FLIGHT_MS=2750;
         const SKY_DRINK_ROLL_MS=850;
         const SKY_OUTRO_POSTSCENE_MS=3900;
+        const SKY_DRINK_TRANSFER_START=SKY_DRINK_DROP_START+(SKY_DRINK_FLIGHT_MS+SKY_DRINK_ROLL_MS)/1000;
+        const SKY_DRINK_TRANSFER_DURATION=1.75;
         let skyAltarActivated=false,skyAltarActivatedAt=0,skySceneStart=0,skySceneSeconds=0;
         let skyCheckpointReached=false,skyCheckpointX=0;
         let skyBirds=[];
@@ -289,13 +291,13 @@
           try{localStorage.setItem(INVENTORY_KEY,JSON.stringify(inventory));}catch(e){console.warn('Inventário sem persistência local',e);}
         }
         function showItemToast(message){
-          itemToastMessage=message;itemToastUntil=elapsedSeconds+3.5;
+          itemToastMessage=message;itemToastUntil=gameNow+3500;
           const toast=document.getElementById('item-toast');
           if(toast){toast.textContent=message;toast.style.display='block';}
         }
         function updateToast(){
           const toast=document.getElementById('item-toast');
-          if(toast&&toast.style.display==='block'&&elapsedSeconds>=itemToastUntil)toast.style.display='none';
+          if(toast&&toast.style.display==='block'&&gameNow>=itemToastUntil)toast.style.display='none';
         }
         function unlockInventory(){
           inventoryUnlocked=true;
@@ -1120,6 +1122,7 @@
         function update(dt,now){
           document.body.classList.toggle('map-mode',state==='map');
           if(!sceneReady||inventoryOpen)return;
+          updateToast();
           if(state==='map'){updateMap(dt);return;}
           if(state==='cutscene'){
             cinematicSeconds=(now-cutsceneStart)/1000;
@@ -1140,6 +1143,8 @@
             if(state==='skyIntro'&&skySceneSeconds>=skyDialogueDuration())finishSkyIntro();
             else if(state==='skyOutro'){
               updateSkyOutroFacing();
+              if(skySceneSeconds>=SKY_DRINK_TRANSFER_START+SKY_DRINK_TRANSFER_DURATION)
+                giveStoryItem('drink');
               if(skySceneSeconds>=skyDialogueDuration()+SKY_OUTRO_POSTSCENE_MS/1000)finishSkyOutro();
             }
             return;
@@ -1157,7 +1162,7 @@
             return;
           }
           if(state!=='playing')return;
-          elapsedSeconds+=dt;updateToast();
+          elapsedSeconds+=dt;
           invulnerable=Math.max(0,invulnerable-dt);
           const effectiveSpeed=player.speed*(elapsedSeconds<activeBuffs.speedUntil?1.5:1);
           if(keys.left){player.vx=-effectiveSpeed;player.direction=-1;}
@@ -1904,6 +1909,8 @@
           return {x,foot,angle,travel:rollProgress,phase:rollProgress>=1?'stopped':'roll'};
         }
         function drawSkyDrink(){
+          // Depois do salto, o drink deixa o mundo e viaja até o inventário do HUD.
+          if(skySceneSeconds>=SKY_DRINK_TRANSFER_START)return;
           const pose=getSkyDrinkPose(skySceneSeconds);
           if(!pose)return;
           // Discretas partículas claras reforçam a parábola, sem usar as
@@ -1930,6 +1937,32 @@
             ctx.fillStyle='#7d2fc6';ctx.fillRect(-9,-22,18,14);
             ctx.fillStyle='#3c2358';ctx.fillRect(-12,-31,24,4);
             ctx.fillStyle='#fff3d1';ctx.fillRect(8,-41,3,14);
+          }
+          ctx.restore();
+        }
+        // Efeito em coordenadas de tela (fora da câmera) até o botão 68.png.
+        function drawSkyDrinkTransfer(){
+          if(state!=='skyOutro'||skySceneSeconds<SKY_DRINK_TRANSFER_START)return;
+          const progress=Math.min(1,(skySceneSeconds-SKY_DRINK_TRANSFER_START)/SKY_DRINK_TRANSFER_DURATION);
+          if(progress>=1)return;
+          const ease=easeOut(progress);
+          const button=document.getElementById('inventory-button');
+          const canvasRect=canvas.getBoundingClientRect?.(),buttonRect=button?.getBoundingClientRect?.();
+          const targetX=canvasRect?.width&&buttonRect?.width?
+            ((buttonRect.left+buttonRect.width/2-canvasRect.left)/canvasRect.width)*GAME_WIDTH:GAME_WIDTH-67;
+          const targetY=canvasRect?.height&&buttonRect?.height?
+            ((buttonRect.top+buttonRect.height/2-canvasRect.top)/canvasRect.height)*GAME_HEIGHT:24;
+          const originX=(SKY_ALTAR_X-132)-cameraX;
+          const originY=339;
+          const x=originX+(targetX-originX)*ease;
+          const y=originY+(targetY-originY)*ease-Math.sin(Math.PI*progress)*74;
+          const size=40-23*ease;
+          ctx.save();
+          ctx.globalAlpha=1-.1*ease;
+          ctx.shadowColor='#e5b6ff';ctx.shadowBlur=8+15*progress;
+          if(extras.villainDrink)drawObject(extras.villainDrink,x-size/2,y-size/2,size,size);
+          else{
+            ctx.fillStyle='#a778f5';ctx.fillRect(x-size/2,y-size/2,size,size);
           }
           ctx.restore();
         }
@@ -1963,9 +1996,10 @@
           drawHero();
           ctx.restore();
           ctx.restore();
+          if(state==='skyOutro')drawSkyDrinkTransfer();
           if(state==='skyIntro'||state==='skyOutro')drawSkyStoryText();
           if(state==='skyOutro'&&skySceneSeconds>=skyDialogueDuration()){
-            pixelText('ALGO CAIU DO PORTAL...',GAME_HEIGHT-44,9,'#ffe9b0');
+            pixelText(inventory.story.includes('drink')?'PISTA GUARDADA NO INVENTARIO!':'ALGO CAIU DO PORTAL...',GAME_HEIGHT-44,8,'#ffe9b0');
           }
           if(state==='skyAltarCharge'){
             ctx.fillStyle='rgba(7,32,62,.76)';ctx.fillRect(186,72,430,57);
