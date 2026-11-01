@@ -45,8 +45,10 @@ service cloud.firestore {
         && data.payload.keys().hasOnly([
           'version','savedAt','difficulty','level','phase','score','lives','elapsedSeconds',
           'player','checkpoint','skyCheckpoint','levelComplete','inventory',
-          'collectedPickups','inventoryUnlocked','legacy'
+          'collectedPickups','inventoryUnlocked','legacy','superRemaining'
         ])
+        && (!('superRemaining' in data.payload) ||
+          (data.payload.superRemaining is number && data.payload.superRemaining >= 0 && data.payload.superRemaining <= 12))
         && data.payload.version == 1
         && data.payload.savedAt is number
         && data.payload.difficulty in ['easy','normal','hard']
@@ -82,7 +84,11 @@ service cloud.firestore {
         && data.payload.inventory.story.size() <= 9
         && data.payload.inventory.story.hasOnly(['medallion','drink'])
         && data.payload.inventory.consumables is map
-        && data.payload.inventory.consumables.keys().hasOnly(['life','shield','speed','jump'])
+        && data.payload.inventory.consumables.keys().hasOnly(['life','shield','speed','jump','burger'])
+        && (!('burger' in data.payload.inventory.consumables) ||
+          (data.payload.inventory.consumables.burger is int &&
+           data.payload.inventory.consumables.burger >= 0 &&
+           data.payload.inventory.consumables.burger <= 99))
         && data.payload.collectedPickups is list
         && data.payload.collectedPickups.size() <= 100
         && data.payload.inventoryUnlocked is bool

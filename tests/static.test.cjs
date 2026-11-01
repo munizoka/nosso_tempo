@@ -53,7 +53,7 @@ check('Vitoria e vilão se voltam ao herói na introdução da fase 3',mario.inc
 
 check('Menu inicial contém ações principais', ['sgb-menu','NOVO JOGO','CARREGAR JOGO','OPÇÕES','SAIR DO JOGO'].every(x=>mario.includes(x)));
 check('Três saves independentes em localStorage',mario.includes('super-gabriel-bros-save-slots-v1')&&mario.includes('function sanitiseSave(')&&mario.includes('function startNewCampaign(')&&mario.includes('function loadCampaign('));
-check('Novo jogo não carrega inventário legado',mario.includes('function loadInventory(){')&&mario.includes('return {version:2,story:[],consumables:{life:0,shield:0,speed:0,jump:0}};'));
+check('Novo jogo não carrega inventário legado',mario.includes('function loadInventory(){')&&mario.includes('return {version:2,story:[],consumables:{life:0,shield:0,speed:0,jump:0,burger:0}};'));
 check('Legado recuperável e isolado',mario.includes('slotTable[0]=sanitiseSave(')&&mario.includes("legacy:true")&&mario.includes("slotTable.every(x=>!x)"));
 check('Dificuldade afeta vidas e inimigos',mario.includes('function gameLives(')&&mario.includes('enemyDifficultyMultiplier()'));
 check('Tela inicial pausa relógio sem atualizar física',mario.includes('if(!inventoryOpen&&!menuOpen)')&&mario.includes("state==='menu'"));
@@ -80,3 +80,16 @@ check('iOS tem Apple Touch Icon próprio',mario.includes('rel="apple-touch-icon"
 check('Favicon também utiliza arte do Gabriel',mario.includes('rel="icon" href="./77.jpg?v=20261101" type="image/jpeg"'));
 const sgbManifest=JSON.parse(fs.readFileSync(path.join(root,'mario.webmanifest'),'utf8'));
 check('Manifesto do app aponta para 77.jpg',sgbManifest.icons?.some(icon=>icon.src==='./77.jpg'&&icon.type==='image/jpeg'&&icon.purpose==='any'));
+
+const superAssets=['78.png','79.png','80.png','81.png','82.png','83.png'];
+check('Seis novos sprites e itens foram enviados',superAssets.every(file=>fs.existsSync(path.join(root,file))&&fs.statSync(path.join(root,file)).size>1000));
+check('Fase 2 encara Gabriel antes da fuga',mario.includes('const princessFacing=slide>.12?')&&mario.includes('const villainFacing=slide>.12?')&&mario.includes('shrink*villainFacing'));
+check('Corações animados e dano sem recriação a cada frame',mario.includes('sgb-heart-hit')&&mario.includes('damagedHeartUntil')&&mario.includes('signature!==lastHeartSignature')&&mario.includes('83.png'));
+check('Bloco de interrogação libera hambúrguer ao bater por baixo',mario.includes("b.type==='surprise')hitQuestionBlock(b)")&&mario.includes('burgerDrops.push(')&&mario.includes('updateBurgerDrops(dt)'));
+check('Hambúrguer vai ao inventário, sem uso automático',mario.includes("addConsumable('burger',1)")&&mario.includes("else if(id==='burger'){superPower.until="));
+check('Super Gabriel usa sprites de transformação e investida',mario.includes('processedAssets.superHeroFrames=makeFrames(sheet,4)')&&mario.includes('extras.dashSuper:extras.dashHero')&&mario.includes('trySuperDash()'));
+check('Investida tem input X e botão B condicionado',mario.includes("e.code==='KeyX'&&!e.repeat")&&mario.includes('id="btn-dash"')&&mario.includes("show=isSuperGabriel()&&state==='playing'"));
+check('Investida derrota inimigos e corvos',mario.includes('enemy.alive=false;score+=150;setHUD();continue;')&&mario.includes('bird.alive=false;score+=180;setHUD();continue;'));
+check('Power-up pausa e volta com seu tempo de duração',mario.includes('superRemaining:Math.max(0,superPower.until-elapsedSeconds)')&&mario.includes('superPower.until=elapsedSeconds+data.superRemaining')&&mario.includes('if(!inventoryOpen&&!menuOpen){'));
+check('Blocos coletados permanecem únicos no save',mario.includes('collectedPickups.add(drop.id)')&&mario.includes("collectedPickups.has(questionId(b))")&&mario.includes('collectedPickups=new Set();'));
+check('Firestore continua isolado e aceita burger + poder temporário',rules.includes("'jump','burger'")&&rules.includes("'superRemaining'")&&rules.includes('gbIsSelf(userId)'));
