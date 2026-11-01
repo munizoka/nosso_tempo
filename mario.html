@@ -1669,7 +1669,7 @@
           const secs=Math.max(0,(t-SKY_DRINK_DROP_START)*1000);
           const travel=easeOut(secs/SKY_DRINK_ROLL_MS);
           const portalX=SKY_END-115;
-          const destX=SKY_ALTAR_X-80;
+          const destX=SKY_ALTAR_X-12; // Para aos pés do Gabriel, sem atravessá-lo.
           const x=portalX-(portalX-destX)*travel;
           // Cai de dentro do portal; faz um pequeno quique antes de repousar.
           const dropProgress=easeOut(secs/420);
