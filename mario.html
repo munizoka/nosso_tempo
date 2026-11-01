@@ -863,8 +863,8 @@
           }
           if(state==='skyIntro'||state==='skyOutro'){
             skySceneSeconds=(now-skySceneStart)/1000;
-            if(state==='skyIntro'&&skySceneSeconds>=12.7)finishSkyIntro();
-            else if(state==='skyOutro'&&skySceneSeconds>=11.8)finishSkyOutro();
+            if(state==='skyIntro'&&skySceneSeconds>=skyDialogueDuration())finishSkyIntro();
+            else if(state==='skyOutro'&&skySceneSeconds>=skyDialogueDuration())finishSkyOutro();
             return;
           }
           if(state==='forestIntro'||state==='forestOutro'){
@@ -948,6 +948,66 @@
           ctx.drawImage(sprite,-Math.round(width/2),-height,width,height);
           ctx.restore();
         }
+
+        // Ritmo da dublagem futura: uma única lista define duração e fala ativa.
+        function timedLines(list){
+          let at=0;
+          return list.map(item=>{
+            const line={from:at,to:at+item.duration,speaker:item.speaker,message:item.message,color:item.color};
+            at=line.to;return line;
+          });
+        }
+        const SKY_INTRO_LINES=timedLines([
+          {speaker:'GABRIEL',message:'ONDE A GENTE FOI PARAR?! ESTAMOS NAS NUVENS?!',duration:4.5,color:'#ffe4a0'},
+          {speaker:'VITORIA',message:'GABRIEL! ESSE LUGAR É PERIGOSO! CUIDADO COM O VENTO!',duration:5.2,color:'#ffadd1'},
+          {speaker:'VILÃO',message:'VOCÊ CONSEGUIU ME SEGUIR ATÉ AQUI... MAS DUVIDO QUE CONSIGA ATRAVESSAR MEU TEMPLO TALARICAR!',duration:7.2,color:'#d6a5ff'},
+          {speaker:'GABRIEL',message:'VOCÊ DE NOVO?! ALÉM DE TALARICADOR, AGORA É DONO DAS NUVENS?!',duration:5.7,color:'#ffe4a0'},
+          {speaker:'GABRIEL',message:'COITADO, DEVE ACHAR QUE ESTÁ VOANDO ALTO.',duration:4.4,color:'#ffe4a0'}
+        ]);
+        const SKY_OUTRO_LINES=timedLines([
+          {speaker:'GABRIEL',message:'O CRISTAL ESTÁ ACESO! ACABOU, TALARICADOR!',duration:4.1,color:'#ffe4a0'},
+          {speaker:'VITORIA',message:'GABRIEL! O TEMPLO ESTÁ TREMENDO!',duration:3.9,color:'#ffadd1'},
+          {speaker:'VILÃO',message:'CADA VITÓRIA SUA ME DEIXA MAIS PERTO DO MEU PLANO...',duration:5.0,color:'#d6a5ff'},
+          {speaker:'GABRIEL',message:'QUE PLANO? QUEM É VOCÊ DE VERDADE?!',duration:4.2,color:'#ffe4a0'},
+          {speaker:'VILÃO',message:'VOCÊ DESCOBRIRÁ... NA PRÓXIMA FASE!',duration:4.2,color:'#d6a5ff'},
+          {speaker:'VITORIA',message:'NÃO DESISTA! ESTOU CONTANDO COM VOCÊ!',duration:4.1,color:'#ffadd1'}
+        ]);
+        function skyDialogueLines(which=state){return which==='skyIntro'?SKY_INTRO_LINES:SKY_OUTRO_LINES;}
+        function skyDialogueDuration(which=state){const lines=skyDialogueLines(which);return lines[lines.length-1].to;}
+        function activeDialogueSpeaker(){
+          if(state==='skyIntro'||state==='skyOutro'){
+            return storyLine(skySceneSeconds,skyDialogueLines())?.speaker||null;
+          }
+          if(state==='forestIntro'){
+            const t=forestSceneSeconds;
+            return t<2.5?'VITORIA':t<6.5?'GABRIEL':t<8.5?'VILÃO':t<10.6?'VITORIA':t<12.7?'GABRIEL':null;
+          }
+          if(state==='forestOutro'){
+            const t=forestSceneSeconds;
+            return t<2.1?'GABRIEL':t<4?'VITORIA':t<6?'VILÃO':t<8.1?'GABRIEL':t<9.8?'VITORIA':t<11.3?'GABRIEL':null;
+          }
+          if(state==='cutscene'){
+            const t=cinematicSeconds;
+            return t<1.8?'GABRIEL':t<4.7?'VILÃO':t<5.5?'VITORIA':t<9.4?'GABRIEL':null;
+          }
+          return null;
+        }
+        function drawSpeakingSprite(sprite,centerX,footY,height,character,facing=1){
+          drawSpriteOnFeet(sprite,centerX,footY,height,facing);
+          if(activeDialogueSpeaker()!==character||!sprite?.width||!sprite?.height)return;
+          // Pequenina boca em pixel art sobre o sprite EXISTENTE. Não modifica o asset.
+          // 150 ms alternando entre fechada e aberta, somente durante a fala.
+          const open=Math.floor(performance.now()/150)%2===0;
+          const w=Math.max(1,Math.round(height*sprite.width/sprite.height));
+          ctx.save();ctx.translate(Math.round(centerX),Math.round(footY));
+          if(facing===-1)ctx.scale(-1,1);
+          const px=character==='GABRIEL'?Math.round(w*.23):Math.round(w*.08);
+          const py=character==='GABRIEL'?-Math.round(height*.62):-Math.round(height*.66);
+          ctx.fillStyle='#292027';ctx.fillRect(px,py,3,open?3:1);
+          if(open){ctx.fillStyle='#ff9b9a';ctx.fillRect(px+1,py+2,1,1);}
+          ctx.restore();
+        }
+
         function drawObject(sprite,x,y,w,h){
           if(sprite&&sprite.width&&sprite.height)ctx.drawImage(sprite,Math.round(x),Math.round(y),Math.round(w),Math.round(h));
         }
@@ -1038,7 +1098,7 @@
         function drawHero(){
           if(invulnerable>0 && Math.floor(elapsedSeconds*12)%2===0)return;
           const sprite=processedAssets.heroFrames?.[Math.min(3,player.animFrame)]||processedAssets.heroFrames?.[0];
-          drawSpriteOnFeet(sprite,player.x+player.w/2,player.y+player.h,player.h,player.direction);
+          drawSpeakingSprite(sprite,player.x+player.w/2,player.y+player.h,player.h,'GABRIEL',player.direction);
         }
         function easeOut(v){const x=Math.max(0,Math.min(1,v));return 1-(1-x)*(1-x);}
         function drawCinematicCharacters(t){
@@ -1102,7 +1162,7 @@
             ctx.save();ctx.globalAlpha=captiveAlpha;
             ctx.translate(princessX,princessFoot);
             ctx.scale(captiveScale,captiveScale);
-            drawSpriteOnFeet(processedAssets.princess,0,0,princess.h);
+            drawSpeakingSprite(processedAssets.princess,0,0,princess.h,'VITORIA');
             ctx.restore();
           }
         }
@@ -1185,7 +1245,7 @@
           ctx.save();ctx.globalAlpha=alpha;
           ctx.translate(princessX,359+floatY-16*slide);
           ctx.scale(shrink,shrink);
-          drawSpriteOnFeet(processedAssets.princess,0,0,49);
+          drawSpeakingSprite(processedAssets.princess,0,0,49,'VITORIA');
           ctx.restore();
           ctx.save();ctx.globalAlpha=alpha;
           ctx.translate(villainX,367+floatY-13*slide);
@@ -1355,19 +1415,20 @@
           const princessX=intro?349:SKY_END-360;
           const villainX=intro?470:SKY_END-280;
           const portalX=intro?605:SKY_END-115;
-          const fade=1-easeOut((t-(intro?9.8:9.7))/1.7);
-          const travel=easeOut((t-(intro?7.2:7.2))/2.9);
+          const duration=skyDialogueDuration();
+          const fade=1-easeOut((t-(duration-1.8))/1.7);
+          const travel=easeOut((t-(duration-5.6))/3.2);
           const shift=travel*110;
           const floatY=Math.sin(t*3)*4;
-          if(t>6.0){
-            ctx.save();ctx.globalAlpha=.75*easeOut((t-6)/1);
+          if(t>duration-6.5){
+            ctx.save();ctx.globalAlpha=.75*easeOut((t-(duration-6.5))/1);
             if(extras.portal)drawObject(extras.portal,portalX-39,226,78,150);
             else{ctx.fillStyle='#8f73d7';ctx.fillRect(portalX-30,235,60,136);}
             ctx.restore();
           }
           ctx.save();ctx.globalAlpha=Math.max(0,fade);
           ctx.translate(princessX+shift,358-18*travel+floatY);
-          drawSpriteOnFeet(processedAssets.princess,0,0,48);
+          drawSpeakingSprite(processedAssets.princess,0,0,48,'VITORIA');
           ctx.restore();
           ctx.save();ctx.globalAlpha=Math.max(0,fade);
           ctx.translate(villainX+shift,372-18*travel+floatY);
@@ -1376,22 +1437,7 @@
           ctx.restore();
         }
         function drawSkyStoryText(){
-          const t=skySceneSeconds,intro=state==='skyIntro';
-          const lines=intro?[
-            {from:0,to:2.2,speaker:'GABRIEL',message:'ONDE A GENTE FOI PARAR?! ESTAMOS NAS NUVENS?!',color:'#ffe4a0'},
-            {from:2.2,to:4.4,speaker:'VITORIA',message:'GABRIEL! ESSE LUGAR É PERIGOSO! CUIDADO COM O VENTO!',color:'#ffadd1'},
-            {from:4.4,to:7.3,speaker:'VILÃO',message:'VOCÊ CONSEGUIU ME SEGUIR ATÉ AQUI... MAS DUVIDO QUE CONSIGA ATRAVESSAR MEU TEMPLO TALARICAR!',color:'#d6a5ff'},
-            {from:7.3,to:10.2,speaker:'GABRIEL',message:'VOCÊ DE NOVO?! ALÉM DE TALARICADOR, AGORA É DONO DAS NUVENS?!',color:'#ffe4a0'},
-            {from:10.2,to:12.7,speaker:'GABRIEL',message:'COITADO, DEVE ACHAR QUE ESTÁ VOANDO ALTO.',color:'#ffe4a0'}
-          ]:[
-            {from:0,to:2,speaker:'GABRIEL',message:'O CRISTAL ESTÁ ACESO! ACABOU, TALARICADOR!',color:'#ffe4a0'},
-            {from:2,to:4,speaker:'VITORIA',message:'GABRIEL! O TEMPLO ESTÁ TREMENDO!',color:'#ffadd1'},
-            {from:4,to:6.2,speaker:'VILÃO',message:'CADA VITÓRIA SUA ME DEIXA MAIS PERTO DO MEU PLANO...',color:'#d6a5ff'},
-            {from:6.2,to:8.2,speaker:'GABRIEL',message:'QUE PLANO? QUEM É VOCÊ DE VERDADE?!',color:'#ffe4a0'},
-            {from:8.2,to:10,speaker:'VILÃO',message:'VOCÊ DESCOBRIRÁ... NA PRÓXIMA FASE!',color:'#d6a5ff'},
-            {from:10,to:11.8,speaker:'VITORIA',message:'NÃO DESISTA! ESTOU CONTANDO COM VOCÊ!',color:'#ffadd1'}
-          ];
-          const line=storyLine(t,lines);
+          const line=storyLine(skySceneSeconds,skyDialogueLines());
           if(line)drawStoryDialogue(line.speaker,line.message,line.color);
           pixelText('ENTER OU BOTÃO A: PULAR CENA',GAME_HEIGHT-17,7,'#e8e9fc');
         }
