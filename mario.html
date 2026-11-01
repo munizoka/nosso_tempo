@@ -192,7 +192,8 @@
         const SKY_ESCAPE_START=18.9;
         const SKY_ESCAPE_FINISH=23.2;
         const SKY_DRINK_DROP_START=23.35;
-        const SKY_DRINK_ROLL_MS=2750;
+        const SKY_DRINK_FLIGHT_MS=2750;
+        const SKY_DRINK_ROLL_MS=850;
         const SKY_OUTRO_POSTSCENE_MS=3900;
         let skyAltarActivated=false,skyAltarActivatedAt=0,skySceneStart=0,skySceneSeconds=0;
         let skyCheckpointReached=false,skyCheckpointX=0;
@@ -930,7 +931,7 @@
             if(state==='skyIntro'&&skySceneSeconds>=skyDialogueDuration())finishSkyIntro();
             else if(state==='skyOutro'){
               updateSkyOutroFacing();
-              if(skySceneSeconds>=skyDialogueDuration()+SKY_OUTRO_POSTSCENE_MS)finishSkyOutro();
+              if(skySceneSeconds>=skyDialogueDuration()+SKY_OUTRO_POSTSCENE_MS/1000)finishSkyOutro();
             }
             return;
           }
@@ -1634,9 +1635,10 @@
         function updateSkyOutroFacing(){
           if(state!=='skyOutro')return;
           const pose=skyEscapePosition(skySceneSeconds);
-          // Enquanto os dois estiverem visíveis, Gabriel olha para onde eles estão.
-          // Depois que entrarem no portal, ele continua olhando para a saída.
-          const target=pose.fade>.02?pose.villainX:pose.portalX;
+          // 1) Acompanha Vitoria e vilão; 2) observa o portal;
+          // 3) segue o copo em voo e vira de lado quando o objeto passa por ele.
+          const drink=getSkyDrinkPose(skySceneSeconds);
+          const target=drink?drink.x:(pose.fade>.02?pose.villainX:pose.portalX);
           player.direction=target<player.x+player.w/2?-1:1;
         }
         function drawSkyStoryActors(){
@@ -1661,26 +1663,48 @@
             ctx.restore();
           }
         }
-        // O drink 67.png rola da saída do portal em direção ao Gabriel.
-        // É apenas a introdução visual da pista; coleta/inventário serão definidos
-        // depois de revisar as falas da cena juntos.
+        // Trajetória revisada: o drink 67.png é ARREMESSADO pelo portal,
+        // passa por cima de Gabriel, aterrissa do outro lado (à esquerda)
+        // e dá uma pequena rolada antes de parar no chão seguro.
+        // A pista permanece apenas visual enquanto os diálogos são decididos.
         function getSkyDrinkPose(t){
           if(state!=='skyOutro'||t<SKY_DRINK_DROP_START)return null;
-          const secs=Math.max(0,(t-SKY_DRINK_DROP_START)*1000);
-          const travel=easeOut(secs/SKY_DRINK_ROLL_MS);
+          const ms=Math.max(0,(t-SKY_DRINK_DROP_START)*1000);
           const portalX=SKY_END-115;
-          const destX=SKY_ALTAR_X-12; // Para aos pés do Gabriel, sem atravessá-lo.
-          const x=portalX-(portalX-destX)*travel;
-          // Cai de dentro do portal; faz um pequeno quique antes de repousar.
-          const dropProgress=easeOut(secs/420);
-          const bump=secs<1050?Math.abs(Math.sin(secs/90))*(1-dropProgress)*14:0;
-          const foot=379-(1-dropProgress)*43-bump;
-          const angle=(1-travel)*Math.PI*2.2;
-          return {x,foot,angle,travel};
+          const landX=SKY_ALTAR_X-94;
+          const stopX=SKY_ALTAR_X-132; // à ESQUERDA do Gabriel, ainda sobre chão.
+          const groundFoot=379;
+          if(ms<SKY_DRINK_FLIGHT_MS){
+            const p=Math.min(1,ms/SKY_DRINK_FLIGHT_MS),q=1-p;
+            // Curva cúbica com ápice alto: p0 no portal, p3 no chão.
+            const x=portalX+(landX-portalX)*p;
+            const foot=q*q*q*316+3*q*q*p*150+3*q*p*p*178+p*p*p*groundFoot;
+            const angle=-Math.PI*2*p; // uma volta completa durante o voo
+            return {x,foot,angle,travel:p,phase:'flight'};
+          }
+          const rollProgress=easeOut((ms-SKY_DRINK_FLIGHT_MS)/SKY_DRINK_ROLL_MS);
+          const x=landX+(stopX-landX)*rollProgress;
+          const hop=Math.sin(rollProgress*Math.PI*2.2)*8*(1-rollProgress);
+          const foot=groundFoot-Math.abs(hop);
+          const angle=-Math.PI*2-Math.sin(rollProgress*Math.PI)*.22;
+          return {x,foot,angle,travel:rollProgress,phase:rollProgress>=1?'stopped':'roll'};
         }
         function drawSkyDrink(){
           const pose=getSkyDrinkPose(skySceneSeconds);
           if(!pose)return;
+          // Discretas partículas claras reforçam a parábola, sem usar as
+          // marcas de orientação do print como arte definitiva.
+          if(pose.phase==='flight'){
+            ctx.save();
+            for(let k=1;k<=3;k++){
+              const prior=getSkyDrinkPose(skySceneSeconds-k*.075);
+              if(!prior)continue;
+              ctx.globalAlpha=.24-k*.05;
+              ctx.fillStyle='#dcf6ff';
+              ctx.fillRect(Math.round(prior.x-2),Math.round(prior.foot-18),4,4);
+            }
+            ctx.restore();
+          }
           ctx.save();
           ctx.translate(Math.round(pose.x),Math.round(pose.foot));
           ctx.rotate(pose.angle);
