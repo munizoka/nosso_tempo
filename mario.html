@@ -463,6 +463,9 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
         const SUPER_DURATION=12, DASH_DURATION=.52, DASH_COOLDOWN=.95;
         const superPower={until:0,dashUntil:0,cooldownUntil:0,facing:1};
         const burgerDrops=[],questionBlocksHit=new Set();
+        // Partículas e poses de derrota duram apenas no relógio ativo do jogo.
+        const sgbParticles=[],fallenEnemies=[];
+        let lastDashDustAt=-1;
         let damagedHeartUntil=0,damagedHeartIndex=-1,lastHeartSignature='';
         let forestPlatforms = [];
         const FOREST_END = 3400;
@@ -1555,6 +1558,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           superPower.until=superPower.dashUntil=superPower.cooldownUntil=0;
           damagedHeartUntil=0;damagedHeartIndex=-1;lastHeartSignature='';
           burgerDrops.length=0;questionBlocksHit.clear();
+          sgbParticles.length=0;fallenEnemies.length=0;lastDashDustAt=-1;
           // collectedPickups é do slot: reiniciar não pode duplicar hambúrguer coletado.
           enemies=(level===1?level1EnemyTemplate:level===2?level2EnemyTemplate:[]).map(e=>({...e}));
           skyBirds=freshSkyBirds();
@@ -1574,7 +1578,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           superPower.dashUntil=0;
           if(lives<=0){state='gameover';setHUD();if(activeSlot!==null)saveCurrentSlot(false);return;}
           enemies=(level===1?level1EnemyTemplate:level===2?level2EnemyTemplate:[]).map(e=>({...e}));
-          skyBirds=freshSkyBirds();
+          skyBirds=freshSkyBirds();sgbParticles.length=0;fallenEnemies.length=0;
           resetPosition();invulnerable=1.5;setHUD();
         }
         function startCutscene(){
@@ -1781,43 +1785,75 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
             footY>=b.y && footY<b.y+b.h
           );
         }
+        // Detecção frontal: mesmo patamar, distância curta e sem parede entre os dois.
+        function enemyCanSpotHero(enemy,terrain){
+          const ex=enemy.x+enemy.w/2,px=player.x+player.w/2,dx=px-ex;
+          const look=enemy.vx<0?-1:enemy.vx>0?1:(enemy.facing||1);
+          const eyeY=enemy.y+enemy.h*.48;
+          if(dx*look<0||Math.abs(dx)>270||Math.abs((player.y+player.h/2)-eyeY)>65)return false;
+          const a=Math.min(ex,px),b=Math.max(ex,px);
+          return !terrain.some(tile=>tile.type!=='ground'&&tile.type!=='forestGround'&&tile.type!=='skyPlatform'&&
+            tile.x<b&&tile.x+tile.w>a&&tile.y<eyeY&&tile.y+tile.h>eyeY);
+        }
+        function defeatEnemy(enemy,points){
+          enemy.alive=false;score+=points;setHUD();
+          fallenEnemies.push({type:enemy.type,x:enemy.x,y:enemy.y,w:enemy.w,h:enemy.h,
+            facing:enemy.facing||(enemy.vx<0?-1:1),until:elapsedSeconds+.65});
+          emitPixelBurst(enemy.x+enemy.w/2,enemy.y+enemy.h*.45,['#ffe397','#f6a4b2','#fff8dc'],10,105);
+        }
         function updateEnemies(){
           const terrain=activeBlocks();
           for(const enemy of enemies){
             if(!enemy.alive)continue;
+            if(!enemy.aiState)enemy.aiState='patrol';
+            if(!enemy.patrolSpeed)enemy.patrolSpeed=Math.abs(enemy.vx)||1.5;
             const oldBottom=enemy.y+enemy.h;
             enemy.y+=4;
             let grounded=false;
             for(const b of terrain){
               if(isColliding(enemy,b)&&oldBottom<=b.y+3){
-                enemy.y=b.y-enemy.h;
-                grounded=true;
-                break;
+                enemy.y=b.y-enemy.h;grounded=true;break;
               }
             }
-            let turned=false;
-            // Antes da movimentação horizontal: olhar o chão *à frente*.
-            // A verificação só é aplicada quando há apoio, para não oscilar enquanto cai.
-            if(grounded && enemy.vx!==0 && !hasFloorAhead(enemy,terrain)){
-              enemy.vx*=-1;
-              turned=true;
+            if(enemy.aiState==='patrol'&&enemyCanSpotHero(enemy,terrain)){
+              enemy.aiState='alert';enemy.alertUntil=elapsedSeconds+.42;
+              enemy.facing=enemy.vx<0?-1:1;
+              enemy.vx=0;
             }
-            if(!turned)enemy.x+=enemy.vx*enemyDifficultyMultiplier();
+            if(enemy.aiState==='alert'){
+              enemy.vx=0;
+              if(elapsedSeconds>=enemy.alertUntil)enemy.aiState='chase';
+            }
+            if(enemy.aiState==='chase'){
+              const dx=player.x+player.w/2-(enemy.x+enemy.w/2);
+              const dir=Math.abs(dx)>6?Math.sign(dx):0;
+              if(dir)enemy.facing=dir;
+              enemy.vx=dir*enemy.patrolSpeed*1.25;
+            }
+            if(enemy.aiState==='patrol'&&enemy.vx)enemy.facing=Math.sign(enemy.vx);
+            let blocked=false;
+            if(grounded&&enemy.vx!==0&&!hasFloorAhead(enemy,terrain)){
+              blocked=true;
+              if(enemy.aiState==='patrol')enemy.vx*=-1;
+              else enemy.vx=0; // Perseguição não força a queda em buracos.
+            }
+            if(!blocked&&enemy.vx!==0)enemy.x+=enemy.vx*enemyDifficultyMultiplier();
             for(const b of terrain){
               if(b.type!=='ground'&&b.type!=='forestGround'&&isColliding(enemy,b)){
                 if(enemy.vx<0)enemy.x=b.x+b.w;
-                else enemy.x=b.x-enemy.w;
-                enemy.vx*=-1;
+                else if(enemy.vx>0)enemy.x=b.x-enemy.w;
+                if(enemy.aiState==='patrol')enemy.vx*=-1;
+                else enemy.vx=0; // Espera junto à parede em vez de atravessá-la.
                 break;
               }
             }
             if(isDashing()&&isColliding(player,enemy)){
-              enemy.alive=false;score+=150;setHUD();continue;
+              defeatEnemy(enemy,150);continue;
             }
             if(invulnerable<=0&&isColliding(player,enemy)){
               if(player.vy>0&&player.y+player.h<=enemy.y+20){
-                enemy.alive=false;player.vy=player.jumpPower*0.8;score+=100;setHUD();
-              } else {loseLife();return;}
+                defeatEnemy(enemy,100);player.vy=player.jumpPower*.8;
+              }else{loseLife();return;}
             }
           }
         }
@@ -2159,11 +2195,19 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
         }
         function drawEnemies(){
           for(const e of enemies){if(!e.alive)continue;
-            const frame=processedAssets.enemyFrames?.[e.type==='mushroom'?0:1];
-            // Ambos os sprites da folha 37.jpg olham para a direita na imagem original.
-            // A direção visual deve acompanhar vx, evitando o 'moonwalk' da tartaruga.
-            const facing=e.vx<0?-1:1;
+            const poses=processedAssets.mobFrames?.[e.type]||{};
+            const frameName=e.aiState==='alert'?'alert':
+              (Math.abs(e.vx)>.05?(Math.floor(elapsedSeconds*8+e.x*.03)%2?'walk1':'walk2'):'idle');
+            const original=processedAssets.enemyFrames?.[e.type==='mushroom'?0:1];
+            const frame=poses[frameName]||poses.idle||original;
+            // Todos os sprites novos olham para a direita; espelho apenas para a esquerda.
+            const facing=e.facing||(e.vx<0?-1:1);
             drawSpriteOnFeet(frame,e.x+e.w/2,e.y+e.h,e.h,facing);
+            if(e.aiState==='alert'){
+              ctx.save();ctx.fillStyle='#ffdd65';ctx.strokeStyle='#392034';ctx.lineWidth=2;
+              ctx.font='bold 20px sans-serif';ctx.textAlign='center';ctx.strokeText('!',e.x+e.w/2,e.y-8);
+              ctx.fillText('!',e.x+e.w/2,e.y-8);ctx.restore();
+            }
           }
         }
         function drawHero(){
