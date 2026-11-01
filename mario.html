@@ -1389,6 +1389,50 @@
           if(line)drawStoryDialogue(line.speaker,line.message,line.color);
           pixelText('ENTER OU BOTÃO A: PULAR CENA',GAME_HEIGHT-17,7,'#cdd6e6');
         }
+
+        // Desenha a Pista 01 em pixel art, sem exigir novos arquivos.
+        // O medalhão cai do vilão na fuga, brilha no chão e é recolhido pelo herói.
+        function drawVillainMedallionAt(x,y,scale=1){
+          ctx.save();ctx.translate(Math.round(x),Math.round(y));ctx.scale(scale,scale);
+          ctx.shadowColor='#b3d9ff';ctx.shadowBlur=7;
+          ctx.fillStyle='#251d3b';ctx.fillRect(-10,-11,20,22);
+          ctx.fillStyle='#a57e48';ctx.fillRect(-8,-9,16,18);
+          ctx.fillStyle='#f6d48b';ctx.fillRect(-6,-7,12,14);
+          ctx.fillStyle='#52417f';ctx.fillRect(-4,-5,8,10);
+          // Runa de vento: marca incompleta em forma de espiral.
+          ctx.fillStyle='#a6efff';
+          ctx.fillRect(-2,-4,6,2);ctx.fillRect(3,-3,2,4);
+          ctx.fillRect(-3,0,6,2);ctx.fillRect(-4,-2,2,3);
+          // Rachadura que atravessa o medalhão.
+          ctx.fillStyle='#241936';ctx.fillRect(0,-8,2,5);
+          ctx.fillRect(-2,-3,2,5);ctx.fillRect(0,2,2,6);
+          ctx.restore();
+        }
+        function drawForestClueProp(){
+          if(state!=='forestOutro')return;
+          const t=forestSceneSeconds;
+          if(t<8.6||t>16.6)return;
+          const x=FOREST_CLUE_X;
+          if(t<15){
+            const progress=easeOut((t-8.6)/2);
+            const y=270+(358-270)*progress;
+            ctx.save();
+            ctx.globalAlpha=1;
+            ctx.translate(x,y);
+            ctx.rotate((1-progress)*Math.PI*1.5);
+            drawVillainMedallionAt(0,0,1);
+            ctx.restore();
+            if(t>10.6){
+              ctx.fillStyle='rgba(207,236,255,'+(.45+.4*Math.sin(t*9)**2)+')';
+              ctx.fillRect(x-1,330,2,4);ctx.fillRect(x-18,347,3,3);ctx.fillRect(x+15,341,3,3);
+            }
+          }else{
+            // Ao ser coletado, vira um pequeno brilho sobre Gabriel.
+            ctx.save();ctx.globalAlpha=Math.max(0,1-(t-15)/1.6);
+            drawVillainMedallionAt(player.x+player.w/2,325-(t-15)*30,.8);
+            ctx.restore();
+          }
+        }
         function drawForestTotem(){
           const x=FOREST_TOTEM_X,groundY=380;
           const img=forestTotemActivated?extras.totemOn:extras.totemOff;
@@ -1437,6 +1481,7 @@
           else {ctx.fillStyle='#8e6db1';ctx.fillRect(1765,325,4,55);}
           drawForestTotem();
           if(state==='forestIntro'||state==='forestOutro')drawForestStoryActors();
+          if(state==='forestOutro')drawForestClueProp();
           drawEnemies();drawHero();
           ctx.restore();
           if(state==='forestIntro'||state==='forestOutro')drawForestStoryText();
@@ -1618,7 +1663,7 @@
           if(state==='gameover')overlay('GAME OVER','AS VIDAS ACABARAM','CLIQUE EM RECOMEÇAR');
           if(state==='chapterEnd'){
             if(level===3)overlay('FASE 3 CONCLUÍDA!','O TEMPLO DOS VENTOS FOI SUPERADO.','O MISTÉRIO CONTINUA...  |  ENTER / A: MAPA');
-            else overlay('FASE 2 CONCLUÍDA!','VOCÊ CHEGOU AO FIM DA FLORESTA SOMBRIA.','FASE 3 DISPONÍVEL  |  ENTER / A: MAPA');
+            else overlay('FASE 2 CONCLUÍDA!','PISTA 01: MEDALHÃO RACHADO NO INVENTÁRIO','FASE 3 DISPONÍVEL  |  ENTER / A: MAPA');
           }
         }
         function loop(now){
