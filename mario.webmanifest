@@ -1,0 +1,17 @@
+{
+  "id": "./mario.html",
+  "name": "Super Gabriel Bros",
+  "short_name": "Super Gabriel",
+  "description": "Jogo Super Gabriel Bros, plataforma e aventuras em pixel art.",
+  "start_url": "./mario.html",
+  "scope": "./",
+  "display": "fullscreen",
+  "display_override": [
+    "fullscreen",
+    "standalone"
+  ],
+  "orientation": "landscape",
+  "background_color": "#131628",
+  "theme_color": "#131628",
+  "lang": "pt-BR"
+}
