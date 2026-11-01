@@ -381,7 +381,7 @@
           sky: '43.jpg', mountains: '44.png', trees: '45.png', giantTree: '46.png',
           forestGround: '47.png', dirt: '48.jpg', wood: '49.png', magic: '50.png',
           checkpointOff: '51.png', checkpointOn: '52.png', villain: '53.png', portal: '54.png', mapHead: '55.jpg',
-          totemOn: '56.png', totemOff: '57.png', skyTemple: '58.png', skyGround: '59.png', skyPlatform: '60.png', skyCrow: '61.png', skyAltarOff: '62.png', skyAltarOn: '63.png'
+          totemOn: '56.png', totemOff: '57.png', skyTemple: '58.png', skyGround: '59.png', skyPlatform: '60.png', skyCrow: '61.png', skyAltarOff: '62.png', skyAltarOn: '63.png', windShort: '64.png', windLong: '65.png', windUp: '66.png'
         };
 
         function cropSprite(img) {
@@ -537,30 +537,40 @@
           {x:3050,y:348,w:32,h:32,vx:-2,type:'turtle',alive:true}
         ];
 
-        // Fase 3: plataformas celestiais e ilhas de apoio. Alturas em pixels do mundo.
-        // Plataformas são one-way: Gabriel atravessa por baixo e pousa sobre elas.
+        // FASE 3: menos chão contínuo, quatro travessias que sobem e descem.
+        // A mudança de altura exige pulos planejados, sem deixar a fase injusta.
+        // Plataformas 'skyPlatform' são de colisão unidirecional.
         const level3Blocks=[
-          {x:0,y:380,w:560,h:140,type:'skyGround'},
-          {x:680,y:380,w:430,h:140,type:'skyGround'},
-          {x:1220,y:380,w:440,h:140,type:'skyGround'},
-          {x:1770,y:380,w:370,h:140,type:'skyGround'},
-          {x:2260,y:380,w:400,h:140,type:'skyGround'},
-          {x:2790,y:380,w:490,h:140,type:'skyGround'},
-          {x:490,y:323,w:155,h:22,type:'skyPlatform'},
-          {x:790,y:293,w:120,h:22,type:'skyPlatform'},
-          {x:1035,y:306,w:150,h:22,type:'skyPlatform',moving:true,baseX:1035,baseY:306,travel:48,speed:.8},
-          {x:1175,y:290,w:140,h:22,type:'skyPlatform'},
-          {x:1460,y:283,w:132,h:22,type:'skyPlatform',moving:true,baseX:1460,baseY:283,travel:56,speed:1},
-          {x:1630,y:310,w:155,h:22,type:'skyPlatform'},
-          {x:1850,y:270,w:145,h:22,type:'skyPlatform'},
-          {x:2080,y:315,w:156,h:22,type:'skyPlatform',moving:true,baseX:2080,baseY:315,travel:49,speed:1.12},
-          {x:2190,y:294,w:146,h:22,type:'skyPlatform'},
-          {x:2475,y:271,w:156,h:22,type:'skyPlatform'},
-          {x:2640,y:321,w:150,h:22,type:'skyPlatform'}
+          {x:0,y:380,w:470,h:140,type:'skyGround'},
+          {x:900,y:380,w:270,h:140,type:'skyGround'},
+          {x:1570,y:380,w:300,h:140,type:'skyGround'},
+          {x:2390,y:380,w:220,h:140,type:'skyGround'},
+          {x:2910,y:380,w:370,h:140,type:'skyGround'},
+
+          // Travessia 1: apenas duas plataformas, subindo 160 px.
+          {x:485,y:295,w:140,h:22,type:'skyPlatform'},
+          {x:695,y:220,w:145,h:22,type:'skyPlatform',moving:true,baseX:695,baseY:220,travel:15,speed:.65},
+
+          // Travessia 2: zigue-zague com apoio de vento ascendente.
+          {x:1150,y:302,w:115,h:22,type:'skyPlatform'},
+          {x:1300,y:195,w:112,h:22,type:'skyPlatform'},
+          {x:1445,y:285,w:120,h:22,type:'skyPlatform',moving:true,baseX:1445,baseY:285,travel:15,speed:.85},
+
+          // Travessia 3: corvos, vento contrário e subida mais difícil.
+          {x:1860,y:292,w:120,h:22,type:'skyPlatform'},
+          {x:2035,y:186,w:110,h:22,type:'skyPlatform'},
+          {x:2215,y:255,w:140,h:22,type:'skyPlatform',moving:true,baseX:2215,baseY:255,travel:18,speed:.9},
+
+          // Travessia 4: duas plataformas até o altar.
+          {x:2613,y:290,w:135,h:22,type:'skyPlatform'},
+          {x:2790,y:213,w:140,h:22,type:'skyPlatform'}
         ];
+        // Ventos visualizados com 64.png/65.png/66.png atrás do personagem.
         const skyWindZones=[
-          {x:980,w:550,force:1.25,y:240},
-          {x:1940,w:480,force:-1.1,y:210}
+          {type:'horizontal',x:520,y:140,w:360,h:245,force:1.05,asset:'windShort'},
+          {type:'up',x:1200,y:150,w:290,h:240,lift:.19,asset:'windUp'},
+          {type:'horizontal',x:1900,y:115,w:450,h:275,force:-1.2,asset:'windLong'},
+          {type:'up',x:2640,y:145,w:280,h:245,lift:.19,asset:'windUp'}
         ];
         const skyBirdTemplate=[
           {x:900,y:218,baseX:900,baseY:218,vx:-1.45,w:38,h:34,phase:.3,range:90,alive:true},
@@ -863,8 +873,8 @@
           }
           if(state==='skyIntro'||state==='skyOutro'){
             skySceneSeconds=(now-skySceneStart)/1000;
-            if(state==='skyIntro'&&skySceneSeconds>=12.7)finishSkyIntro();
-            else if(state==='skyOutro'&&skySceneSeconds>=11.8)finishSkyOutro();
+            if(state==='skyIntro'&&skySceneSeconds>=skyDialogueDuration())finishSkyIntro();
+            else if(state==='skyOutro'&&skySceneSeconds>=skyDialogueDuration())finishSkyOutro();
             return;
           }
           if(state==='forestIntro'||state==='forestOutro'){
@@ -879,11 +889,12 @@
           if(keys.left){player.vx=-player.speed;player.direction=-1;}
           else if(keys.right){player.vx=player.speed;player.direction=1;}
           else player.vx=0;
-          // As rajadas de vento afetam a velocidade horizontal, mas não o HUD.
+          // Ventos atuam somente dentro da faixa visível da rajada.
           if(level===3){
             for(const gust of skyWindZones){
-              if(player.x+player.w>=gust.x&&player.x<=gust.x+gust.w)
-                player.vx+=gust.force;
+              const inWind=player.x+player.w>gust.x&&player.x<gust.x+gust.w&&
+                player.y+player.h>gust.y&&player.y<gust.y+gust.h;
+              if(inWind&&gust.type==='horizontal')player.vx+=gust.force;
             }
             player.vx=Math.max(-7,Math.min(7,player.vx));
           }
@@ -891,6 +902,14 @@
           if(level===2||level===3)updateMovingPlatforms(elapsedSeconds);
           const terrain=activeBlocks();
           player.vy=Math.min(player.vy+player.gravity,16);
+          if(level===3&&!player.grounded){
+            for(const gust of skyWindZones){
+              if(gust.type==='up'&&player.x+player.w>gust.x&&player.x<gust.x+gust.w&&
+                 player.y+player.h>gust.y&&player.y<gust.y+gust.h){
+                player.vy=Math.max(-16,player.vy-gust.lift);
+              }
+            }
+          }
           player.grounded=false;
           player.x+=player.vx;
           if(player.x<0)player.x=0;
@@ -904,6 +923,7 @@
           }
           const oldFootY=player.y+player.h;
           player.y+=player.vy;
+          if(level===3&&player.y<32){player.y=32;player.vy=Math.max(player.vy,0);}
           for(const b of terrain){
             // Plataformas celestiais permitem passar por baixo e pousar por cima.
             if(b.type==='skyPlatform' && !(player.vy>=0&&oldFootY<=b.y+7))continue;
@@ -913,8 +933,8 @@
             }
           }
           if(player.y>GAME_HEIGHT+200){loseLife();return;}
-          if(level===3&&!skyCheckpointReached&&player.x+player.w>1830&&player.x<1900&&player.y+player.h>315){
-            skyCheckpointReached=true;skyCheckpointX=1820;score+=250;setHUD();
+          if(level===3&&!skyCheckpointReached&&player.x+player.w>1650&&player.x<1720&&player.y+player.h>330){
+            skyCheckpointReached=true;skyCheckpointX=1650;score+=250;setHUD();
           }
           if(level===2 && !checkpointReached && player.x+player.w>1760 &&
              player.x<1825 && player.y+player.h>305){
@@ -948,6 +968,66 @@
           ctx.drawImage(sprite,-Math.round(width/2),-height,width,height);
           ctx.restore();
         }
+
+        // Ritmo da dublagem futura: uma única lista define duração e fala ativa.
+        function timedLines(list){
+          let at=0;
+          return list.map(item=>{
+            const line={from:at,to:at+item.duration,speaker:item.speaker,message:item.message,color:item.color};
+            at=line.to;return line;
+          });
+        }
+        const SKY_INTRO_LINES=timedLines([
+          {speaker:'GABRIEL',message:'ONDE A GENTE FOI PARAR?! ESTAMOS NAS NUVENS?!',duration:4.5,color:'#ffe4a0'},
+          {speaker:'VITORIA',message:'GABRIEL! ESSE LUGAR É PERIGOSO! CUIDADO COM O VENTO!',duration:5.2,color:'#ffadd1'},
+          {speaker:'VILÃO',message:'VOCÊ CONSEGUIU ME SEGUIR ATÉ AQUI... MAS DUVIDO QUE CONSIGA ATRAVESSAR MEU TEMPLO TALARICAR!',duration:7.2,color:'#d6a5ff'},
+          {speaker:'GABRIEL',message:'VOCÊ DE NOVO?! ALÉM DE TALARICADOR, AGORA É DONO DAS NUVENS?!',duration:5.7,color:'#ffe4a0'},
+          {speaker:'GABRIEL',message:'COITADO, DEVE ACHAR QUE ESTÁ VOANDO ALTO.',duration:4.4,color:'#ffe4a0'}
+        ]);
+        const SKY_OUTRO_LINES=timedLines([
+          {speaker:'GABRIEL',message:'O CRISTAL ESTÁ ACESO! ACABOU, TALARICADOR!',duration:4.1,color:'#ffe4a0'},
+          {speaker:'VITORIA',message:'GABRIEL! O TEMPLO ESTÁ TREMENDO!',duration:3.9,color:'#ffadd1'},
+          {speaker:'VILÃO',message:'CADA VITÓRIA SUA ME DEIXA MAIS PERTO DO MEU PLANO...',duration:5.0,color:'#d6a5ff'},
+          {speaker:'GABRIEL',message:'QUE PLANO? QUEM É VOCÊ DE VERDADE?!',duration:4.2,color:'#ffe4a0'},
+          {speaker:'VILÃO',message:'VOCÊ DESCOBRIRÁ... NA PRÓXIMA FASE!',duration:4.2,color:'#d6a5ff'},
+          {speaker:'VITORIA',message:'NÃO DESISTA! ESTOU CONTANDO COM VOCÊ!',duration:4.1,color:'#ffadd1'}
+        ]);
+        function skyDialogueLines(which=state){return which==='skyIntro'?SKY_INTRO_LINES:SKY_OUTRO_LINES;}
+        function skyDialogueDuration(which=state){const lines=skyDialogueLines(which);return lines[lines.length-1].to;}
+        function activeDialogueSpeaker(){
+          if(state==='skyIntro'||state==='skyOutro'){
+            return storyLine(skySceneSeconds,skyDialogueLines())?.speaker||null;
+          }
+          if(state==='forestIntro'){
+            const t=forestSceneSeconds;
+            return t<2.5?'VITORIA':t<6.5?'GABRIEL':t<8.5?'VILÃO':t<10.6?'VITORIA':t<12.7?'GABRIEL':null;
+          }
+          if(state==='forestOutro'){
+            const t=forestSceneSeconds;
+            return t<2.1?'GABRIEL':t<4?'VITORIA':t<6?'VILÃO':t<8.1?'GABRIEL':t<9.8?'VITORIA':t<11.3?'GABRIEL':null;
+          }
+          if(state==='cutscene'){
+            const t=cinematicSeconds;
+            return t<1.8?'GABRIEL':t<4.7?'VILÃO':t<5.5?'VITORIA':t<9.4?'GABRIEL':null;
+          }
+          return null;
+        }
+        function drawSpeakingSprite(sprite,centerX,footY,height,character,facing=1){
+          drawSpriteOnFeet(sprite,centerX,footY,height,facing);
+          if(activeDialogueSpeaker()!==character||!sprite?.width||!sprite?.height)return;
+          // Pequenina boca em pixel art sobre o sprite EXISTENTE. Não modifica o asset.
+          // 150 ms alternando entre fechada e aberta, somente durante a fala.
+          const open=Math.floor(performance.now()/150)%2===0;
+          const w=Math.max(1,Math.round(height*sprite.width/sprite.height));
+          ctx.save();ctx.translate(Math.round(centerX),Math.round(footY));
+          if(facing===-1)ctx.scale(-1,1);
+          const px=character==='GABRIEL'?Math.round(w*.23):Math.round(w*.08);
+          const py=character==='GABRIEL'?-Math.round(height*.62):-Math.round(height*.66);
+          ctx.fillStyle='#292027';ctx.fillRect(px,py,3,open?3:1);
+          if(open){ctx.fillStyle='#ff9b9a';ctx.fillRect(px+1,py+2,1,1);}
+          ctx.restore();
+        }
+
         function drawObject(sprite,x,y,w,h){
           if(sprite&&sprite.width&&sprite.height)ctx.drawImage(sprite,Math.round(x),Math.round(y),Math.round(w),Math.round(h));
         }
@@ -1038,7 +1118,7 @@
         function drawHero(){
           if(invulnerable>0 && Math.floor(elapsedSeconds*12)%2===0)return;
           const sprite=processedAssets.heroFrames?.[Math.min(3,player.animFrame)]||processedAssets.heroFrames?.[0];
-          drawSpriteOnFeet(sprite,player.x+player.w/2,player.y+player.h,player.h,player.direction);
+          drawSpeakingSprite(sprite,player.x+player.w/2,player.y+player.h,player.h,'GABRIEL',player.direction);
         }
         function easeOut(v){const x=Math.max(0,Math.min(1,v));return 1-(1-x)*(1-x);}
         function drawCinematicCharacters(t){
@@ -1102,7 +1182,7 @@
             ctx.save();ctx.globalAlpha=captiveAlpha;
             ctx.translate(princessX,princessFoot);
             ctx.scale(captiveScale,captiveScale);
-            drawSpriteOnFeet(processedAssets.princess,0,0,princess.h);
+            drawSpeakingSprite(processedAssets.princess,0,0,princess.h,'VITORIA');
             ctx.restore();
           }
         }
@@ -1185,7 +1265,7 @@
           ctx.save();ctx.globalAlpha=alpha;
           ctx.translate(princessX,359+floatY-16*slide);
           ctx.scale(shrink,shrink);
-          drawSpriteOnFeet(processedAssets.princess,0,0,49);
+          drawSpeakingSprite(processedAssets.princess,0,0,49,'VITORIA');
           ctx.restore();
           ctx.save();ctx.globalAlpha=alpha;
           ctx.translate(villainX,367+floatY-13*slide);
@@ -1307,22 +1387,46 @@
           ctx.restore();
         }
         function drawSkyWind(){
+          // Efeito em três camadas de vento pixel art: alpha 0.20–0.33, sempre atrás de Gabriel.
           const t=elapsedSeconds;
-          for(const z of skyWindZones){
+          for(const gust of skyWindZones){
+            const x=gust.x-cameraX;
+            if(x>GAME_WIDTH+90||x+gust.w<-90)continue;
             ctx.save();
-            const x=z.x-cameraX;
-            if(x>GAME_WIDTH+100||x+z.w<0){ctx.restore();continue;}
-            // Faixas translúcidas e flechas reforçam o sentido da corrente de vento.
-            ctx.fillStyle='rgba(180,238,255,.12)';
-            ctx.fillRect(x,135,z.w,220);
-            ctx.strokeStyle='rgba(240,252,255,.75)';ctx.lineWidth=2;
-            const sign=Math.sign(z.force);
-            for(let k=0;k<11;k++){
-              const q=((k*91+t*50*Math.abs(z.force))%z.w);
-              const px=x+(sign>0?q:z.w-q);
-              const py=167+(k%5)*35;
-              ctx.beginPath();ctx.moveTo(px-13*sign,py);ctx.lineTo(px+13*sign,py);
-              ctx.lineTo(px+5*sign,py-5);ctx.moveTo(px+13*sign,py);ctx.lineTo(px+5*sign,py+5);ctx.stroke();
+            ctx.beginPath();ctx.rect(x,gust.y,gust.w,gust.h);ctx.clip();
+            const sprite=extras[gust.asset];
+            const rising=gust.type==='up';
+            const count=rising?7:9;
+            for(let k=0;k<count;k++){
+              const alpha=.20+(k%3)*.065;
+              ctx.globalAlpha=alpha;
+              if(rising){
+                const px=x+24+((k*71)%(gust.w-48));
+                const py=gust.y+gust.h-((k*84+t*63)%(gust.h+110));
+                if(sprite)drawObject(sprite,px-22,py,44,105);
+                else{
+                  ctx.strokeStyle='#e6ffff';ctx.lineWidth=3;
+                  ctx.beginPath();ctx.moveTo(px-7,py+80);
+                  ctx.bezierCurveTo(px+22,py+44,px-15,py+22,px+6,py);ctx.stroke();
+                }
+              }else{
+                const dir=Math.sign(gust.force);
+                const progress=(k*89+t*66)% (gust.w+150);
+                const px=x+(dir>0?progress-105:gust.w-progress+20);
+                const py=gust.y+29+(k%5)*39+Math.sin(t*2+k)*7;
+                const wide=gust.asset==='windLong'?112:77;
+                if(sprite){
+                  ctx.save();
+                  if(dir<0){ctx.translate(px+wide,0);ctx.scale(-1,1);drawObject(sprite,0,py,wide,31);}
+                  else drawObject(sprite,px,py,wide,31);
+                  ctx.restore();
+                }else{
+                  // Fallback sem setas até os arquivos PNG estarem publicados.
+                  ctx.strokeStyle='#ecfbff';ctx.lineWidth=2.3;
+                  ctx.beginPath();ctx.moveTo(px,py+16);
+                  ctx.bezierCurveTo(px+23,py-4,px+42,py+31,px+wide,py+12);ctx.stroke();
+                }
+              }
             }
             ctx.restore();
           }
@@ -1355,19 +1459,20 @@
           const princessX=intro?349:SKY_END-360;
           const villainX=intro?470:SKY_END-280;
           const portalX=intro?605:SKY_END-115;
-          const fade=1-easeOut((t-(intro?9.8:9.7))/1.7);
-          const travel=easeOut((t-(intro?7.2:7.2))/2.9);
+          const duration=skyDialogueDuration();
+          const fade=1-easeOut((t-(duration-1.8))/1.7);
+          const travel=easeOut((t-(duration-5.6))/3.2);
           const shift=travel*110;
           const floatY=Math.sin(t*3)*4;
-          if(t>6.0){
-            ctx.save();ctx.globalAlpha=.75*easeOut((t-6)/1);
+          if(t>duration-6.5){
+            ctx.save();ctx.globalAlpha=.75*easeOut((t-(duration-6.5))/1);
             if(extras.portal)drawObject(extras.portal,portalX-39,226,78,150);
             else{ctx.fillStyle='#8f73d7';ctx.fillRect(portalX-30,235,60,136);}
             ctx.restore();
           }
           ctx.save();ctx.globalAlpha=Math.max(0,fade);
           ctx.translate(princessX+shift,358-18*travel+floatY);
-          drawSpriteOnFeet(processedAssets.princess,0,0,48);
+          drawSpeakingSprite(processedAssets.princess,0,0,48,'VITORIA');
           ctx.restore();
           ctx.save();ctx.globalAlpha=Math.max(0,fade);
           ctx.translate(villainX+shift,372-18*travel+floatY);
@@ -1376,22 +1481,7 @@
           ctx.restore();
         }
         function drawSkyStoryText(){
-          const t=skySceneSeconds,intro=state==='skyIntro';
-          const lines=intro?[
-            {from:0,to:2.2,speaker:'GABRIEL',message:'ONDE A GENTE FOI PARAR?! ESTAMOS NAS NUVENS?!',color:'#ffe4a0'},
-            {from:2.2,to:4.4,speaker:'VITORIA',message:'GABRIEL! ESSE LUGAR É PERIGOSO! CUIDADO COM O VENTO!',color:'#ffadd1'},
-            {from:4.4,to:7.3,speaker:'VILÃO',message:'VOCÊ CONSEGUIU ME SEGUIR ATÉ AQUI... MAS DUVIDO QUE CONSIGA ATRAVESSAR MEU TEMPLO TALARICAR!',color:'#d6a5ff'},
-            {from:7.3,to:10.2,speaker:'GABRIEL',message:'VOCÊ DE NOVO?! ALÉM DE TALARICADOR, AGORA É DONO DAS NUVENS?!',color:'#ffe4a0'},
-            {from:10.2,to:12.7,speaker:'GABRIEL',message:'COITADO, DEVE ACHAR QUE ESTÁ VOANDO ALTO.',color:'#ffe4a0'}
-          ]:[
-            {from:0,to:2,speaker:'GABRIEL',message:'O CRISTAL ESTÁ ACESO! ACABOU, TALARICADOR!',color:'#ffe4a0'},
-            {from:2,to:4,speaker:'VITORIA',message:'GABRIEL! O TEMPLO ESTÁ TREMENDO!',color:'#ffadd1'},
-            {from:4,to:6.2,speaker:'VILÃO',message:'CADA VITÓRIA SUA ME DEIXA MAIS PERTO DO MEU PLANO...',color:'#d6a5ff'},
-            {from:6.2,to:8.2,speaker:'GABRIEL',message:'QUE PLANO? QUEM É VOCÊ DE VERDADE?!',color:'#ffe4a0'},
-            {from:8.2,to:10,speaker:'VILÃO',message:'VOCÊ DESCOBRIRÁ... NA PRÓXIMA FASE!',color:'#d6a5ff'},
-            {from:10,to:11.8,speaker:'VITORIA',message:'NÃO DESISTA! ESTOU CONTANDO COM VOCÊ!',color:'#ffadd1'}
-          ];
-          const line=storyLine(t,lines);
+          const line=storyLine(skySceneSeconds,skyDialogueLines());
           if(line)drawStoryDialogue(line.speaker,line.message,line.color);
           pixelText('ENTER OU BOTÃO A: PULAR CENA',GAME_HEIGHT-17,7,'#e8e9fc');
         }
@@ -1406,7 +1496,7 @@
             }
           }
           const flag=skyCheckpointReached?extras.checkpointOn:extras.checkpointOff;
-          if(flag)drawObject(flag,1850,310,40,70);
+          if(flag)drawObject(flag,1657,310,40,70);
           drawSkyBirds();drawSkyAltar();
           if(state==='skyIntro'||state==='skyOutro')drawSkyStoryActors();
           drawHero();
