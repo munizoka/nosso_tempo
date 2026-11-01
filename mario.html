@@ -95,6 +95,7 @@
         </div>
 
         <div class="flex gap-2 pointer-events-auto">
+            <button onclick="toggleInventario()" id="inventory-button" title="Inventário de pistas (tecla I)" aria-label="Abrir inventário" aria-expanded="false" class="px-3 py-2 bg-amber-950/90 border-2 border-amber-200 rounded-xl text-white font-sans font-bold shadow-lg text-sm">🎒 <span id="inventory-count">0</span></button>
             <button onclick="voltarAoMapa()" class="px-3 py-2 bg-indigo-900/80 border-2 border-white rounded-xl text-white font-sans font-bold shadow-lg text-sm" title="Voltar ao mapa">🗺️ Mapa</button>
             <button onclick="reiniciarFase()" class="px-4 py-3 bg-zinc-800/80 border-2 border-white rounded-xl flex items-center justify-center text-white font-sans font-bold backdrop-blur pointer-events-auto shadow-lg active:scale-95 transition-transform text-sm uppercase">
                 🔄 Recomeçar
@@ -103,6 +104,16 @@
     </div>
 
     <div id="game-shell"><canvas id="game-canvas" aria-label="Super Gabriel Bros: mapa e fases"></canvas></div>
+    <section id="inventory-panel" role="dialog" aria-label="Inventário de pistas" aria-modal="true" style="display:none;position:fixed;z-index:90;inset:0;background:rgba(0,0,0,.72);align-items:center;justify-content:center;padding:20px;">
+      <div style="width:min(460px,95vw);background:#151324;color:#fff;border:3px solid #c6a86f;border-radius:14px;padding:24px;font-family:system-ui,sans-serif;box-shadow:0 20px 80px #000;">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;">
+          <strong style="font-size:19px;">🎒 Inventário de Gabriel</strong>
+          <button id="inventory-close" onclick="toggleInventario()" aria-label="Fechar inventário" style="background:#322b45;border-radius:9px;color:white;padding:7px 12px;cursor:pointer;">✕</button>
+        </div>
+        <p id="inventory-description" style="font-size:14px;line-height:1.6;margin-top:18px;">Nenhuma pista encontrada ainda.</p>
+        <p style="font-size:12px;color:#b6b0c6;margin-top:14px;">Pistas de história ficam guardadas neste navegador.</p>
+      </div>
+    </section>
 
     <!-- Controles Mobile -->
     <div id="mobile-controls" class="game-control-panel">
@@ -1012,19 +1023,56 @@
           }
           return null;
         }
+
+        const mouthSkinCache=new WeakMap();
+        function getCharacterSkin(sprite,character){
+          if(mouthSkinCache.has(sprite))return mouthSkinCache.get(sprite);
+          let color=character==='GABRIEL'?'#dea078':'#efb290';
+          try {
+            const g=sprite.getContext?.('2d',{willReadFrequently:true});
+            if(g){
+              const w=sprite.width,h=sprite.height;
+              const pixels=g.getImageData(0,0,w,h).data;
+              const x1=Math.floor(w*(character==='GABRIEL'?.48:.31));
+              const x2=Math.ceil(w*(character==='GABRIEL'?.90:.70));
+              let shades=[];
+              for(let y=Math.floor(h*.22);y<Math.ceil(h*.51);y++)
+                for(let x=x1;x<x2;x++){
+                  const i=(y*w+x)*4,r=pixels[i],green=pixels[i+1],b=pixels[i+2],a=pixels[i+3];
+                  if(a>220&&r>115&&green>65&&green<213&&b<182&&r>green*1.10&&green>b*.95)
+                    shades.push([r,green,b]);
+                }
+              if(shades.length){
+                shades.sort((a,b)=>a[0]-b[0]);
+                const shade=shades[Math.floor(shades.length*.58)];
+                color='rgb('+shade[0]+','+shade[1]+','+shade[2]+')';
+              }
+            }
+          }catch(e){/* Canvas com restrição: cor de pele alternativa. */}
+          mouthSkinCache.set(sprite,color);return color;
+        }
         function drawSpeakingSprite(sprite,centerX,footY,height,character,facing=1){
           drawSpriteOnFeet(sprite,centerX,footY,height,facing);
           if(activeDialogueSpeaker()!==character||!sprite?.width||!sprite?.height)return;
-          // Pequenina boca em pixel art sobre o sprite EXISTENTE. Não modifica o asset.
-          // 150 ms alternando entre fechada e aberta, somente durante a fala.
-          const open=Math.floor(performance.now()/150)%2===0;
+          const open=Math.floor(performance.now()/165)%2===0;
           const w=Math.max(1,Math.round(height*sprite.width/sprite.height));
           ctx.save();ctx.translate(Math.round(centerX),Math.round(footY));
           if(facing===-1)ctx.scale(-1,1);
-          const px=character==='GABRIEL'?Math.round(w*.23):Math.round(w*.08);
-          const py=character==='GABRIEL'?-Math.round(height*.62):-Math.round(height*.66);
-          ctx.fillStyle='#292027';ctx.fillRect(px,py,3,open?3:1);
-          if(open){ctx.fillStyle='#ff9b9a';ctx.fillRect(px+1,py+2,1,1);}
+          // Substitui TODA a região da boca já desenhada (não apenas um pixel externo).
+          // Âncora interna ao rosto, com cor adaptada aos pixels de pele de cada sprite.
+          const mouthX=character==='GABRIEL'?Math.round(w*.11):0;
+          const mouthY=character==='GABRIEL'?-Math.round(height*.62):-Math.round(height*.64);
+          ctx.fillStyle=getCharacterSkin(sprite,character);
+          ctx.fillRect(mouthX-4,mouthY-3,9,7);
+          ctx.fillStyle='#3c2027';
+          if(open){
+            ctx.fillRect(mouthX-3,mouthY-1,7,5);
+            ctx.fillStyle='#fa9ba6';ctx.fillRect(mouthX-2,mouthY+2,5,1);
+            ctx.fillStyle='#fff5de';ctx.fillRect(mouthX-2,mouthY-1,5,1);
+          }else{
+            ctx.fillRect(mouthX-3,mouthY+1,7,2);
+            ctx.fillStyle='#b45a60';ctx.fillRect(mouthX-1,mouthY+2,3,1);
+          }
           ctx.restore();
         }
 
