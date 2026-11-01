@@ -217,6 +217,7 @@
         let lives = 5;
         let elapsedSeconds = 0;
         let previousFrame = performance.now();
+        let gameNow = previousFrame; // Relógio virtual: NÃO avança com o inventário aberto.
         let cameraX = 0;
         let sceneReady = false;
         let checkpointReached = false;
@@ -847,14 +848,20 @@
           forestTotemActivated=false;forestTotemActivatedAt=0;
           skyAltarActivated=false;skyAltarActivatedAt=0;
           skyCheckpointReached=false;skyCheckpointX=0;
+          activeBuffs.shield=0;activeBuffs.speedUntil=0;activeBuffs.jumpUntil=0;
+          collectedPickups=new Set();
           enemies=(level===1?level1EnemyTemplate:level===2?level2EnemyTemplate:[]).map(e=>({...e}));
           skyBirds=freshSkyBirds();
           for(const b of [...level2Blocks,...level3Blocks])if(b.moving){b.x=b.baseX;b.y=b.baseY;}
           resetPosition();setHUD();
         }
         window.reiniciarFase=restartCurrentLevel;
-        function loseLife(){
+        function loseLife(reason='enemy'){
           if(state!=='playing')return;
+          if(reason!=='fall'&&activeBuffs.shield>0){
+            activeBuffs.shield--;invulnerable=1.25;
+            showItemToast('ESCUDO PROTEGEU GABRIEL!');return;
+          }
           lives--;
           if(lives<=0){state='gameover';setHUD();return;}
           enemies=(level===1?level1EnemyTemplate:level===2?level2EnemyTemplate:[]).map(e=>({...e}));
@@ -863,12 +870,12 @@
         }
         function startCutscene(){
           if(state!=='playing'||level!==1)return;
-          state='cutscene';cutsceneStart=performance.now();cinematicSeconds=0;
+          state='cutscene';cutsceneStart=gameNow;cinematicSeconds=0;
           player.vx=0;player.vy=0;keys.left=false;keys.right=false;keys.up=false;
           player.direction=1;player.animFrame=0;
         }
         function showSkyTitle(){
-          level=3;state='title3';cameraX=0;
+          level=3;state='title3';cameraX=0;unlockInventory();
           keys.left=keys.right=keys.up=keys.down=false;
           setHUD();
         }
@@ -882,7 +889,7 @@
           beginSkyScene('skyIntro');setHUD();
         }
         function beginSkyScene(which){
-          state=which;skySceneStart=performance.now();skySceneSeconds=0;
+          state=which;skySceneStart=gameNow;skySceneSeconds=0;
           keys.left=keys.right=keys.up=keys.down=false;
           player.vx=0;player.vy=0;player.direction=1;
           if(which==='skyOutro'){
@@ -906,6 +913,7 @@
         }
         function finishSkyOutro(){
           if(state!=='skyOutro')return;
+          giveStoryItem('drink');
           levelComplete[3]=true;state='chapterEnd';
           keys.left=keys.right=keys.up=keys.down=false;
           mapTip='FASE 3 CONCLUÍDA!';
@@ -929,7 +937,7 @@
           beginForestScene('forestIntro');setHUD();
         }
         function beginForestScene(which){
-          state=which;forestSceneStart=performance.now();forestSceneSeconds=0;
+          state=which;forestSceneStart=gameNow;forestSceneSeconds=0;
           keys.left=keys.right=keys.up=false;
           player.vx=0;player.vy=0;player.direction=1;player.animFrame=0;
           // No capítulo final, mantém Gabriel em uma posição visível no enquadramento.
@@ -1011,6 +1019,7 @@
           const el=document.getElementById(id);if(!el)return;
           const press=e=>{
             e.preventDefault();
+            if(inventoryOpen)return;
             el.setPointerCapture?.(e.pointerId);
             if(state==='map'){
               if(id==='btn-jump'){chooseMapLevel();return;}
@@ -1148,10 +1157,11 @@
             return;
           }
           if(state!=='playing')return;
-          elapsedSeconds+=dt;
+          elapsedSeconds+=dt;updateToast();
           invulnerable=Math.max(0,invulnerable-dt);
-          if(keys.left){player.vx=-player.speed;player.direction=-1;}
-          else if(keys.right){player.vx=player.speed;player.direction=1;}
+          const effectiveSpeed=player.speed*(elapsedSeconds<activeBuffs.speedUntil?1.5:1);
+          if(keys.left){player.vx=-effectiveSpeed;player.direction=-1;}
+          else if(keys.right){player.vx=effectiveSpeed;player.direction=1;}
           else player.vx=0;
           // Ventos atuam somente dentro da faixa visível da rajada.
           if(level===3){
@@ -1162,7 +1172,10 @@
             }
             player.vx=Math.max(-7,Math.min(7,player.vx));
           }
-          if(keys.up&&player.grounded){player.vy=player.jumpPower;player.grounded=false;}
+          if(keys.up&&player.grounded){
+            player.vy=player.jumpPower*(elapsedSeconds<activeBuffs.jumpUntil?1.3:1);
+            player.grounded=false;
+          }
           if(level===2||level===3)updateMovingPlatforms(elapsedSeconds);
           const terrain=activeBlocks();
           player.vy=Math.min(player.vy+player.gravity,16);
@@ -1196,7 +1209,7 @@
               else if(player.vy<0){player.y=b.y+b.h;player.vy=0;}
             }
           }
-          if(player.y>GAME_HEIGHT+200){loseLife();return;}
+          if(player.y>GAME_HEIGHT+200){loseLife('fall');return;}
           if(level===3&&!skyCheckpointReached&&player.x+player.w>1650&&player.x<1720&&player.y+player.h>330){
             skyCheckpointReached=true;skyCheckpointX=1650;score+=250;setHUD();
           }
@@ -1204,6 +1217,7 @@
              player.x<1825 && player.y+player.h>305){
             checkpointReached=true;checkpointX=1730;score+=250;setHUD();
           }
+          updateLevelPickups();
           if(level===3)updateSkyBirds(elapsedSeconds);
           else updateEnemies();
           if(state!=='playing')return;
@@ -1970,6 +1984,7 @@
           if(!sceneReady){ctx.fillStyle='#5c94fc';ctx.fillRect(0,0,GAME_WIDTH,GAME_HEIGHT);pixelText('CARREGANDO A MAGIA...',GAME_HEIGHT/2,12);return;}
           if(state==='map'){drawMap();return;}
           if(level===1)drawLevelOne();else if(level===2)drawLevelTwo();else drawLevelThree();
+          if(state==='playing')drawLevelPickups();
           if(state==='title2')overlay('FASE 2','A FLORESTA MISTERIOSA','ENTER OU BOTÃO A PARA COMEÇAR');
           if(state==='title3')overlay('FASE 3','O TEMPLO DOS VENTOS','ENTER OU BOTÃO A PARA COMEÇAR');
           if(state==='gameover')overlay('GAME OVER','AS VIDAS ACABARAM','CLIQUE EM RECOMEÇAR');
@@ -1979,8 +1994,15 @@
           }
         }
         function loop(now){
-          const dt=Math.min(.05,(now-previousFrame)/1000);
-          previousFrame=now;update(dt,now);draw();requestAnimationFrame(loop);
+          const dt=Math.min(.05,Math.max(0,(now-previousFrame)/1000));
+          previousFrame=now;
+          if(!inventoryOpen){
+            gameNow+=dt*1000;
+            update(dt,gameNow);draw();
+          }
+          // Quando inventário abre, não chamamos update nem draw:
+          // timers, IA, vento, plataformas, cutscenes e efeitos ficam congelados.
+          requestAnimationFrame(loop);
         }
         setHUD();
         document.body.classList.add('map-mode');
