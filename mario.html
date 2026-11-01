@@ -562,6 +562,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
         function returnToMap() {
           state='map';keys.left=keys.right=keys.up=keys.down=false;
           mapTip='MOVA A CABEÇA E ESCOLHA UMA FASE';setHUD();
+          if(activeSlot!==null)saveCurrentSlot(false);
         }
         window.voltarAoMapa=returnToMap;
         function chooseMapLevel() {
@@ -817,6 +818,13 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
               originalLoaded++;
               if(originalLoaded===Object.keys(originalPaths).length){
                 sceneReady=true; previousFrame=performance.now(); gameNow=previousFrame;
+                // Atalhos de teste continuam diretos; jogadores comuns sempre
+                // veem o menu antes de iniciar a campanha.
+                if(testMode){
+                  state='map';menuOpen=false;
+                  document.getElementById('sgb-menu').hidden=true;
+                  document.body.classList.remove('sgb-menu-active');
+                }
                 // Testes opcionais: ?teste=final, ?teste=floresta, ?teste=intro2, ?teste=final2
                 if(testMode==='final'){
                   player.x=princess.x-40; player.y=340; player.grounded=true;
@@ -1222,7 +1230,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
         }
         function restartCurrentLevel() {
           if(state==='map'){mapHead.x=139;mapHead.y=319;return;}
-          state='playing';lives=5;score=0;elapsedSeconds=0;invulnerable=0;
+          state='playing';lives=gameLives();score=0;elapsedSeconds=0;invulnerable=0;
           checkpointReached=false;checkpointX=0;
           forestTotemActivated=false;forestTotemActivatedAt=0;
           skyAltarActivated=false;skyAltarActivatedAt=0;
@@ -1242,7 +1250,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
             showItemToast('ESCUDO PROTEGEU GABRIEL!');return;
           }
           lives--;
-          if(lives<=0){state='gameover';setHUD();return;}
+          if(lives<=0){state='gameover';setHUD();if(activeSlot!==null)saveCurrentSlot(false);return;}
           enemies=(level===1?level1EnemyTemplate:level===2?level2EnemyTemplate:[]).map(e=>({...e}));
           skyBirds=freshSkyBirds();
           resetPosition();invulnerable=1.5;setHUD();
@@ -1295,6 +1303,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           if(state!=='skyOutro')return;
           giveStoryItem('drink');
           levelComplete[3]=true;state='chapterEnd';
+          if(activeSlot!==null)saveCurrentSlot(false);
           keys.left=keys.right=keys.up=keys.down=false;
           mapTip='FASE 3 CONCLUÍDA!';
         }
@@ -1352,7 +1361,8 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           // Pular a cena também não deve fazer o jogador perder a pista.
           giveVillainMedallion();
           levelComplete[2]=true;
-          state='chapterEnd';keys.left=keys.right=keys.up=false;
+          state='chapterEnd';
+          if(activeSlot!==null)saveCurrentSlot(false);keys.left=keys.right=keys.up=false;
           mapTip='FASE 2 CONCLUÍDA!';
         }
         function skipStoryScene(){
@@ -1367,6 +1377,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
         }
 
         window.addEventListener('keydown', e=>{
+          if(menuOpen)return;
           if(e.code==='KeyI'){e.preventDefault();window.toggleInventario();return;}
           if(inventoryOpen){if(e.code==='Escape'){e.preventDefault();window.toggleInventario();}return;}
           if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','KeyA','KeyD','KeyW','KeyS','Enter'].includes(e.code))e.preventDefault();
@@ -1399,7 +1410,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           const el=document.getElementById(id);if(!el)return;
           const press=e=>{
             e.preventDefault();
-            if(inventoryOpen)return;
+            if(inventoryOpen||menuOpen)return;
             el.setPointerCapture?.(e.pointerId);
             if(state==='map'){
               if(id==='btn-jump'){chooseMapLevel();return;}
@@ -1434,7 +1445,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
         function hasFloorAhead(enemy,terrain){
           // Consulta a borda dianteira e 5px abaixo dos pés; não depende do tamanho dos buracos.
           // Funciona nos dois mundos e impede que o inimigo ande para o vazio.
-          const nextX=enemy.x+enemy.vx;
+          const nextX=enemy.x+enemy.vx*enemyDifficultyMultiplier();
           const footX=enemy.vx>0?nextX+enemy.w+4:nextX-4;
           const footY=enemy.y+enemy.h+5;
           return terrain.some(b=>
@@ -1465,7 +1476,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
               enemy.vx*=-1;
               turned=true;
             }
-            if(!turned)enemy.x+=enemy.vx;
+            if(!turned)enemy.x+=enemy.vx*enemyDifficultyMultiplier();
             for(const b of terrain){
               if(b.type!=='ground'&&b.type!=='forestGround'&&isColliding(enemy,b)){
                 if(enemy.vx<0)enemy.x=b.x+b.w;
@@ -1484,7 +1495,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
         function updateSkyBirds(t){
           for(const bird of skyBirds){
             if(!bird.alive)continue;
-            bird.x+=bird.vx;
+            bird.x+=bird.vx*enemyDifficultyMultiplier();
             if(bird.x<bird.baseX-bird.range||bird.x>bird.baseX+bird.range){
               bird.vx*=-1;
               bird.x=Math.max(bird.baseX-bird.range,Math.min(bird.baseX+bird.range,bird.x));
@@ -1499,7 +1510,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
         }
         function update(dt,now){
           document.body.classList.toggle('map-mode',state==='map');
-          if(!sceneReady||inventoryOpen)return;
+          if(!sceneReady||inventoryOpen||menuOpen||state==='menu')return;
           updateToast();
           if(state==='map'){updateMap(dt);return;}
           if(state==='cutscene'){
@@ -1541,6 +1552,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           }
           if(state!=='playing')return;
           elapsedSeconds+=dt;
+          if(activeSlot!==null){saveAccumulator+=dt;if(saveAccumulator>=15){saveAccumulator=0;saveCurrentSlot(false);}}
           invulnerable=Math.max(0,invulnerable-dt);
           const effectiveSpeed=player.speed*(elapsedSeconds<activeBuffs.speedUntil?1.5:1);
           if(keys.left){player.vx=-effectiveSpeed;player.direction=-1;}
@@ -2401,6 +2413,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
         function draw(){
           ctx.imageSmoothingEnabled=false;
           if(!sceneReady){ctx.fillStyle='#5c94fc';ctx.fillRect(0,0,GAME_WIDTH,GAME_HEIGHT);pixelText('CARREGANDO A MAGIA...',GAME_HEIGHT/2,12);return;}
+          if(state==='menu'){ctx.fillStyle='#0f1432';ctx.fillRect(0,0,GAME_WIDTH,GAME_HEIGHT);return;}
           if(state==='map'){drawMap();return;}
           if(level===1)drawLevelOne();else if(level===2)drawLevelTwo();else drawLevelThree();
           if(state==='playing')drawLevelPickups();
@@ -2415,7 +2428,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
         function loop(now){
           const dt=Math.min(.05,Math.max(0,(now-previousFrame)/1000));
           previousFrame=now;
-          if(!inventoryOpen){
+          if(!inventoryOpen&&!menuOpen){
             gameNow+=dt*1000;
             update(dt,gameNow);draw();
           }
@@ -2424,7 +2437,6 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           requestAnimationFrame(loop);
         }
         setHUD();
-        document.body.classList.add('map-mode');
         requestAnimationFrame(loop);
     </script>
 </body>
