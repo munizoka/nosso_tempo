@@ -708,7 +708,7 @@
               else processedAssets[key]=trimTransparent(clean);
               originalLoaded++;
               if(originalLoaded===Object.keys(originalPaths).length){
-                sceneReady=true; previousFrame=performance.now();
+                sceneReady=true; previousFrame=performance.now(); gameNow=previousFrame;
                 // Testes opcionais: ?teste=final, ?teste=floresta, ?teste=intro2, ?teste=final2
                 if(testMode==='final'){
                   player.x=princess.x-40; player.y=340; player.grounded=true;
@@ -1325,7 +1325,7 @@
         function drawSpeakingSprite(sprite,centerX,footY,height,character,facing=1){
           drawSpriteOnFeet(sprite,centerX,footY,height,facing);
           if(activeDialogueSpeaker()!==character||!sprite?.width||!sprite?.height)return;
-          const open=Math.floor(performance.now()/165)%2===0;
+          const open=Math.floor(gameNow/165)%2===0;
           const w=Math.max(1,Math.round(height*sprite.width/sprite.height));
           ctx.save();ctx.translate(Math.round(centerX),Math.round(footY));
           if(facing===-1)ctx.scale(-1,1);
@@ -1667,7 +1667,7 @@
           const x=FOREST_TOTEM_X,groundY=380;
           const img=forestTotemActivated?extras.totemOn:extras.totemOff;
           ctx.save();
-          const pulse=.5+.5*Math.sin(performance.now()/190);
+          const pulse=.5+.5*Math.sin(gameNow/190);
           // Aura abaixo do objeto; só fica intensa depois da ativação.
           ctx.fillStyle=forestTotemActivated?'rgba(178,99,255,'+(.18+pulse*.19)+')':'rgba(75,64,102,.16)';
           ctx.beginPath();ctx.ellipse(x,groundY-4,50+12*pulse,11+4*pulse,0,0,Math.PI*2);ctx.fill();
@@ -1690,7 +1690,7 @@
           if(forestTotemActivated){
             ctx.fillStyle='rgba(220,175,255,'+(.45+.35*pulse)+')';
             for(let i=0;i<5;i++){
-              const theta=i*1.256+performance.now()/650;
+              const theta=i*1.256+gameNow/650;
               ctx.fillRect(Math.round(x+30*Math.cos(theta)),
                 Math.round(groundY-60+41*Math.sin(theta)),4,4);
             }
@@ -1803,7 +1803,7 @@
         function drawSkyAltar(){
           const image=skyAltarActivated?extras.skyAltarOn:extras.skyAltarOff;
           const x=SKY_ALTAR_X, foot=380, h=112, w=84;
-          ctx.save();const pulse=(1+Math.sin(performance.now()/200))*.5;
+          ctx.save();const pulse=(1+Math.sin(gameNow/200))*.5;
           if(skyAltarActivated){
             ctx.fillStyle='rgba(147,244,255,'+(.22+.18*pulse)+')';
             ctx.beginPath();ctx.ellipse(x,foot-33,56+pulse*10,65+pulse*7,0,0,Math.PI*2);ctx.fill();
