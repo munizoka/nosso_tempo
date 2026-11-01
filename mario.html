@@ -83,7 +83,7 @@
 
     <!-- Em modo retrato, o mapa e o jogo continuam funcionais, sem forçar rotação. -->
 
-    <!-- Interface Superior (Score, Tempo, Fullscreen e Recomeçar) -->
+    <!-- Interface Superior (Score, Tempo, Mapa e Recomeçar) -->
     <div id="game-hud" class="absolute z-50 flex justify-between items-start pointer-events-none">
         <a href="index.html" class="w-12 h-12 bg-zinc-800/80 border-2 border-white rounded-full flex items-center justify-center text-white font-sans font-bold backdrop-blur pointer-events-auto shadow-lg text-2xl active:scale-90 transition-transform">←</a>
         
@@ -96,10 +96,6 @@
 
         <div class="flex gap-2 pointer-events-auto">
             <button onclick="voltarAoMapa()" class="px-3 py-2 bg-indigo-900/80 border-2 border-white rounded-xl text-white font-sans font-bold shadow-lg text-sm" title="Voltar ao mapa">🗺️ Mapa</button>
-            <!-- Botão de Tela Cheia -->
-            <button onclick="toggleFullScreen()" class="w-12 h-12 bg-zinc-800/80 border-2 border-white rounded-xl flex items-center justify-center text-white font-sans font-bold backdrop-blur pointer-events-auto shadow-lg active:scale-95 transition-transform text-lg" title="Tela Cheia">
-                🔲
-            </button>
             <button onclick="reiniciarFase()" class="px-4 py-3 bg-zinc-800/80 border-2 border-white rounded-xl flex items-center justify-center text-white font-sans font-bold backdrop-blur pointer-events-auto shadow-lg active:scale-95 transition-transform text-sm uppercase">
                 🔄 Recomeçar
             </button>
@@ -177,6 +173,8 @@
         const testMode = new URLSearchParams(window.location.search).get('teste');
         const MAP_BOUNDS={left:62,right:738,top:99,bottom:376};
         const mapHead={x:139,y:319,r:17,speed:150};
+        const levelComplete={1:false,2:false};
+        const FOREST_GOAL_X=FOREST_END-430;
         const mapLevels=[
           {id:1,name:'PRIMEIRA AVENTURA',x:139,y:319,open:true,color:'#ff6158'},
           {id:2,name:'FLORESTA MISTERIOSA',x:340,y:236,open:true,color:'#fab53c'},
@@ -224,6 +222,8 @@
         }
         function drawMap() {
           // Cenário original inspirado nos mapas 16-bit (não reutiliza a imagem de referência).
+          const islandOuter=[[92,78],[209,67],[348,81],[407,107],[515,97],[690,96],[744,125],[752,255],[713,343],[627,372],[460,388],[284,375],[162,388],[98,333],[71,239]];
+          const islandInner=[[101,80],[212,73],[341,89],[404,114],[516,103],[686,104],[738,128],[744,248],[708,337],[625,364],[459,379],[284,366],[165,380],[107,326],[81,235]];
           ctx.fillStyle='#e3d2b0';ctx.fillRect(0,0,GAME_WIDTH,GAME_HEIGHT);
           for(let y=12;y<450;y+=43)for(let x=14;x<800;x+=65){
             if((x+y)%3===0){ctx.fillStyle='#fff8e4';ctx.fillRect(x,y,14,5);ctx.fillRect(x+5,y-5,5,15);}
@@ -233,8 +233,34 @@
           for(let y=72;y<389;y+=20)for(let x=42;x<765;x+=32){
             if((x+y)%5===0){ctx.fillStyle='#b1e2ff';ctx.fillRect(x,y,9,3);}
           }
-          poly([[92,78],[209,67],[348,81],[407,107],[515,97],[690,96],[744,125],[752,255],[713,343],[627,372],[460,388],[284,375],[162,388],[98,333],[71,239]],'#6fbb38','#305126',9);
-          poly([[101,80],[212,73],[341,89],[404,114],[516,103],[686,104],[738,128],[744,248],[708,337],[625,364],[459,379],[284,366],[165,380],[107,326],[81,235]],'#66d235','#b8f65e',4);
+          poly(islandOuter,'#6fbb38','#305126',9);
+          poly(islandInner,'#66d235','#b8f65e',4);
+          // Bioma sombrio da FASE 2 no lado direito do mapa.
+          ctx.save();
+          ctx.beginPath();ctx.moveTo(islandInner[0][0],islandInner[0][1]);
+          for(let i=1;i<islandInner.length;i++)ctx.lineTo(islandInner[i][0],islandInner[i][1]);ctx.closePath();
+          ctx.clip();
+          const darkGrad=ctx.createLinearGradient(410,120,760,360);
+          darkGrad.addColorStop(0,'rgba(72,53,102,0.02)');
+          darkGrad.addColorStop(.28,'rgba(73,55,111,0.18)');
+          darkGrad.addColorStop(.62,'rgba(49,35,82,0.42)');
+          darkGrad.addColorStop(1,'rgba(24,22,52,0.64)');
+          ctx.fillStyle=darkGrad;ctx.fillRect(410,75,350,315);
+          ctx.globalAlpha=.55;
+          for(const p of [[564,149,110,40],[615,191,128,50],[596,279,122,54],[682,305,92,38]]){
+            ctx.fillStyle='#423360';ctx.beginPath();ctx.ellipse(p[0],p[1],p[2]/2,p[3]/2,0,0,Math.PI*2);ctx.fill();
+          }
+          ctx.globalAlpha=.8;
+          for(const [x,y] of [[606,150],[650,208],[626,282],[695,314]]){
+            ctx.strokeStyle='#291a3f';ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x-4,y+26);ctx.stroke();
+            ctx.beginPath();ctx.moveTo(x-2,y+9);ctx.lineTo(x-14,y+2);ctx.moveTo(x-1,y+13);ctx.lineTo(x+12,y+5);ctx.moveTo(x-3,y+19);ctx.lineTo(x-16,y+22);ctx.stroke();
+          }
+          for(let i=0;i<8;i++){
+            const mx=470+i*34,my=145+(i%2)*62;
+            ctx.fillStyle='rgba(158,120,233,.17)';ctx.fillRect(mx,my,26,3);
+            ctx.fillRect(mx+7,my+6,18,3);
+          }
+          ctx.restore();
           // Lago e cachoeira nas laterais.
           poly([[406,180],[446,152],[508,168],[547,190],[545,220],[591,240],[573,285],[531,314],[476,301],[433,322],[392,293],[409,250]],'#387fe8','#233d78',8);
           poly([[408,178],[449,161],[502,174],[543,193],[535,219],[584,246],[565,282],[532,305],[475,294],[432,314],[402,291],[418,251]],'#5d9bf5','#b9e7fd',3);
@@ -243,17 +269,22 @@
           // Caminho amarelado, com um nó para cada fase.
           const paths=[[[139,319],[227,319],[275,279],[340,236]],[[340,236],[340,176],[390,143],[612,143],[674,163]]];
           for(const pts of paths){ctx.beginPath();ctx.moveTo(...pts[0]);for(let i=1;i<pts.length;i++)ctx.lineTo(...pts[i]);ctx.strokeStyle='#b38e53';ctx.lineWidth=25;ctx.lineJoin='round';ctx.lineCap='round';ctx.stroke();ctx.strokeStyle='#fae8a9';ctx.lineWidth=18;ctx.stroke();}
+          // Destaque sombrio sobre a trilha da Fase 2.
+          ctx.beginPath();ctx.moveTo(340,236);ctx.lineTo(340,176);ctx.lineTo(390,143);ctx.lineTo(612,143);ctx.lineTo(674,163);
+          ctx.strokeStyle='rgba(96,68,138,.9)';ctx.lineWidth=8;ctx.lineJoin='round';ctx.lineCap='round';ctx.stroke();
           // Árvores, colinas, canos e torres em pixel art.
           for(let n=0;n<24;n++){
             const x=107+((n*127)%599),y=113+((n*73)%237);
             if(Math.hypot(x-490,y-250)<112||Math.hypot(x-340,y-236)<36||Math.hypot(x-674,y-163)<35)continue;
-            ctx.fillStyle='#275a29';ctx.fillRect(x-9,y+3,25,16);
-            ctx.fillStyle='#258f2a';ctx.fillRect(x-8,y-6,21,20);
-            ctx.fillStyle='#7de047';ctx.fillRect(x-5,y-7,12,7);
+            const spooky=x>510;
+            ctx.fillStyle=spooky?'#21342f':'#275a29';ctx.fillRect(x-9,y+3,25,16);
+            ctx.fillStyle=spooky?'#395247':'#258f2a';ctx.fillRect(x-8,y-6,21,20);
+            ctx.fillStyle=spooky?'#8761be':'#7de047';ctx.fillRect(x-5,y-7,12,7);
           }
           for(const [x,y] of [[243,143],[274,172],[618,278],[684,298]]){
-            poly([[x-19,y+12],[x-10,y-13],[x+3,y-27],[x+17,y-12],[x+22,y+12]],'#c59660','#5b4428',4);
-            ctx.fillStyle='#f4ca8a';ctx.fillRect(x-7,y-12,8,12);
+            const spooky=x>500;
+            poly([[x-19,y+12],[x-10,y-13],[x+3,y-27],[x+17,y-12],[x+22,y+12]],spooky?'#7e648d':'#c59660',spooky?'#342541':'#5b4428',4);
+            ctx.fillStyle=spooky?'#d8b0ee':'#f4ca8a';ctx.fillRect(x-7,y-12,8,12);
           }
           for(const [x,y] of [[633,275],[276,349]]){
             ctx.fillStyle='#1b7036';ctx.fillRect(x-14,y-5,29,29);
@@ -261,19 +292,32 @@
             ctx.fillStyle='#14592b';ctx.fillRect(x-19,y-10,39,12);
             ctx.fillStyle='#6df45b';ctx.fillRect(x-16,y-9,29,6);
           }
+          // Castelo/portal futuro no extremo direito.
           ctx.fillStyle='#47516c';ctx.fillRect(698,112,40,36);ctx.fillStyle='#c0c7d4';ctx.fillRect(699,114,36,13);
           ctx.fillStyle='#252338';ctx.fillRect(711,130,12,18);
+          ctx.fillStyle='rgba(188,142,255,.35)';ctx.fillRect(692,108,52,44);
+          const chosen=mapClosest();
           for(const n of mapLevels){
+            const complete=!!levelComplete[n.id];
             ctx.fillStyle='#29242b';ctx.fillRect(n.x-13,n.y-8,28,18);
-            ctx.fillStyle=n.color;ctx.fillRect(n.x-10,n.y-10,22,15);
+            ctx.fillStyle=complete?'#f8c545':n.color;ctx.fillRect(n.x-10,n.y-10,22,15);
             ctx.fillStyle='#fff8c6';ctx.fillRect(n.x-5,n.y-7,10,5);
             if(mapClosest()===n){ctx.strokeStyle='#fff9cd';ctx.lineWidth=2;ctx.strokeRect(n.x-19,n.y-19,38,38);}
+            if(complete){
+              retroText('★',n.x+18,n.y-14,8,'#ffe27a');
+            }
           }
-          const chosen=mapClosest();
           ctx.fillStyle='#f5e6bf';ctx.fillRect(26,17,748,33);
           retroText('SUPER GABRIEL BROS  •  MAPA',400,39,13,'#302c2e');
           ctx.fillStyle='#262238';ctx.fillRect(100,411,600,31);
-          retroText(chosen?(chosen.open?'FASE '+chosen.id+' • '+chosen.name+' • ENTER / A':'FASE 3 • EM BREVE'):mapTip,400,432,8,'#fff8cf');
+          let footerText=mapTip;
+          if(chosen){
+            if(chosen.open){
+              const status=levelComplete[chosen.id]?' • CONCLUÍDA':'';
+              footerText='FASE '+chosen.id+' • '+chosen.name+status+' • ENTER / A';
+            } else footerText='FASE 3 • EM BREVE';
+          }
+          retroText(footerText,400,432,8,'#fff8cf');
           // Apenas a cabeça extraída visualmente pelo recorte circular da imagem 55.jpg.
           ctx.save();ctx.beginPath();ctx.arc(mapHead.x,mapHead.y,17,0,Math.PI*2);ctx.clip();
           const head=extras.mapHead;
@@ -284,16 +328,6 @@
           ctx.restore();ctx.strokeStyle='#fff5bf';ctx.lineWidth=3;ctx.beginPath();ctx.arc(mapHead.x,mapHead.y,18,0,Math.PI*2);ctx.stroke();
           retroText('▲',mapHead.x,mapHead.y-25,8,'#ffeff4');
         }
-
-        function toggleFullScreen() {
-          const doc = document;
-          if (!doc.fullscreenElement) {
-            doc.documentElement.requestFullscreen?.().catch(() => {});
-          } else {
-            doc.exitFullscreen?.().catch(() => {});
-          }
-        }
-        window.toggleFullScreen = toggleFullScreen;
 
         function setHUD() {
           HUD.score.textContent = `SCORE: ${score}`;
@@ -541,10 +575,12 @@
         }
         function finishForestOutro(){
           if(state!=='forestOutro')return;
+          levelComplete[2]=true;
           state='chapterEnd';keys.left=keys.right=keys.up=false;
+          mapTip='FASE 2 CONCLUÍDA!';
         }
         function skipStoryScene(){
-          if(state==='cutscene'){returnToMap();return true;}
+          if(state==='cutscene'){levelComplete[1]=true;returnToMap();return true;}
           if(state==='forestIntro'){finishForestIntro();return true;}
           if(state==='forestOutro'){finishForestOutro();return true;}
           return false;
@@ -648,7 +684,7 @@
           if(state==='map'){updateMap(dt);return;}
           if(state==='cutscene'){
             cinematicSeconds=(now-cutsceneStart)/1000;
-            if(cinematicSeconds>=10.1)returnToMap();
+            if(cinematicSeconds>=10.1){levelComplete[1]=true;returnToMap();}
             return;
           }
           if(state==='forestIntro'||state==='forestOutro'){
@@ -692,7 +728,7 @@
           updateEnemies();
           if(state!=='playing')return;
           if(level===1&&isColliding(player,princess)){startCutscene();return;}
-          if(level===2 && player.x>=FOREST_END-455){startForestOutro();return;}
+          if(level===2 && player.x>=FOREST_GOAL_X-55){startForestOutro();return;}
           const maxCamera=level===1?3250:FOREST_END-GAME_WIDTH;
           cameraX=Math.max(0,Math.min(maxCamera,player.x-GAME_WIDTH/2.5));
           if(!player.grounded)player.animFrame=2;
@@ -966,16 +1002,35 @@
             {from:8.5,to:10.6,speaker:'VITORIA',message:'GABRIEL! NÃO DESISTA DE MIM!',color:'#ffadd1'},
             {from:10.6,to:12.7,speaker:'GABRIEL',message:'EU VOU ATRÁS DE VOCÊS!',color:'#ffe4a0'}
           ]:[
-            {from:0,to:2.5,speaker:'GABRIEL',message:'FINALMENTE! AGORA EU TE PEGUEI!',color:'#ffe4a0'},
-            {from:2.5,to:4.7,speaker:'VITORIA',message:'GABRIEL! ELE VAI FUGIR DE NOVO!',color:'#ffadd1'},
-            {from:4.7,to:6.9,speaker:'VILÃO',message:'VOCÊ AINDA ESTÁ MUITO LONGE DA VERDADE!',color:'#d6a5ff'},
-            {from:6.9,to:8.9,speaker:'GABRIEL',message:'PARE DE TENTAR ME TALARICAR!',color:'#ffe4a0'},
-            {from:8.9,to:11.3,speaker:'GABRIEL',message:'DA PRÓXIMA VEZ VOCÊ NÃO ESCAPA!',color:'#ffe4a0'}
+            {from:0,to:2.1,speaker:'GABRIEL',message:'FINALMENTE! AGORA EU TE PEGUEI!',color:'#ffe4a0'},
+            {from:2.1,to:4.0,speaker:'VITORIA',message:'GABRIEL! CUIDADO, ELE ESTÁ ABRINDO UM PORTAL!',color:'#ffadd1'},
+            {from:4.0,to:6.0,speaker:'VILÃO',message:'VOCÊ VENCEU A FLORESTA... MAS O JOGO ESTÁ SÓ COMEÇANDO!',color:'#d6a5ff'},
+            {from:6.0,to:8.1,speaker:'GABRIEL',message:'PARE DE TENTAR ME TALARICAR! EU VOU TE ALCANÇAR!',color:'#ffe4a0'},
+            {from:8.1,to:9.8,speaker:'VITORIA',message:'VOCÊ CONSEGUIU CHEGAR ATÉ O FIM! NÃO DESISTA!',color:'#ffadd1'},
+            {from:9.8,to:11.3,speaker:'GABRIEL',message:'FASE 2 CONCLUÍDA! NA PRÓXIMA VOCÊ NÃO ESCAPA!',color:'#ffe4a0'}
           ];
           const line=storyLine(t,dialogue);
           if(line)drawStoryDialogue(line.speaker,line.message,line.color);
           pixelText('ENTER OU BOTÃO A: PULAR CENA',GAME_HEIGHT-17,7,'#cdd6e6');
         }
+        function drawForestGoalMarker(){
+          const gx=FOREST_GOAL_X, baseY=298;
+          ctx.save();
+          ctx.globalAlpha=.95;
+          ctx.fillStyle='rgba(181,118,255,.18)';
+          ctx.beginPath();ctx.ellipse(gx+14,356,54,15,0,0,Math.PI*2);ctx.fill();
+          ctx.strokeStyle='#6d3bb8';ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(gx+14,300);ctx.lineTo(gx+14,355);ctx.stroke();
+          ctx.fillStyle='#d8c1ff';ctx.fillRect(gx+8,304,12,10);
+          ctx.fillStyle='#7f39d8';ctx.fillRect(gx+20,304,12,10);
+          ctx.fillStyle='#f2deff';ctx.beginPath();ctx.moveTo(gx+14,282);ctx.lineTo(gx+30,304);ctx.lineTo(gx-2,304);ctx.closePath();ctx.fill();
+          for(let i=0;i<4;i++){
+            ctx.fillStyle='rgba(211,175,255,.55)';
+            ctx.fillRect(gx-24+i*16,292-(i%2)*8,8,8);
+          }
+          retroText('FIM',gx+14,275,7,'#ffdca0');
+          ctx.restore();
+        }
+
         function drawLevelTwo(){
           drawForestBackground();
           ctx.save();ctx.translate(-Math.round(cameraX),0);
@@ -987,6 +1042,7 @@
           const flag=checkpointReached?extras.checkpointOn:extras.checkpointOff;
           if(flag)drawObject(flag,1755,312,42,68);
           else {ctx.fillStyle='#8e6db1';ctx.fillRect(1765,325,4,55);}
+          drawForestGoalMarker();
           if(state==='forestIntro'||state==='forestOutro')drawForestStoryActors();
           drawEnemies();drawHero();
           ctx.restore();
@@ -1005,7 +1061,7 @@
           if(level===1)drawLevelOne();else drawLevelTwo();
           if(state==='title2')overlay('FASE 2','A FLORESTA MISTERIOSA','ENTER OU BOTÃO A PARA COMEÇAR');
           if(state==='gameover')overlay('GAME OVER','AS VIDAS ACABARAM','CLIQUE EM RECOMEÇAR');
-          if(state==='chapterEnd')overlay('VITORIA FOI LEVADA DE NOVO!','O MISTÉRIO CONTINUA...','FASE 3 EM BREVE  |  ENTER / A: MAPA');
+          if(state==='chapterEnd')overlay('FASE 2 CONCLUÍDA!','VOCÊ CHEGOU AO FIM DA FLORESTA SOMBRIA.','FASE 3 EM BREVE  |  ENTER / A: MAPA');
         }
         function loop(now){
           const dt=Math.min(.05,(now-previousFrame)/1000);
