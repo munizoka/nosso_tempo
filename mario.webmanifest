@@ -13,5 +13,12 @@
   "orientation": "landscape",
   "background_color": "#131628",
   "theme_color": "#131628",
-  "lang": "pt-BR"
+  "lang": "pt-BR",
+  "icons": [
+    {
+      "src": "./77.jpg",
+      "type": "image/jpeg",
+      "purpose": "any"
+    }
+  ]
 }
