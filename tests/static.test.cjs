@@ -114,7 +114,7 @@ check('Barra de Super Forca usa o tempo ativo do jogo',mario.includes('id="sgb-s
  mario.includes('remaining/SUPER_DURATION*100')&&mario.includes('superPower.until-elapsedSeconds'));
 check('Sprites opcionais de cinco poses para os dois inimigos',[
  '84 bolota idle.png','85 bolota walk 1.png','86 bolota walk 2.png',
- '87 bolota dead.png','88 bolota espanto.png','89 turtle espanto.png',
+ '87 bolota dead.png','88 bolota espanto.png','89 trutle espanto.png',
  '90 turtle dead.png','91 turtle walk 1.png','92 turtle idle.png','93 turtle walk 2.png'
 ].every(asset=>mario.includes(asset))&&mario.includes("img.onerror=()=>"));
 check('Patrulha, alerta e perseguicao com memoria',mario.includes("enemy.aiState='alert'") &&
