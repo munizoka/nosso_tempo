@@ -560,18 +560,22 @@
         function isColliding(a,b){return a.x<b.x+b.w&&a.x+a.w>b.x&&a.y<b.y+b.h&&a.y+a.h>b.y;}
 
         function resetPosition(){
-          player.x=level===1?50:(checkpointReached?checkpointX:50);
+          player.x=level===1?50:level===2?(checkpointReached?checkpointX:50):(skyCheckpointReached?skyCheckpointX:50);
           player.y=100;player.vx=0;player.vy=0;player.grounded=false;
           player.direction=1;player.animFrame=0;cameraX=0;
           if(level===2&&checkpointReached)cameraX=Math.max(0,Math.min(FOREST_END-GAME_WIDTH,player.x-320));
+          if(level===3&&skyCheckpointReached)cameraX=Math.max(0,Math.min(SKY_END-GAME_WIDTH,player.x-320));
         }
         function restartCurrentLevel() {
           if(state==='map'){mapHead.x=139;mapHead.y=319;return;}
           state='playing';lives=5;score=0;elapsedSeconds=0;invulnerable=0;
           checkpointReached=false;checkpointX=0;
           forestTotemActivated=false;forestTotemActivatedAt=0;
-          enemies=(level===1?level1EnemyTemplate:level2EnemyTemplate).map(e=>({...e}));
-          for(const b of level2Blocks)if(b.moving){b.x=b.baseX;b.y=b.baseY;}
+          skyAltarActivated=false;skyAltarActivatedAt=0;
+          skyCheckpointReached=false;skyCheckpointX=0;
+          enemies=(level===1?level1EnemyTemplate:level===2?level2EnemyTemplate:[]).map(e=>({...e}));
+          skyBirds=freshSkyBirds();
+          for(const b of [...level2Blocks,...level3Blocks])if(b.moving){b.x=b.baseX;b.y=b.baseY;}
           resetPosition();setHUD();
         }
         window.reiniciarFase=restartCurrentLevel;
@@ -579,7 +583,8 @@
           if(state!=='playing')return;
           lives--;
           if(lives<=0){state='gameover';setHUD();return;}
-          enemies=(level===1?level1EnemyTemplate:level2EnemyTemplate).map(e=>({...e}));
+          enemies=(level===1?level1EnemyTemplate:level===2?level2EnemyTemplate:[]).map(e=>({...e}));
+          skyBirds=freshSkyBirds();
           resetPosition();invulnerable=1.5;setHUD();
         }
         function startCutscene(){
@@ -588,6 +593,49 @@
           player.vx=0;player.vy=0;keys.left=false;keys.right=false;keys.up=false;
           player.direction=1;player.animFrame=0;
         }
+        function showSkyTitle(){
+          level=3;state='title3';cameraX=0;
+          keys.left=keys.right=keys.up=keys.down=false;
+          setHUD();
+        }
+        function startSkyLevel(){
+          if(state!=='title3')return;
+          level=3;skyCheckpointReached=false;skyCheckpointX=0;
+          skyAltarActivated=false;skyAltarActivatedAt=0;
+          skyBirds=freshSkyBirds();
+          resetPosition();
+          player.x=110;player.y=340;player.grounded=true;
+          beginSkyScene('skyIntro');setHUD();
+        }
+        function beginSkyScene(which){
+          state=which;skySceneStart=performance.now();skySceneSeconds=0;
+          keys.left=keys.right=keys.up=keys.down=false;
+          player.vx=0;player.vy=0;player.direction=1;
+          if(which==='skyOutro'){
+            skyAltarActivated=true;
+            player.x=SKY_ALTAR_X-58;player.y=340;player.grounded=true;
+            cameraX=SKY_END-GAME_WIDTH;
+          }else cameraX=0;
+        }
+        function finishSkyIntro(){
+          if(state!=='skyIntro')return;
+          state='playing';keys.left=keys.right=keys.up=keys.down=false;
+          player.y=340;player.vy=0;player.grounded=true;
+        }
+        function activateSkyAltar(now){
+          if(level!==3||state!=='playing'||skyAltarActivated)return;
+          skyAltarActivated=true;skyAltarActivatedAt=now;state='skyAltarCharge';
+          player.vx=0;player.vy=0;
+          keys.left=keys.right=keys.up=keys.down=false;
+          cameraX=SKY_END-GAME_WIDTH;
+        }
+        function finishSkyOutro(){
+          if(state!=='skyOutro')return;
+          levelComplete[3]=true;state='chapterEnd';
+          keys.left=keys.right=keys.up=keys.down=false;
+          mapTip='FASE 3 CONCLUÍDA!';
+        }
+
         function showForestTitle(){
           level=2;state='title2';cameraX=0;
           keys.left=keys.right=keys.up=false;
@@ -647,6 +695,9 @@
           if(state==='forestIntro'){finishForestIntro();return true;}
           if(state==='forestTotemCharge'){startForestOutro();return true;}
           if(state==='forestOutro'){finishForestOutro();return true;}
+          if(state==='skyIntro'){finishSkyIntro();return true;}
+          if(state==='skyAltarCharge'){beginSkyScene('skyOutro');return true;}
+          if(state==='skyOutro'){finishSkyOutro();return true;}
           return false;
         }
 
@@ -663,6 +714,7 @@
           }
           if(state==='chapterEnd'&&(e.code==='Enter'||e.code==='Space')){returnToMap();return;}
           if(state==='title2'&&(e.code==='Enter'||e.code==='Space'||e.code==='ArrowUp')){startForest();return;}
+          if(state==='title3'&&(e.code==='Enter'||e.code==='Space'||e.code==='ArrowUp')){startSkyLevel();return;}
           if(['Enter','Space','ArrowUp'].includes(e.code)&&skipStoryScene())return;
           if(state!=='playing')return;
           if(e.code==='ArrowLeft'||e.code==='KeyA')keys.left=true;
@@ -687,6 +739,7 @@
             }
             if(state==='chapterEnd'&&id==='btn-jump'){returnToMap();return;}
             if(state==='title2'&&key==='up'){startForest();return;}
+            if(state==='title3'&&key==='up'){startSkyLevel();return;}
             if(id==='btn-jump'&&skipStoryScene())return;
             if(state!=='playing')return;
             keys[key]=true;
@@ -700,7 +753,7 @@
 
         function updateMovingPlatforms(t){
           // Movimento senoidal previsível. Um jogador em cima é transportado junto.
-          for(const b of level2Blocks){
+          for(const b of level===2?level2Blocks:level3Blocks){
             if(!b.moving)continue;
             const oldX=b.x,oldY=b.y;
             b.x=b.baseX+Math.sin(t*b.speed)*b.travel;
@@ -760,6 +813,22 @@
             }
           }
         }
+        function updateSkyBirds(t){
+          for(const bird of skyBirds){
+            if(!bird.alive)continue;
+            bird.x+=bird.vx;
+            if(bird.x<bird.baseX-bird.range||bird.x>bird.baseX+bird.range){
+              bird.vx*=-1;
+              bird.x=Math.max(bird.baseX-bird.range,Math.min(bird.baseX+bird.range,bird.x));
+            }
+            bird.y=bird.baseY+Math.sin(t*2.5+bird.phase)*24;
+            if(invulnerable<=0&&isColliding(player,bird)){
+              if(player.vy>0&&player.y+player.h<bird.y+18){
+                bird.alive=false;player.vy=player.jumpPower*.72;score+=150;setHUD();
+              }else{loseLife();return;}
+            }
+          }
+        }
         function update(dt,now){
           document.body.classList.toggle('map-mode',state==='map');
           if(!sceneReady)return;
@@ -774,6 +843,16 @@
             if(now-forestTotemActivatedAt>=FOREST_TOTEM_CHARGE_MS)startForestOutro();
             return;
           }
+          if(state==='skyAltarCharge'){
+            if(now-skyAltarActivatedAt>=SKY_ALTAR_CHARGE_MS)beginSkyScene('skyOutro');
+            return;
+          }
+          if(state==='skyIntro'||state==='skyOutro'){
+            skySceneSeconds=(now-skySceneStart)/1000;
+            if(state==='skyIntro'&&skySceneSeconds>=12.7)finishSkyIntro();
+            else if(state==='skyOutro'&&skySceneSeconds>=11.8)finishSkyOutro();
+            return;
+          }
           if(state==='forestIntro'||state==='forestOutro'){
             forestSceneSeconds=(now-forestSceneStart)/1000;
             if(state==='forestIntro'&&forestSceneSeconds>=12.7)finishForestIntro();
@@ -786,40 +865,59 @@
           if(keys.left){player.vx=-player.speed;player.direction=-1;}
           else if(keys.right){player.vx=player.speed;player.direction=1;}
           else player.vx=0;
+          // As rajadas de vento afetam a velocidade horizontal, mas não o HUD.
+          if(level===3){
+            for(const gust of skyWindZones){
+              if(player.x+player.w>=gust.x&&player.x<=gust.x+gust.w)
+                player.vx+=gust.force;
+            }
+            player.vx=Math.max(-7,Math.min(7,player.vx));
+          }
           if(keys.up&&player.grounded){player.vy=player.jumpPower;player.grounded=false;}
-          if(level===2)updateMovingPlatforms(elapsedSeconds);
+          if(level===2||level===3)updateMovingPlatforms(elapsedSeconds);
           const terrain=activeBlocks();
           player.vy=Math.min(player.vy+player.gravity,16);
           player.grounded=false;
           player.x+=player.vx;
           if(player.x<0)player.x=0;
           for(const b of terrain){
+            if(b.type==='skyPlatform')continue;
             if(isColliding(player,b)){
               if(player.vx>0)player.x=b.x-player.w;
               else if(player.vx<0)player.x=b.x+b.w;
               player.vx=0;
             }
           }
+          const oldFootY=player.y+player.h;
           player.y+=player.vy;
           for(const b of terrain){
+            // Plataformas celestiais permitem passar por baixo e pousar por cima.
+            if(b.type==='skyPlatform' && !(player.vy>=0&&oldFootY<=b.y+7))continue;
             if(isColliding(player,b)){
               if(player.vy>0){player.y=b.y-player.h;player.vy=0;player.grounded=true;}
               else if(player.vy<0){player.y=b.y+b.h;player.vy=0;}
             }
           }
           if(player.y>GAME_HEIGHT+200){loseLife();return;}
+          if(level===3&&!skyCheckpointReached&&player.x+player.w>1830&&player.x<1900&&player.y+player.h>315){
+            skyCheckpointReached=true;skyCheckpointX=1820;score+=250;setHUD();
+          }
           if(level===2 && !checkpointReached && player.x+player.w>1760 &&
              player.x<1825 && player.y+player.h>305){
             checkpointReached=true;checkpointX=1730;score+=250;setHUD();
           }
-          updateEnemies();
+          if(level===3)updateSkyBirds(elapsedSeconds);
+          else updateEnemies();
           if(state!=='playing')return;
           if(level===1&&isColliding(player,princess)){startCutscene();return;}
           if(level===2 && player.grounded &&
              player.x+player.w>=FOREST_TOTEM_X-18 && player.x<FOREST_TOTEM_X+52){
             activateForestTotem(now);return;
           }
-          const maxCamera=level===1?3250:FOREST_END-GAME_WIDTH;
+          if(level===3&&player.grounded&&player.x+player.w>=SKY_ALTAR_X-35&&player.x<SKY_ALTAR_X+45){
+            activateSkyAltar(now);return;
+          }
+          const maxCamera=level===1?3250:(level===2?FOREST_END-GAME_WIDTH:SKY_END-GAME_WIDTH);
           cameraX=Math.max(0,Math.min(maxCamera,player.x-GAME_WIDTH/2.5));
           if(!player.grounded)player.animFrame=2;
           else if(player.vx!==0){player.animTimer++;
