@@ -248,31 +248,188 @@
         const FOREST_TOTEM_CHARGE_MS=1350;
         const FOREST_CLUE_X=FOREST_END-170;
         const FOREST_OUTRO_DURATION=21.7;
-        const INVENTORY_KEY='super-gabriel-bros-pistas-v1';
-        let inventoryOpen=false;
-        let hasVillainMedallion=false;
-        try{hasVillainMedallion=JSON.parse(localStorage.getItem(INVENTORY_KEY)||'false')===true;}
-        catch(e){hasVillainMedallion=false;}
-        function renderInventory(){
-          const count=document.getElementById('inventory-count');
-          const description=document.getElementById('inventory-description');
-          if(count)count.textContent=hasVillainMedallion?'1':'0';
-          if(description)description.textContent=hasVillainMedallion
-            ?'PISTA 01 — MEDALHÃO RACHADO. Caiu do manto do vilão quando ele fugiu da Floresta Misteriosa. Possui uma runa em forma de vento. Ainda não sabemos quem é o dono.'
-            :'Nenhuma pista encontrada ainda. Explore os finais das fases para descobrir mais.';
+        // Inventário modular, em versão local (sem alterar Firebase).
+        const INVENTORY_KEY='super-gabriel-bros-inventario-v2';
+        const OLD_CLUE_KEY='super-gabriel-bros-pistas-v1';
+        const INVENTORY_UNLOCK_KEY='super-gabriel-bros-inventario-desbloqueado-v1';
+        const ITEM_CATALOG={
+          medallion:{id:'medallion',kind:'story',name:'Medalhão Rachado',icon:'🔮',description:'Pista 01: encontrado na Floresta Misteriosa. Uma runa de vento marca sua superfície. Não pode ser usado nem descartado.',origin:'Fim da Fase 2'},
+          drink:{id:'drink',kind:'story',name:'Drink Misterioso',asset:'67.png',icon:'🍹',description:'Pista 02: caiu do portal do vilão no Templo dos Ventos. O que esse copo revela sobre ele?',origin:'Fim da Fase 3'},
+          life:{id:'life',kind:'consumable',name:'Cogumelo de Vida',icon:'🍄',description:'Concede uma vida extra imediatamente (limite: 99).'},
+          shield:{id:'shield',kind:'consumable',name:'Escudo Protetor',icon:'🛡️',description:'Protege de um ataque inimigo. Não protege contra cair no abismo.'},
+          speed:{id:'speed',kind:'consumable',name:'Poção de Velocidade',icon:'⚡',description:'Aumenta a velocidade durante 12 segundos de jogo.'},
+          jump:{id:'jump',kind:'consumable',name:'Poção de Superpulo',icon:'🧪',description:'Aumenta a altura do salto durante 12 segundos de jogo.'}
+        };
+        const CONSUMABLE_IDS=['life','shield','speed','jump'];
+        const STORY_IDS=['medallion','drink'];
+        function loadInventory(){
+          let saved=null;
+          try{saved=JSON.parse(localStorage.getItem(INVENTORY_KEY)||'null');}catch(e){}
+          const story=Array.isArray(saved?.story)?saved.story.filter(id=>STORY_IDS.includes(id)):[];
+          // Migração da pista legada, sem apagar a chave antiga.
+          try{if(localStorage.getItem(OLD_CLUE_KEY)==='true'&&!story.includes('medallion'))story.push('medallion');}catch(e){}
+          const consumables={};
+          for(const id of CONSUMABLE_IDS){
+            const raw=saved?.consumables?.[id];
+            consumables[id]=Number.isSafeInteger(raw)?Math.max(0,Math.min(99,raw)):0;
+          }
+          return {version:2,story,consumables};
         }
-        function giveVillainMedallion(){
-          if(hasVillainMedallion)return;
-          hasVillainMedallion=true;
-          try{localStorage.setItem(INVENTORY_KEY,'true');}catch(e){/* Continua na sessão. */}
+        const inventory=loadInventory();
+        let inventoryOpen=false,selectedInvItem=null;
+        let inventoryUnlocked=false;
+        try{inventoryUnlocked=localStorage.getItem(INVENTORY_UNLOCK_KEY)==='true';}catch(e){}
+        if(inventory.story.includes('drink'))inventoryUnlocked=true;
+        const activeBuffs={shield:0,speedUntil:0,jumpUntil:0};
+        const worldPickups=[]; // Cadastro futuro: registerLevelPickup({id,level,x,y,itemId})
+        let collectedPickups=new Set();
+        let itemToastUntil=0,itemToastMessage='';
+        function persistInventory(){
+          try{localStorage.setItem(INVENTORY_KEY,JSON.stringify(inventory));}catch(e){console.warn('Inventário sem persistência local',e);}
+        }
+        function showItemToast(message){
+          itemToastMessage=message;itemToastUntil=elapsedSeconds+3.5;
+          const toast=document.getElementById('item-toast');
+          if(toast){toast.textContent=message;toast.style.display='block';}
+        }
+        function updateToast(){
+          const toast=document.getElementById('item-toast');
+          if(toast&&toast.style.display==='block'&&elapsedSeconds>=itemToastUntil)toast.style.display='none';
+        }
+        function unlockInventory(){
+          inventoryUnlocked=true;
+          try{localStorage.setItem(INVENTORY_UNLOCK_KEY,'true');}catch(e){}
+          updateInventoryButton();
+        }
+        function updateInventoryButton(){
+          const button=document.getElementById('inventory-button');
+          if(!button)return;
+          const visible=inventoryUnlocked||level===3;
+          button.classList.toggle('inventory-visible',visible);
+          // Quantidade de itens encontrados, incluindo pilhas de consumíveis.
+          const count=document.getElementById('inventory-count');
+          if(count)count.textContent=String(inventory.story.length+Object.values(inventory.consumables).reduce((n,v)=>n+v,0));
+        }
+        function giveStoryItem(id){
+          if(ITEM_CATALOG[id]?.kind!=='story')return false;
+          if(inventory.story.includes(id))return false;
+          inventory.story.push(id);
+          if(id==='medallion'){
+            try{localStorage.setItem(OLD_CLUE_KEY,'true');}catch(e){}
+          }
+          persistInventory();renderInventory();showItemToast('PISTA ENCONTRADA: '+ITEM_CATALOG[id].name);
+          return true;
+        }
+        function giveVillainMedallion(){giveStoryItem('medallion');}
+        function addConsumable(id,amount=1){
+          if(ITEM_CATALOG[id]?.kind!=='consumable'||!Number.isSafeInteger(amount)||amount<=0)return false;
+          const old=inventory.consumables[id]||0;
+          const next=Math.min(99,old+amount);
+          if(next===old)return false;
+          inventory.consumables[id]=next;
+          persistInventory();renderInventory();showItemToast('ITEM OBTIDO: '+ITEM_CATALOG[id].name+' x'+(next-old));
+          return true;
+        }
+        // Registra itens futuros; nada aparece nas fases antes de planejarmos sua posição.
+        function registerLevelPickup({id,level:pickupLevel,x,y,itemId}){
+          if(!id||!Number.isInteger(pickupLevel)||!Number.isFinite(x)||!Number.isFinite(y)||ITEM_CATALOG[itemId]?.kind!=='consumable')return false;
+          if(worldPickups.some(p=>p.id===id))return false;
+          worldPickups.push({id,level:pickupLevel,x,y,itemId,w:26,h:26});return true;
+        }
+        function updateLevelPickups(){
+          if(state!=='playing')return;
+          for(const pickup of worldPickups){
+            if(pickup.level!==level||collectedPickups.has(pickup.id)||!isColliding(player,pickup))continue;
+            if(addConsumable(pickup.itemId,1))collectedPickups.add(pickup.id);
+          }
+        }
+        function drawLevelPickups(){
+          ctx.save();ctx.translate(-Math.round(cameraX),0);
+          for(const item of worldPickups){
+            if(item.level!==level||collectedPickups.has(item.id))continue;
+            ctx.fillStyle='#f6db8a';ctx.fillRect(item.x-3,item.y-3,32,32);
+            ctx.fillStyle='#2f2450';ctx.fillRect(item.x,item.y,26,26);
+            ctx.font='20px sans-serif';ctx.textAlign='center';ctx.fillText(ITEM_CATALOG[item.itemId].icon,item.x+13,item.y+21);
+          }
+          ctx.restore();
+        }
+        function itemUsable(id){
+          if(state!=='playing')return false;
+          if((inventory.consumables[id]||0)<1)return false;
+          if(id==='life')return lives<99;
+          if(id==='shield')return activeBuffs.shield===0;
+          if(id==='speed')return elapsedSeconds>=activeBuffs.speedUntil;
+          if(id==='jump')return elapsedSeconds>=activeBuffs.jumpUntil;
+          return false;
+        }
+        function useInventoryItem(id){
+          if(!inventoryOpen||!itemUsable(id))return false;
+          if(id==='life'){lives=Math.min(99,lives+1);setHUD();}
+          else if(id==='shield')activeBuffs.shield=1;
+          else if(id==='speed')activeBuffs.speedUntil=elapsedSeconds+12;
+          else if(id==='jump')activeBuffs.jumpUntil=elapsedSeconds+12;
+          inventory.consumables[id]--;
+          persistInventory();renderInventory();
+          showItemToast('BÔNUS ATIVADO: '+ITEM_CATALOG[id].name);
+          return true;
+        }
+        function discardInventoryItem(id){
+          if(!inventoryOpen||ITEM_CATALOG[id]?.kind!=='consumable'||!(inventory.consumables[id]>0))return false;
+          if(!window.confirm('Descartar 1 '+ITEM_CATALOG[id].name+'?'))return false;
+          inventory.consumables[id]--;persistInventory();renderInventory();return true;
+        }
+        function setInventorySelection(id){
+          selectedInvItem=ITEM_CATALOG[id]?id:null;
           renderInventory();
         }
+        function renderInventory(){
+          updateInventoryButton();
+          for(const [kind,gridId,ids] of [['story','inv-story-grid',STORY_IDS],['consumable','inv-consumable-grid',CONSUMABLE_IDS]]){
+            const grid=document.getElementById(gridId);if(!grid)continue;
+            grid.replaceChildren();
+            for(let n=0;n<9;n++){
+              const id=ids[n],item=id?ITEM_CATALOG[id]:null;
+              const owned=item&&(kind==='story'?inventory.story.includes(id):inventory.consumables[id]>0);
+              const slot=document.createElement('button');slot.type='button';
+              slot.className='inv-slot '+kind+(selectedInvItem===id&&owned?' selected':'');
+              slot.setAttribute('aria-label',owned?item.name:'Espaço vazio');
+              if(!owned){slot.disabled=true;slot.textContent=' ';grid.appendChild(slot);continue;}
+              if(item.asset){
+                const img=document.createElement('img');img.src=item.asset;img.alt='';
+                img.onerror=()=>{img.replaceWith(document.createTextNode(item.icon));};
+                slot.appendChild(img);
+              }else{
+                const icon=document.createElement('span');icon.className='inv-emoji';icon.textContent=item.icon;slot.appendChild(icon);
+              }
+              if(kind==='consumable'){
+                const qty=document.createElement('span');qty.className='inv-qty';qty.textContent=String(inventory.consumables[id]);slot.appendChild(qty);
+              }
+              slot.onclick=()=>setInventorySelection(id);grid.appendChild(slot);
+            }
+          }
+          if(selectedInvItem&&!((ITEM_CATALOG[selectedInvItem].kind==='story'&&inventory.story.includes(selectedInvItem))||
+              (ITEM_CATALOG[selectedInvItem].kind==='consumable'&&inventory.consumables[selectedInvItem]>0)))selectedInvItem=null;
+          const item=selectedInvItem?ITEM_CATALOG[selectedInvItem]:null;
+          const heading=document.getElementById('inv-detail-title'),info=document.getElementById('inv-detail-text'),icon=document.getElementById('inv-detail-icon'),actions=document.getElementById('inv-actions');
+          if(heading)heading.textContent=item?.name||'Selecione um item';
+          if(info)info.textContent=item?(item.description+(item.origin?' • Origem: '+item.origin:'')):'Clique em um espaço ocupado para ver detalhes.';
+          if(icon)icon.textContent=item?.icon||'';
+          if(actions){
+            actions.replaceChildren();
+            if(item?.kind==='story'){
+              const tag=document.createElement('span');tag.textContent='🔒 Item permanente — não pode ser usado ou descartado';tag.style.fontSize='12px';tag.style.color='#c6a5f7';actions.appendChild(tag);
+            }else if(item?.kind==='consumable'){
+              const use=document.createElement('button');use.className='inv-action primary';use.textContent='USAR';use.disabled=!itemUsable(item.id);use.onclick=()=>useInventoryItem(item.id);actions.appendChild(use);
+              const discard=document.createElement('button');discard.className='inv-action danger';discard.textContent='DESCARTAR 1';discard.onclick=()=>discardInventoryItem(item.id);actions.appendChild(discard);
+            }
+          }
+        }
         window.toggleInventario=function(){
-          if(!inventoryOpen&&!['map','playing','chapterEnd','gameover','title2','title3'].includes(state))return;
+          if(!inventoryOpen&&!(inventoryUnlocked||level===3))return;
           inventoryOpen=!inventoryOpen;
-          const panel=document.getElementById('inventory-panel');
-          const button=document.getElementById('inventory-button');
-          if(panel)panel.style.display=inventoryOpen?'flex':'none';
+          keys.left=keys.right=keys.up=keys.down=false;
+          const panel=document.getElementById('inventory-panel'),button=document.getElementById('inventory-button');
+          if(panel)panel.classList.toggle('inventory-open',inventoryOpen);
           if(button)button.setAttribute('aria-expanded',String(inventoryOpen));
           if(inventoryOpen){renderInventory();document.getElementById('inventory-close')?.focus();}
           else button?.focus();
