@@ -4,6 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Super Gabriel Bros</title>
+    <!-- Safari iOS: abrir como app a partir da tela inicial, com conteúdo adaptável à área segura -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Super Gabriel Bros">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#131628">
+    <link rel="manifest" href="./mario.webmanifest">
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
     <style>
@@ -11,18 +18,36 @@
         #game-shell {position:fixed;inset:0;display:flex;align-items:center;justify-content:center;overflow:hidden;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);box-sizing:border-box;}
         #game-canvas {display:block;width:800px;height:450px;max-width:100%;max-height:100%;image-rendering:pixelated;image-rendering:crisp-edges;background:#d7c6a6;touch-action:none;}
         #game-hud {top:max(8px,env(safe-area-inset-top));left:max(8px,env(safe-area-inset-left));right:max(8px,env(safe-area-inset-right));}
-        .game-control-panel {position:fixed;left:max(10px,env(safe-area-inset-left));right:max(10px,env(safe-area-inset-right));bottom:max(9px,env(safe-area-inset-bottom));z-index:40;pointer-events:none;display:flex;justify-content:space-between;align-items:flex-end;}
+        /* Reserva margens para o polegar, bordas curvas e sensor frontal do iPhone. */
+        .game-control-panel {position:fixed;left:max(32px,calc(env(safe-area-inset-left) + 30px));right:max(32px,calc(env(safe-area-inset-right) + 30px));bottom:max(16px,calc(env(safe-area-inset-bottom) + 14px));z-index:40;pointer-events:none;display:flex;justify-content:space-between;align-items:flex-end;}
         .game-control-panel button {pointer-events:auto;touch-action:none;}
         .game-dpad {display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(2,1fr);gap:5px;align-items:end;}
         .game-dpad #btn-up {grid-column:2;grid-row:1;}
         .game-dpad #btn-left {grid-column:1;grid-row:2;}
         .game-dpad #btn-down {grid-column:2;grid-row:2;}
         .game-dpad #btn-right {grid-column:3;grid-row:2;}
+        /* Triângulos CSS em vez de símbolos Unicode que no iOS viram emojis
+           azuis. Os quatro botões passam a ter exatamente o mesmo desenho. */
+        .game-dpad .dpad-btn {font-size:0!important;color:transparent!important;}
+        .game-dpad .dpad-btn::before {content:"";display:block;width:37%;height:37%;background:#334155;}
+        .game-dpad #btn-up::before {clip-path:polygon(50% 0,0 100%,100% 100%);}
+        .game-dpad #btn-down::before {clip-path:polygon(0 0,100% 0,50% 100%);}
+        .game-dpad #btn-left::before {clip-path:polygon(0 50%,100% 0,100% 100%);}
+        .game-dpad #btn-right::before {clip-path:polygon(0 0,100% 50%,0 100%);}
         #btn-up, #btn-down {display:none;}
         body.map-mode #btn-up,body.map-mode #btn-down {display:flex;}
         body.map-mode #ui-score,body.map-mode #ui-lives,body.map-mode #ui-time,body.map-mode #ui-level {display:none;}
         body.map-mode #btn-jump {background:#6551eb;border-color:#a5b4fc;box-shadow:0 6px 0 #312e81;}
         @media (pointer:fine) and (min-width:900px) {.game-control-panel {opacity:0;visibility:hidden;}}
+        /* No celular deitado o cenário preenche a área disponível. O Canvas
+           conserva todos os elementos (sem crop), e controles respeitam safe areas.
+           Em telas ultralargas há um leve ajuste de proporção, em vez de barras pretas. */
+        @media (pointer:coarse) and (orientation:landscape) {
+            #game-shell {padding:0!important;width:100vw;height:100dvh;}
+            #game-canvas {max-width:none;max-height:none;}
+            .game-control-panel {left:max(38px,calc(env(safe-area-inset-left) + 30px));right:max(38px,calc(env(safe-area-inset-right) + 30px));bottom:max(19px,calc(env(safe-area-inset-bottom) + 13px));}
+            #game-hud {left:max(12px,calc(env(safe-area-inset-left) + 8px));right:max(12px,calc(env(safe-area-inset-right) + 8px));top:max(8px,env(safe-area-inset-top));}
+        }
         @media (max-height:540px), (max-width:700px) {
             .dpad-btn {width:clamp(38px,10dvh,56px)!important;height:clamp(38px,10dvh,56px)!important;border-width:2px!important;font-size:22px!important;box-shadow:0 3px 0 #334155!important;}
             .action-btn {width:clamp(49px,15dvh,70px)!important;height:clamp(49px,15dvh,70px)!important;border-width:3px!important;font-size:22px!important;box-shadow:0 4px 0 #991b1b!important;}
@@ -32,7 +57,7 @@
         @media (orientation:portrait) and (max-width:800px) {
             #game-shell {padding-top:58px;padding-bottom:155px;}
             #game-hud {z-index:55;}
-            .game-control-panel {bottom:max(14px,env(safe-area-inset-bottom));}
+            .game-control-panel {bottom:max(19px,calc(env(safe-area-inset-bottom) + 16px));}
         }
 
         /* D-Pad Estilo Minimalista (Apenas Laterais) */
@@ -163,10 +188,10 @@
         
         <!-- Direcionais Limpos (Esquerda/Direita) -->
         <div class="game-dpad pointer-events-auto opacity-90">
-            <button id="btn-up" class="dpad-btn" aria-label="Mover para cima">▲</button>
-            <button id="btn-left" class="dpad-btn" aria-label="Mover para esquerda">◀</button>
-            <button id="btn-down" class="dpad-btn" aria-label="Mover para baixo">▼</button>
-            <button id="btn-right" class="dpad-btn" aria-label="Mover para direita">▶</button>
+            <button id="btn-up" class="dpad-btn" aria-label="Mover para cima">▲︎</button>
+            <button id="btn-left" class="dpad-btn" aria-label="Mover para esquerda">◀︎</button>
+            <button id="btn-down" class="dpad-btn" aria-label="Mover para baixo">▼︎</button>
+            <button id="btn-right" class="dpad-btn" aria-label="Mover para direita">▶︎</button>
         </div>
 
         <div class="pointer-events-auto opacity-90 hover:opacity-100 transition-opacity">
@@ -184,16 +209,31 @@
         canvas.width = GAME_WIDTH;
         canvas.height = GAME_HEIGHT;
         ctx.imageSmoothingEnabled = false;
-        // Canvas sempre inteiro na tela (sem object-fit:cover ou corte).
+        // No iPhone horizontal, sem barras laterais e sem recortar o mapa ou HUD.
+        // Limitação: a imagem 16:9 recebe ajuste horizontal suave em displays mais largos.
+        // A janela standalone do iOS ainda pode reservar espaço para a barra do sistema.
+        function shouldFillMobileLandscape() {
+          const landscape=window.matchMedia?.('(orientation:landscape)')?.matches ??
+                          window.innerWidth>window.innerHeight;
+          const touch=window.matchMedia?
+                       window.matchMedia('(pointer:coarse)').matches:
+                       (navigator.maxTouchPoints||0)>0;
+          return !!(landscape&&touch);
+        }
         function resizeGameCanvas() {
           const shell=document.getElementById('game-shell');
-          if (!shell) return;
+          if(!shell)return;
           const styles=getComputedStyle(shell);
-          const maxWidth=Math.max(1,shell.clientWidth-parseFloat(styles.paddingLeft)-parseFloat(styles.paddingRight));
-          const maxHeight=Math.max(1,shell.clientHeight-parseFloat(styles.paddingTop)-parseFloat(styles.paddingBottom));
-          const scale=Math.min(maxWidth/GAME_WIDTH,maxHeight/GAME_HEIGHT);
-          canvas.style.width=Math.floor(GAME_WIDTH*scale)+'px';
-          canvas.style.height=Math.floor(GAME_HEIGHT*scale)+'px';
+          const maxWidth=Math.max(1,shell.clientWidth-(parseFloat(styles.paddingLeft)||0)-(parseFloat(styles.paddingRight)||0));
+          const maxHeight=Math.max(1,shell.clientHeight-(parseFloat(styles.paddingTop)||0)-(parseFloat(styles.paddingBottom)||0));
+          if(shouldFillMobileLandscape()){
+            canvas.style.width=Math.floor(maxWidth)+'px';
+            canvas.style.height=Math.floor(maxHeight)+'px';
+          }else{
+            const scale=Math.min(maxWidth/GAME_WIDTH,maxHeight/GAME_HEIGHT);
+            canvas.style.width=Math.floor(GAME_WIDTH*scale)+'px';
+            canvas.style.height=Math.floor(GAME_HEIGHT*scale)+'px';
+          }
         }
         window.addEventListener('resize',resizeGameCanvas);
         window.addEventListener('orientationchange',resizeGameCanvas);
@@ -1877,10 +1917,14 @@
           if(pose.fade>.002){
             ctx.save();ctx.globalAlpha=Math.max(0,pose.fade);
             ctx.translate(princessX,358-(intro?18*pose.travel:13*pose.travel)+floatY);
-            drawSpeakingSprite(processedAssets.princess,0,0,48,'VITORIA');
+            // Na introdução, Vitoria olha para Gabriel, à esquerda.
+            // No desfecho ela se volta ao portal à direita.
+            drawSpeakingSprite(processedAssets.princess,0,0,48,'VITORIA',intro?-1:1);
             ctx.restore();
             ctx.save();ctx.globalAlpha=Math.max(0,pose.fade);
             ctx.translate(villainX,372-(intro?18*pose.travel:13*pose.travel)+floatY);
+            // O vilão também encara Gabriel durante a apresentação.
+            if(intro)ctx.scale(-1,1);
             if(extras.villain)drawObject(extras.villain,-37,-108,74,108);
             else{ctx.fillStyle='#21142d';ctx.fillRect(-30,-85,60,85);}
             ctx.restore();
