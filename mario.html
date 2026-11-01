@@ -215,7 +215,8 @@
         function shouldFillMobileLandscape() {
           const landscape=window.matchMedia?.('(orientation:landscape)')?.matches ??
                           window.innerWidth>window.innerHeight;
-          const touch=window.matchMedia?.('(pointer:coarse)')?.matches ||
+          const touch=window.matchMedia?
+                       window.matchMedia('(pointer:coarse)').matches:
                        (navigator.maxTouchPoints||0)>0;
           return !!(landscape&&touch);
         }
