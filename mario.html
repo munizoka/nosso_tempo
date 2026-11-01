@@ -118,13 +118,20 @@
           background:linear-gradient(160deg,#ffe28b,#b886e9);border:3px solid #fff0b5;border-radius:50%;
           color:#252038;font:900 21px system-ui,sans-serif;box-shadow:0 5px 0 #68518a,0 0 15px rgba(255,203,87,.35);
           cursor:pointer;touch-action:none;user-select:none;-webkit-user-select:none}
+        /* Posição do B: acima e à direita do A, na área marcada da captura. */
+        #btn-dash{position:relative;left:clamp(22px,4vw,52px);top:clamp(-42px,-7dvh,-22px)}
         #btn-dash.sgb-dash-visible{display:flex}
+        #btn-power{display:none;align-items:center;justify-content:center;width:clamp(43px,12dvh,66px);height:clamp(43px,12dvh,66px);
+          background:linear-gradient(150deg,#f9dd83,#a474df);border:3px solid #fff0b5;border-radius:50%;
+          box-shadow:0 5px 0 #68518a;cursor:pointer;touch-action:none;user-select:none;-webkit-user-select:none}
+        #btn-power.sgb-power-visible{display:flex}
+        #btn-power img{width:65%;height:65%;object-fit:contain;image-rendering:pixelated}
+        #btn-power:active{transform:translateY(4px) scale(.96);box-shadow:0 1px 0 #68518a}
         #btn-dash:active{transform:translateY(4px) scale(.96);box-shadow:0 1px 0 #68518a}
         #sgb-super-meter{display:none;position:fixed;z-index:47;top:max(80px,calc(env(safe-area-inset-top) + 70px));right:max(16px,env(safe-area-inset-right));width:min(172px,37vw);padding:7px 9px;border:2px solid #ffe49a;border-radius:8px;background:rgba(22,17,38,.88);color:#fff5c7;pointer-events:none;font:700 10px system-ui,sans-serif;box-shadow:0 3px 10px #0005}
         #sgb-super-meter.active{display:block}
         #sgb-super-meter-track{height:7px;margin-top:4px;overflow:hidden;border-radius:4px;background:#544462}
         #sgb-super-meter-fill{height:100%;width:100%;background:linear-gradient(90deg,#eeb04d,#f6e67e)}
-        #sgb-super-meter.warning #sgb-super-meter-fill{background:#f07e66}
         @media(prefers-reduced-motion:reduce){.sgb-heart.hurt{animation:none}}
 
 
@@ -371,8 +378,8 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
       </div>
     </section>
 
-    <div id="sgb-super-meter" role="progressbar" aria-label="Tempo restante da Super Força" aria-valuemin="0" aria-valuemax="12" aria-valuenow="0">
-      <span id="sgb-super-meter-label">SUPER FORÇA: 12s</span>
+    <div id="sgb-super-meter" role="status" aria-label="Super Força ativa até o fim da fase">
+      <span id="sgb-super-meter-label">SUPER FORÇA · ATÉ O FIM DA FASE</span>
       <div id="sgb-super-meter-track"><div id="sgb-super-meter-fill"></div></div>
     </div>
     <!-- Controles Mobile -->
@@ -387,6 +394,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
         </div>
 
         <div class="pointer-events-auto opacity-90 hover:opacity-100 transition-opacity sgb-action-stack">
+            <button id="btn-power" aria-label="Ativar Super Força com hambúrguer" title="Ativar Super Força (T)" type="button"><img src="79.png" alt=""></button>
             <button id="btn-dash" aria-label="Investida Super Gabriel" title="Investida (X)" type="button">B</button>
             <button id="btn-jump" class="action-btn" aria-label="Pular ou escolher fase">A</button>
         </div>
@@ -459,7 +467,8 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
         let checkpointReached = false;
         let checkpointX = 0;
         let invulnerable = 0;
-        // Power-up 79: tempos em segundos ATIVOS, suspensos com inventário/menu abertos.
+        // A Super Força dura até sair da fase. O valor 12 é apenas um marcador
+        // compatível com o campo legado superRemaining (Firestore valida 0–12).
         const SUPER_DURATION=12, DASH_DURATION=.52, DASH_COOLDOWN=.95;
         const superPower={until:0,dashUntil:0,cooldownUntil:0,facing:1};
         const burgerDrops=[],questionBlocksHit=new Set();
@@ -506,7 +515,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           shield:{id:'shield',kind:'consumable',name:'Escudo Protetor',icon:'🛡️',description:'Protege de um ataque inimigo. Não protege contra cair no abismo.'},
           speed:{id:'speed',kind:'consumable',name:'Poção de Velocidade',icon:'⚡',description:'Aumenta a velocidade durante 12 segundos de jogo.'},
           jump:{id:'jump',kind:'consumable',name:'Poção de Superpulo',icon:'🧪',description:'Aumenta a altura do salto durante 12 segundos de jogo.'},
-          burger:{id:'burger',kind:'consumable',name:'Hambúrguer da Super Força',asset:'79.png',icon:'🍔',description:'Transforma Gabriel por 12 segundos de jogo e libera a investida: X no computador ou botão B no celular.'}
+          burger:{id:'burger',kind:'consumable',name:'Hambúrguer da Super Força',asset:'79.png',icon:'🍔',description:'Transforma Gabriel até o fim da fase. Ative com T no teclado ou o botão do hambúrguer no celular; use X ou B para investir.'}
         };
         const CONSUMABLE_IDS=['life','shield','speed','jump','burger'];
         const STORY_IDS=['medallion','drink'];
@@ -596,16 +605,25 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           if(id==='shield')return activeBuffs.shield===0;
           if(id==='speed')return elapsedSeconds>=activeBuffs.speedUntil;
           if(id==='jump')return elapsedSeconds>=activeBuffs.jumpUntil;
-          if(id==='burger')return elapsedSeconds>=superPower.until;
+          if(id==='burger')return !isSuperGabriel();
           return false;
+        }
+        function activateSuperFromBurger(){
+          if(state!=='playing'||menuOpen||isSuperGabriel()||(inventory.consumables.burger||0)<1)return false;
+          inventory.consumables.burger--;
+          superPower.until=Number.POSITIVE_INFINITY; // Não expira enquanto esta fase estiver ativa.
+          superPower.dashUntil=0;superPower.cooldownUntil=0;
+          persistInventory();renderInventory();updateDashButton();
+          showItemToast('SUPER FORÇA ATIVA ATÉ O FIM DA FASE!');
+          return true;
         }
         function useInventoryItem(id){
           if(!inventoryOpen||!itemUsable(id))return false;
+          if(id==='burger')return activateSuperFromBurger();
           if(id==='life'){lives=Math.min(99,lives+1);setHUD();}
           else if(id==='shield')activeBuffs.shield=1;
           else if(id==='speed')activeBuffs.speedUntil=elapsedSeconds+12;
           else if(id==='jump')activeBuffs.jumpUntil=elapsedSeconds+12;
-          else if(id==='burger'){superPower.until=elapsedSeconds+SUPER_DURATION;superPower.dashUntil=0;superPower.cooldownUntil=0;}
           inventory.consumables[id]--;
           persistInventory();renderInventory();
           showItemToast('BÔNUS ATIVADO: '+ITEM_CATALOG[id].name);
@@ -689,6 +707,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
         }
         function returnToMap() {
           state='map';keys.left=keys.right=keys.up=keys.down=false;
+          superPower.until=superPower.dashUntil=superPower.cooldownUntil=0; // Fase encerrada.
           mapTip='MOVA A CABEÇA E ESCOLHA UMA FASE';setHUD();
           if(activeSlot!==null)saveCurrentSlot(false);
         }
@@ -851,17 +870,17 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
         function updateDashButton(){
           const button=document.getElementById('btn-dash');if(!button)return;
           const show=isSuperGabriel()&&state==='playing'&&!menuOpen&&!inventoryOpen;
+          const powerButton=document.getElementById('btn-power');
+          const canActivate=state==='playing'&&!menuOpen&&!inventoryOpen&&!isSuperGabriel()&&(inventory.consumables.burger||0)>0;
+          if(powerButton){powerButton.classList.toggle('sgb-power-visible',canActivate);powerButton.disabled=!canActivate;powerButton.setAttribute('aria-hidden',String(!canActivate));}
           button.classList.toggle('sgb-dash-visible',show);
           button.disabled=!show||elapsedSeconds<superPower.cooldownUntil;
           button.setAttribute('aria-hidden',String(!show));
           const meter=document.getElementById('sgb-super-meter');
           if(meter){
-            const remaining=show?Math.max(0,superPower.until-elapsedSeconds):0;
             meter.classList.toggle('active',show);
-            meter.classList.toggle('warning',show&&remaining<=3);
-            meter.setAttribute('aria-valuenow',remaining.toFixed(1));
-            document.getElementById('sgb-super-meter-label').textContent='SUPER FORÇA: '+remaining.toFixed(1)+'s';
-            document.getElementById('sgb-super-meter-fill').style.width=(remaining/SUPER_DURATION*100).toFixed(1)+'%';
+            document.getElementById('sgb-super-meter-label').textContent='SUPER FORÇA · ATÉ O FIM DA FASE';
+            document.getElementById('sgb-super-meter-fill').style.width='100%';
           }
         }
         function setHUD() {
@@ -1329,7 +1348,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           return sanitiseSave({
             version:1,savedAt:Date.now(),difficulty,level,
             phase:state==='playing'?'playing':'map',score,lives,elapsedSeconds,
-            superRemaining:Math.max(0,superPower.until-elapsedSeconds),
+            superRemaining:isSuperGabriel()?SUPER_DURATION:0, // Marcador compatível com saves antigos e Firestore.
             player:{x:player.x,y:player.y,direction:player.direction},
             checkpoint:{reached:checkpointReached,x:checkpointX},
             skyCheckpoint:{reached:skyCheckpointReached,x:skyCheckpointX},
@@ -1371,7 +1390,8 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           for(const id of CONSUMABLE_IDS)inventory.consumables[id]=data.inventory.consumables[id];
           inventoryUnlocked=data.inventoryUnlocked;selectedInvItem=null;inventoryOpen=false;
           score=data.score;lives=data.lives;elapsedSeconds=data.elapsedSeconds;
-          superPower.until=elapsedSeconds+data.superRemaining;superPower.dashUntil=0;superPower.cooldownUntil=0;
+          superPower.until=data.phase==='playing'&&data.superRemaining>0?Number.POSITIVE_INFINITY:0;
+          superPower.dashUntil=0;superPower.cooldownUntil=0;
           checkpointReached=data.checkpoint.reached;checkpointX=data.checkpoint.x;
           skyCheckpointReached=data.skyCheckpoint.reached;skyCheckpointX=data.skyCheckpoint.x;
           collectedPickups=new Set(data.collectedPickups);
@@ -1761,7 +1781,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           if(menuOpen)return;
           if(e.code==='KeyI'){e.preventDefault();window.toggleInventario();return;}
           if(inventoryOpen){if(e.code==='Escape'){e.preventDefault();window.toggleInventario();}return;}
-          if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','KeyA','KeyD','KeyW','KeyS','KeyX','Enter'].includes(e.code))e.preventDefault();
+          if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','KeyA','KeyD','KeyW','KeyS','KeyX','KeyT','Enter'].includes(e.code))e.preventDefault();
           if(state==='map'){
             if(e.repeat && (e.code==='Enter'||e.code==='Space'))return;
             if(e.code==='Enter'||e.code==='Space'){chooseMapLevel();return;}
@@ -1776,6 +1796,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           if(state==='title3'&&(e.code==='Enter'||e.code==='Space'||e.code==='ArrowUp')){startSkyLevel();return;}
           if(['Enter','Space','ArrowUp'].includes(e.code)&&skipStoryScene())return;
           if(state!=='playing')return;
+          if(e.code==='KeyT'&&!e.repeat){activateSuperFromBurger();return;}
           if(e.code==='KeyX'&&!e.repeat){trySuperDash();return;}
           if(e.code==='ArrowLeft'||e.code==='KeyA')keys.left=true;
           if(e.code==='ArrowRight'||e.code==='KeyD')keys.right=true;
@@ -1811,6 +1832,9 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
         }
         bindInput('btn-left','left');bindInput('btn-right','right');
         bindInput('btn-up','up');bindInput('btn-down','down');bindInput('btn-jump','up');
+        document.getElementById('btn-power')?.addEventListener('pointerdown',e=>{
+          e.preventDefault();activateSuperFromBurger();
+        });
         document.getElementById('btn-dash')?.addEventListener('pointerdown',e=>{
           e.preventDefault();trySuperDash();
         });
@@ -1850,6 +1874,17 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           return !terrain.some(tile=>tile.type!=='ground'&&tile.type!=='forestGround'&&tile.type!=='skyPlatform'&&
             tile.x<b&&tile.x+tile.w>a&&tile.y<eyeY&&tile.y+tile.h>eyeY);
         }
+        const ENEMY_LOST_SIGHT_SECONDS=10;
+        // Na perseguição, a visão pode mudar de lado sem precisar de outro espanto.
+        // Paredes, distância ou diferença grande de altura interrompem o contato.
+        function enemyHasVisualContact(enemy,terrain){
+          const ex=enemy.x+enemy.w/2,px=player.x+player.w/2;
+          const eyeY=enemy.y+enemy.h*.48;
+          if(Math.abs(px-ex)>300||Math.abs((player.y+player.h/2)-eyeY)>65)return false;
+          const a=Math.min(ex,px),b=Math.max(ex,px);
+          return !terrain.some(tile=>tile.type!=='ground'&&tile.type!=='forestGround'&&tile.type!=='skyPlatform'&&
+            tile.x<b&&tile.x+tile.w>a&&tile.y<eyeY&&tile.y+tile.h>eyeY);
+        }
         function defeatEnemy(enemy,points){
           enemy.alive=false;score+=points;setHUD();
           fallenEnemies.push({type:enemy.type,x:enemy.x,y:enemy.y,w:enemy.w,h:enemy.h,
@@ -1862,6 +1897,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
             if(!enemy.alive)continue;
             if(!enemy.aiState)enemy.aiState='patrol';
             if(!enemy.patrolSpeed)enemy.patrolSpeed=Math.abs(enemy.vx)||1.5;
+            if(!enemy.patrolDirection)enemy.patrolDirection=enemy.vx<0?-1:1;
             const oldBottom=enemy.y+enemy.h;
             enemy.y+=4;
             let grounded=false;
@@ -1872,6 +1908,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
             }
             if(enemy.aiState==='patrol'&&enemyCanSpotHero(enemy,terrain)){
               enemy.aiState='alert';enemy.alertUntil=elapsedSeconds+.42;
+              enemy.lastSeenAt=elapsedSeconds;
               enemy.facing=enemy.vx<0?-1:1;
               enemy.vx=0;
             }
@@ -1880,10 +1917,17 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
               if(elapsedSeconds>=enemy.alertUntil)enemy.aiState='chase';
             }
             if(enemy.aiState==='chase'){
-              const dx=player.x+player.w/2-(enemy.x+enemy.w/2);
-              const dir=Math.abs(dx)>6?Math.sign(dx):0;
-              if(dir)enemy.facing=dir;
-              enemy.vx=dir*enemy.patrolSpeed*1.25;
+              if(enemyHasVisualContact(enemy,terrain))enemy.lastSeenAt=elapsedSeconds;
+              if(elapsedSeconds-(enemy.lastSeenAt??elapsedSeconds)>=ENEMY_LOST_SIGHT_SECONDS){
+                enemy.aiState='patrol';
+                enemy.vx=enemy.patrolDirection*enemy.patrolSpeed;
+                enemy.facing=enemy.patrolDirection;
+              }else{
+                const dx=player.x+player.w/2-(enemy.x+enemy.w/2);
+                const dir=Math.abs(dx)>6?Math.sign(dx):0;
+                if(dir)enemy.facing=dir;
+                enemy.vx=dir*enemy.patrolSpeed*1.25;
+              }
             }
             if(enemy.aiState==='patrol'&&enemy.vx)enemy.facing=Math.sign(enemy.vx);
             let blocked=false;
