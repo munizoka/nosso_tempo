@@ -944,6 +944,142 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
         function activeBlocks(){return level===1?level1Blocks:(level===2?level2Blocks:level3Blocks);}
         function isColliding(a,b){return a.x<b.x+b.w&&a.x+a.w>b.x&&a.y<b.y+b.h&&a.y+a.h>b.y;}
 
+
+        // Três saves locais separados. Nenhum é carregado automaticamente.
+        const GAME_SAVE_KEY='super-gabriel-bros-save-slots-v1';
+        const GAME_OPTIONS_KEY='super-gabriel-bros-options-v1';
+        const DIFFICULTIES=['easy','normal','hard'];
+        let difficulty='normal',menuOpen=true,menuPage='home',slotMode='load',saveAccumulator=0;
+        let slotTable=[null,null,null];
+        try{
+          const o=JSON.parse(localStorage.getItem(GAME_OPTIONS_KEY)||'null');
+          if(DIFFICULTIES.includes(o?.difficulty))difficulty=o.difficulty;
+        }catch(e){}
+        function sanitiseSave(data){
+          if(!data||data.version!==1)return null;
+          const lv=[1,2,3].includes(data.level)?data.level:1;
+          const story=Array.isArray(data.inventory?.story)?[...new Set(data.inventory.story.filter(x=>STORY_IDS.includes(x)))]:[];
+          const consumables={};
+          for(const id of CONSUMABLE_IDS){
+            const n=data.inventory?.consumables?.[id];
+            consumables[id]=Number.isSafeInteger(n)?Math.max(0,Math.min(99,n)):0;
+          }
+          const completed={};for(const i of [1,2,3])completed[i]=data.levelComplete?.[i]===true;
+          const clamp=(value,min,max,fallback)=>Number.isFinite(value)?Math.max(min,Math.min(max,value)):fallback;
+          return {
+            version:1,savedAt:clamp(data.savedAt,0,9999999999999,Date.now()),
+            difficulty:DIFFICULTIES.includes(data.difficulty)?data.difficulty:'normal',
+            level:lv,phase:data.phase==='playing'?'playing':'map',
+            score:Math.floor(clamp(data.score,0,9999999,0)),
+            lives:Math.floor(clamp(data.lives,1,99,5)),
+            elapsedSeconds:clamp(data.elapsedSeconds,0,999999,0),
+            player:{x:clamp(data.player?.x,0,3900,50),y:clamp(data.player?.y,-100,390,100),direction:data.player?.direction===-1?-1:1},
+            checkpoint:{reached:data.checkpoint?.reached===true,x:clamp(data.checkpoint?.x,0,3900,0)},
+            skyCheckpoint:{reached:data.skyCheckpoint?.reached===true,x:clamp(data.skyCheckpoint?.x,0,3900,0)},
+            levelComplete:completed,inventory:{version:2,story,consumables},
+            collectedPickups:Array.isArray(data.collectedPickups)?data.collectedPickups.filter(x=>typeof x==='string'&&x.length<=64).slice(0,100):[],
+            inventoryUnlocked:data.inventoryUnlocked===true||story.includes('drink')||lv===3,
+            legacy:data.legacy===true
+          };
+        }
+        function menuMessage(message){
+          const el=document.getElementById('sgb-menu-status');
+          if(el)el.textContent=message;
+        }
+        function readSlotTable(){
+          try{
+            const a=JSON.parse(localStorage.getItem(GAME_SAVE_KEY)||'null');
+            if(Array.isArray(a))return [0,1,2].map(i=>sanitiseSave(a[i]));
+          }catch(e){}
+          return [null,null,null];
+        }
+        function writeSlotTable(){
+          try{localStorage.setItem(GAME_SAVE_KEY,JSON.stringify(slotTable));return true;}
+          catch(e){menuMessage('Não foi possível gravar os saves neste navegador.');return false;}
+        }
+        slotTable=readSlotTable();
+        // O save único antigo é preservado num slot de recuperação, sem
+        // contaminar outras campanhas nem remover as chaves antigas.
+        if(slotTable.every(x=>!x)){
+          let old=null,legacyUnlock=false,legacyMedal=false;
+          try{old=JSON.parse(localStorage.getItem(INVENTORY_KEY)||'null');}catch(e){}
+          try{legacyUnlock=localStorage.getItem(INVENTORY_UNLOCK_KEY)==='true';}catch(e){}
+          try{legacyMedal=localStorage.getItem(OLD_CLUE_KEY)==='true';}catch(e){}
+          const story=Array.isArray(old?.story)?old.story.filter(x=>STORY_IDS.includes(x)):[];
+          if(legacyMedal&&!story.includes('medallion'))story.push('medallion');
+          if(story.length||legacyUnlock||Object.values(old?.consumables||{}).some(n=>n>0)){
+            const lv=story.includes('drink')||legacyUnlock?3:story.includes('medallion')?2:1;
+            slotTable[0]=sanitiseSave({
+              version:1,legacy:true,savedAt:Date.now(),level:lv,phase:'map',
+              inventory:{story,consumables:old?.consumables||{}},inventoryUnlocked:legacyUnlock,
+              levelComplete:{1:lv>1,2:story.includes('medallion'),3:story.includes('drink')}
+            });
+            writeSlotTable();
+          }
+        }
+        function gameLives(){return difficulty==='easy'?7:difficulty==='hard'?3:5;}
+        function enemyDifficultyMultiplier(){return difficulty==='easy'?.8:difficulty==='hard'?1.25:1;}
+        function makeSaveSnapshot(){
+          return sanitiseSave({
+            version:1,savedAt:Date.now(),difficulty,level,
+            phase:state==='playing'?'playing':'map',score,lives,elapsedSeconds,
+            player:{x:player.x,y:player.y,direction:player.direction},
+            checkpoint:{reached:checkpointReached,x:checkpointX},
+            skyCheckpoint:{reached:skyCheckpointReached,x:skyCheckpointX},
+            levelComplete:{...levelComplete},
+            inventory:{story:[...inventory.story],consumables:{...inventory.consumables}},
+            inventoryUnlocked,collectedPickups:[...collectedPickups]
+          });
+        }
+        function saveCurrentSlot(notify=true){
+          if(activeSlot===null)return false;
+          slotTable[activeSlot]=makeSaveSnapshot();
+          const ok=writeSlotTable();
+          if(notify)menuMessage(ok?'Espaço '+(activeSlot+1)+' salvo com sucesso.':'Erro ao salvar.');
+          return ok;
+        }
+        function clearForNewCampaign(){
+          level=1;state='playing';score=0;elapsedSeconds=0;
+          inventory.story.splice(0);for(const id of CONSUMABLE_IDS)inventory.consumables[id]=0;
+          inventoryUnlocked=false;inventoryOpen=false;selectedInvItem=null;
+          for(const n of [1,2,3])levelComplete[n]=false;
+          restartCurrentLevel();
+          state='map';mapHead.x=139;mapHead.y=319;
+          renderInventory();setHUD();
+        }
+        function startNewCampaign(index){
+          if(index<0||index>2)return;
+          if(slotTable[index]&&!window.confirm('Substituir o save do espaço '+(index+1)+'?'))return;
+          activeSlot=index;clearForNewCampaign();
+          saveCurrentSlot(false);closeMainMenu();menuMessage('');
+        }
+        function loadCampaign(index){
+          const data=sanitiseSave(slotTable[index]);
+          if(!data)return menuMessage('Espaço vazio ou save inválido.');
+          activeSlot=index;difficulty=data.difficulty;level=data.level;
+          state='playing';restartCurrentLevel();
+          for(const n of [1,2,3])levelComplete[n]=data.levelComplete[n];
+          inventory.story.splice(0,inventory.story.length,...data.inventory.story);
+          for(const id of CONSUMABLE_IDS)inventory.consumables[id]=data.inventory.consumables[id];
+          inventoryUnlocked=data.inventoryUnlocked;selectedInvItem=null;inventoryOpen=false;
+          score=data.score;lives=data.lives;elapsedSeconds=data.elapsedSeconds;
+          checkpointReached=data.checkpoint.reached;checkpointX=data.checkpoint.x;
+          skyCheckpointReached=data.skyCheckpoint.reached;skyCheckpointX=data.skyCheckpoint.x;
+          collectedPickups=new Set(data.collectedPickups);
+          if(data.phase==='playing'){
+            state='playing';player.x=data.player.x;player.y=data.player.y;
+            player.vx=0;player.vy=0;player.grounded=false;player.animFrame=0;
+            player.direction=data.player.direction;
+            const width=level===1?4000:level===2?FOREST_END:SKY_END;
+            cameraX=Math.max(0,Math.min(width-GAME_WIDTH,player.x-320));
+          }else{
+            state='map';
+            const node=mapLevels.find(x=>x.id===level)||mapLevels[0];
+            mapHead.x=node.x;mapHead.y=node.y;
+          }
+          renderInventory();setHUD();closeMainMenu();menuMessage('');
+        }
+
         function resetPosition(){
           player.x=level===1?50:level===2?(checkpointReached?checkpointX:50):(skyCheckpointReached?skyCheckpointX:50);
           player.y=100;player.vx=0;player.vy=0;player.grounded=false;
