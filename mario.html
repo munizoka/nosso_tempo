@@ -274,6 +274,20 @@
             ctx.fillRect(mx+7,my+6,18,3);
           }
           ctx.restore();
+          // A região celestial da Fase 3 cresce acima do setor sombrio da floresta.
+          ctx.save();
+          const celestial=ctx.createRadialGradient(666,151,6,666,151,107);
+          celestial.addColorStop(0,'rgba(222,248,255,.90)');
+          celestial.addColorStop(.65,'rgba(142,203,251,.75)');
+          celestial.addColorStop(1,'rgba(142,203,251,0)');
+          ctx.fillStyle=celestial;ctx.beginPath();ctx.ellipse(666,153,113,78,0,0,Math.PI*2);ctx.fill();
+          ctx.fillStyle='rgba(255,255,255,.75)';
+          for(const [cx,cy] of [[610,124],[666,111],[708,138]]){
+            ctx.fillRect(cx,cy,34,7);ctx.fillRect(cx+7,cy-7,20,8);
+          }
+          ctx.fillStyle='#f5dc94';ctx.fillRect(694,114,14,22);
+          ctx.fillStyle='#fff6d6';ctx.fillRect(691,110,20,6);
+          ctx.restore();
           // Lago e cachoeira nas laterais.
           poly([[406,180],[446,152],[508,168],[547,190],[545,220],[591,240],[573,285],[531,314],[476,301],[433,322],[392,293],[409,250]],'#387fe8','#233d78',8);
           poly([[408,178],[449,161],[502,174],[543,193],[535,219],[584,246],[565,282],[532,305],[475,294],[432,314],[402,291],[418,251]],'#5d9bf5','#b9e7fd',3);
