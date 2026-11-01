@@ -931,7 +931,7 @@
             if(state==='skyIntro'&&skySceneSeconds>=skyDialogueDuration())finishSkyIntro();
             else if(state==='skyOutro'){
               updateSkyOutroFacing();
-              if(skySceneSeconds>=skyDialogueDuration()+SKY_OUTRO_POSTSCENE_MS)finishSkyOutro();
+              if(skySceneSeconds>=skyDialogueDuration()+SKY_OUTRO_POSTSCENE_MS/1000)finishSkyOutro();
             }
             return;
           }
