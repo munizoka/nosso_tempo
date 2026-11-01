@@ -894,6 +894,7 @@
           state=which;skySceneStart=gameNow;skySceneSeconds=0;
           keys.left=keys.right=keys.up=keys.down=false;
           player.vx=0;player.vy=0;player.direction=1;
+          player.animFrame=0;player.animTimer=0;
           if(which==='skyOutro'){
             skyAltarActivated=true;
             player.x=SKY_ALTAR_X-58;player.y=340;player.grounded=true;
@@ -1436,7 +1437,10 @@
         }
         function drawHero(){
           if(invulnerable>0 && Math.floor(elapsedSeconds*12)%2===0)return;
-          const sprite=processedAssets.heroFrames?.[Math.min(3,player.animFrame)]||processedAssets.heroFrames?.[0];
+          // Nos diálogos e nas telas de fim de fase, nunca herdar o frame de
+          // corrida ou salto do último instante de jogo. A boca segue animada.
+          const frame=state==='playing'?Math.min(3,player.animFrame):0;
+          const sprite=processedAssets.heroFrames?.[frame]||processedAssets.heroFrames?.[0];
           drawSpeakingSprite(sprite,player.x+player.w/2,player.y+player.h,player.h,'GABRIEL',player.direction);
         }
         function easeOut(v){const x=Math.max(0,Math.min(1,v));return 1-(1-x)*(1-x);}
