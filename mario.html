@@ -113,13 +113,18 @@
         .sgb-heart-overflow{font:700 10px system-ui,sans-serif;margin-left:3px}
         @keyframes sgb-heart-hit{0%{transform:scale(1.25);filter:brightness(2) drop-shadow(0 0 5px red)}
           45%{transform:translate(-2px,2px) scale(1.12)}80%{transform:translate(2px,-1px) scale(.9)}100%{transform:scale(.65);opacity:0}}
-        .sgb-action-stack{display:flex;align-items:flex-end;gap:10px}
+        .sgb-action-stack{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:9px}
         #btn-dash{display:none;align-items:center;justify-content:center;width:clamp(43px,12dvh,66px);height:clamp(43px,12dvh,66px);
-          margin-bottom:5px;background:linear-gradient(160deg,#ffe28b,#b886e9);border:3px solid #fff0b5;border-radius:50%;
+          background:linear-gradient(160deg,#ffe28b,#b886e9);border:3px solid #fff0b5;border-radius:50%;
           color:#252038;font:900 21px system-ui,sans-serif;box-shadow:0 5px 0 #68518a,0 0 15px rgba(255,203,87,.35);
           cursor:pointer;touch-action:none;user-select:none;-webkit-user-select:none}
         #btn-dash.sgb-dash-visible{display:flex}
         #btn-dash:active{transform:translateY(4px) scale(.96);box-shadow:0 1px 0 #68518a}
+        #sgb-super-meter{display:none;position:fixed;z-index:47;top:max(80px,calc(env(safe-area-inset-top) + 70px));right:max(16px,env(safe-area-inset-right));width:min(172px,37vw);padding:7px 9px;border:2px solid #ffe49a;border-radius:8px;background:rgba(22,17,38,.88);color:#fff5c7;pointer-events:none;font:700 10px system-ui,sans-serif;box-shadow:0 3px 10px #0005}
+        #sgb-super-meter.active{display:block}
+        #sgb-super-meter-track{height:7px;margin-top:4px;overflow:hidden;border-radius:4px;background:#544462}
+        #sgb-super-meter-fill{height:100%;width:100%;background:linear-gradient(90deg,#eeb04d,#f6e67e)}
+        #sgb-super-meter.warning #sgb-super-meter-fill{background:#f07e66}
         @media(prefers-reduced-motion:reduce){.sgb-heart.hurt{animation:none}}
 
 
@@ -366,6 +371,10 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
       </div>
     </section>
 
+    <div id="sgb-super-meter" role="progressbar" aria-label="Tempo restante da Super Força" aria-valuemin="0" aria-valuemax="12" aria-valuenow="0">
+      <span id="sgb-super-meter-label">SUPER FORÇA: 12s</span>
+      <div id="sgb-super-meter-track"><div id="sgb-super-meter-fill"></div></div>
+    </div>
     <!-- Controles Mobile -->
     <div id="mobile-controls" class="game-control-panel">
         
@@ -454,6 +463,9 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
         const SUPER_DURATION=12, DASH_DURATION=.52, DASH_COOLDOWN=.95;
         const superPower={until:0,dashUntil:0,cooldownUntil:0,facing:1};
         const burgerDrops=[],questionBlocksHit=new Set();
+        // Partículas e poses de derrota duram apenas no relógio ativo do jogo.
+        const sgbParticles=[],fallenEnemies=[];
+        let lastDashDustAt=-1;
         let damagedHeartUntil=0,damagedHeartIndex=-1,lastHeartSignature='';
         let forestPlatforms = [];
         const FOREST_END = 3400;
@@ -842,6 +854,15 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           button.classList.toggle('sgb-dash-visible',show);
           button.disabled=!show||elapsedSeconds<superPower.cooldownUntil;
           button.setAttribute('aria-hidden',String(!show));
+          const meter=document.getElementById('sgb-super-meter');
+          if(meter){
+            const remaining=show?Math.max(0,superPower.until-elapsedSeconds):0;
+            meter.classList.toggle('active',show);
+            meter.classList.toggle('warning',show&&remaining<=3);
+            meter.setAttribute('aria-valuenow',remaining.toFixed(1));
+            document.getElementById('sgb-super-meter-label').textContent='SUPER FORÇA: '+remaining.toFixed(1)+'s';
+            document.getElementById('sgb-super-meter-fill').style.width=(remaining/SUPER_DURATION*100).toFixed(1)+'%';
+          }
         }
         function setHUD() {
           HUD.score.textContent = `SCORE: ${score}`;
@@ -949,6 +970,24 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
             result.push(trimTransparent(o));
           }
           return result;
+        }
+        // Os PNGs 84–93 são opcionais até serem enviados ao GitHub.
+        // Nomes correspondem exatamente aos arquivos gerados pelo Gabriel.
+        const mobSpritePaths={
+          mushroom:{idle:'84 bolota idle.png',walk1:'85 bolota walk 1.png',walk2:'86 bolota walk 2.png',dead:'87 bolota dead.png',alert:'88 bolota espanto.png'},
+          turtle:{alert:'89 trutle espanto.png',dead:'90 turtle dead.png',walk1:'91 turtle walk 1.png',idle:'92 turtle idle.png',walk2:'93 turtle walk 2.png'}
+        };
+        processedAssets.mobFrames={mushroom:{},turtle:{}};
+        for(const [type,poses] of Object.entries(mobSpritePaths)){
+          for(const [pose,path] of Object.entries(poses)){
+            const img=new Image();
+            img.onload=()=>{
+              try{processedAssets.mobFrames[type][pose]=trimTransparent(removeGreenScreen(img));}
+              catch(err){console.warn('Sprite do inimigo não pôde ser processado:',path,err);}
+            };
+            img.onerror=()=>{ /* Sem asset publicado: conserva o sprite 37.jpg. */ };
+            img.src=encodeURI(path);
+          }
         }
         Object.entries(originalPaths).forEach(([key,path])=>{
           const img=new Image();assets[key]=img;
@@ -1107,7 +1146,8 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           if(level!==1||b.type!=='surprise')return;
           const id=questionId(b);
           if(collectedPickups.has(id)||questionBlocksHit.has(id))return;
-          questionBlocksHit.add(id);b.bumpUntil=elapsedSeconds+.18;
+          questionBlocksHit.add(id);b.bumpUntil=elapsedSeconds+.25;
+          emitPixelBurst(b.x+b.w/2,b.y,['#ffe88a','#fff7bb','#dbaa64'],9,95);
           // Sobe do ? e desliza para a direita, aterrissando em chão seguro.
           burgerDrops.push({id,x:b.x+b.w/2-15,y:b.y-12,w:30,h:30,phase:'rise',
             peak:b.y-42,drift:0,vy:0});
@@ -1137,6 +1177,60 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
               }else collectedPickups.delete(drop.id);
             }
           }
+        }
+
+        // Efeitos visuais sem novos recursos: respeitam pausa e o tempo ativo.
+        function emitPixelBurst(x,y,colors,count=8,speed=95){
+          for(let i=0;i<count;i++){
+            const angle=Math.PI*2*i/count+Math.random()*.3,power=speed*(.45+Math.random()*.6);
+            sgbParticles.push({x,y,vx:Math.cos(angle)*power,vy:Math.sin(angle)*power-35,
+              age:0,life:.35+Math.random()*.36,color:colors[i%colors.length],size:3+Math.random()*3});
+          }
+          if(sgbParticles.length>120)sgbParticles.splice(0,sgbParticles.length-120);
+        }
+        function tickCombatEffects(dt){
+          if(isDashing()&&elapsedSeconds-lastDashDustAt>.06){
+            lastDashDustAt=elapsedSeconds;
+            emitPixelBurst(player.x+(superPower.facing>0?2:player.w-2),player.y+player.h-5,
+              ['#ffebae','#b6aeec','#fff7db'],3,40);
+          }
+          for(let i=sgbParticles.length-1;i>=0;i--){
+            const p=sgbParticles[i];p.age+=dt;p.x+=p.vx*dt;p.y+=p.vy*dt;p.vy+=180*dt;
+            if(p.age>=p.life)sgbParticles.splice(i,1);
+          }
+          for(let i=fallenEnemies.length-1;i>=0;i--)
+            if(elapsedSeconds>=fallenEnemies[i].until)fallenEnemies.splice(i,1);
+        }
+        function drawCombatFxWorld(){
+          ctx.save();ctx.translate(-Math.round(cameraX),0);
+          for(const e of fallenEnemies){
+            ctx.save();ctx.globalAlpha=Math.min(1,Math.max(0,(e.until-elapsedSeconds)*2.5));
+            const sprite=processedAssets.mobFrames?.[e.type]?.dead;
+            if(sprite)drawSpriteOnFeet(sprite,e.x+e.w/2,e.y+e.h,e.h,e.facing);
+            else{ctx.fillStyle='#b9835c';ctx.fillRect(e.x+4,e.y+e.h-10,e.w-8,9);}
+            ctx.restore();
+          }
+          for(const p of sgbParticles){
+            ctx.globalAlpha=Math.max(0,1-p.age/p.life);ctx.fillStyle=p.color;
+            ctx.fillRect(Math.round(p.x),Math.round(p.y),Math.ceil(p.size),Math.ceil(p.size));
+          }
+          ctx.restore();
+        }
+        function checkpointChime(){
+          try{
+            const C=window.AudioContext||window.webkitAudioContext;if(!C)return;
+            const ac=checkpointChime.context||(checkpointChime.context=new C());
+            if(ac.state==='suspended'){ac.resume().catch(()=>{});return;}
+            for(const [i,hz] of [659,880].entries()){
+              const tone=ac.createOscillator(),gain=ac.createGain(),at=ac.currentTime+i*.11;
+              tone.type='sine';tone.frequency.value=hz;
+              gain.gain.setValueAtTime(.0001,at);
+              gain.gain.exponentialRampToValueAtTime(.045,at+.015);
+              gain.gain.exponentialRampToValueAtTime(.0001,at+.16);
+              tone.connect(gain);gain.connect(ac.destination);
+              tone.start(at);tone.stop(at+.17);
+            }
+          }catch(err){/* Som opcional, sem afetar o jogo. */}
         }
         function drawBurgerDrops(){
           for(const drop of burgerDrops){
@@ -1519,6 +1613,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           superPower.until=superPower.dashUntil=superPower.cooldownUntil=0;
           damagedHeartUntil=0;damagedHeartIndex=-1;lastHeartSignature='';
           burgerDrops.length=0;questionBlocksHit.clear();
+          sgbParticles.length=0;fallenEnemies.length=0;lastDashDustAt=-1;
           // collectedPickups é do slot: reiniciar não pode duplicar hambúrguer coletado.
           enemies=(level===1?level1EnemyTemplate:level===2?level2EnemyTemplate:[]).map(e=>({...e}));
           skyBirds=freshSkyBirds();
@@ -1538,7 +1633,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           superPower.dashUntil=0;
           if(lives<=0){state='gameover';setHUD();if(activeSlot!==null)saveCurrentSlot(false);return;}
           enemies=(level===1?level1EnemyTemplate:level===2?level2EnemyTemplate:[]).map(e=>({...e}));
-          skyBirds=freshSkyBirds();
+          skyBirds=freshSkyBirds();sgbParticles.length=0;fallenEnemies.length=0;
           resetPosition();invulnerable=1.5;setHUD();
         }
         function startCutscene(){
@@ -1745,43 +1840,75 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
             footY>=b.y && footY<b.y+b.h
           );
         }
+        // Detecção frontal: mesmo patamar, distância curta e sem parede entre os dois.
+        function enemyCanSpotHero(enemy,terrain){
+          const ex=enemy.x+enemy.w/2,px=player.x+player.w/2,dx=px-ex;
+          const look=enemy.vx<0?-1:enemy.vx>0?1:(enemy.facing||1);
+          const eyeY=enemy.y+enemy.h*.48;
+          if(dx*look<0||Math.abs(dx)>270||Math.abs((player.y+player.h/2)-eyeY)>65)return false;
+          const a=Math.min(ex,px),b=Math.max(ex,px);
+          return !terrain.some(tile=>tile.type!=='ground'&&tile.type!=='forestGround'&&tile.type!=='skyPlatform'&&
+            tile.x<b&&tile.x+tile.w>a&&tile.y<eyeY&&tile.y+tile.h>eyeY);
+        }
+        function defeatEnemy(enemy,points){
+          enemy.alive=false;score+=points;setHUD();
+          fallenEnemies.push({type:enemy.type,x:enemy.x,y:enemy.y,w:enemy.w,h:enemy.h,
+            facing:enemy.facing||(enemy.vx<0?-1:1),until:elapsedSeconds+.65});
+          emitPixelBurst(enemy.x+enemy.w/2,enemy.y+enemy.h*.45,['#ffe397','#f6a4b2','#fff8dc'],10,105);
+        }
         function updateEnemies(){
           const terrain=activeBlocks();
           for(const enemy of enemies){
             if(!enemy.alive)continue;
+            if(!enemy.aiState)enemy.aiState='patrol';
+            if(!enemy.patrolSpeed)enemy.patrolSpeed=Math.abs(enemy.vx)||1.5;
             const oldBottom=enemy.y+enemy.h;
             enemy.y+=4;
             let grounded=false;
             for(const b of terrain){
               if(isColliding(enemy,b)&&oldBottom<=b.y+3){
-                enemy.y=b.y-enemy.h;
-                grounded=true;
-                break;
+                enemy.y=b.y-enemy.h;grounded=true;break;
               }
             }
-            let turned=false;
-            // Antes da movimentação horizontal: olhar o chão *à frente*.
-            // A verificação só é aplicada quando há apoio, para não oscilar enquanto cai.
-            if(grounded && enemy.vx!==0 && !hasFloorAhead(enemy,terrain)){
-              enemy.vx*=-1;
-              turned=true;
+            if(enemy.aiState==='patrol'&&enemyCanSpotHero(enemy,terrain)){
+              enemy.aiState='alert';enemy.alertUntil=elapsedSeconds+.42;
+              enemy.facing=enemy.vx<0?-1:1;
+              enemy.vx=0;
             }
-            if(!turned)enemy.x+=enemy.vx*enemyDifficultyMultiplier();
+            if(enemy.aiState==='alert'){
+              enemy.vx=0;
+              if(elapsedSeconds>=enemy.alertUntil)enemy.aiState='chase';
+            }
+            if(enemy.aiState==='chase'){
+              const dx=player.x+player.w/2-(enemy.x+enemy.w/2);
+              const dir=Math.abs(dx)>6?Math.sign(dx):0;
+              if(dir)enemy.facing=dir;
+              enemy.vx=dir*enemy.patrolSpeed*1.25;
+            }
+            if(enemy.aiState==='patrol'&&enemy.vx)enemy.facing=Math.sign(enemy.vx);
+            let blocked=false;
+            if(grounded&&enemy.vx!==0&&!hasFloorAhead(enemy,terrain)){
+              blocked=true;
+              if(enemy.aiState==='patrol')enemy.vx*=-1;
+              else enemy.vx=0; // Perseguição não força a queda em buracos.
+            }
+            if(!blocked&&enemy.vx!==0)enemy.x+=enemy.vx*enemyDifficultyMultiplier();
             for(const b of terrain){
               if(b.type!=='ground'&&b.type!=='forestGround'&&isColliding(enemy,b)){
                 if(enemy.vx<0)enemy.x=b.x+b.w;
-                else enemy.x=b.x-enemy.w;
-                enemy.vx*=-1;
+                else if(enemy.vx>0)enemy.x=b.x-enemy.w;
+                if(enemy.aiState==='patrol')enemy.vx*=-1;
+                else enemy.vx=0; // Espera junto à parede em vez de atravessá-la.
                 break;
               }
             }
             if(isDashing()&&isColliding(player,enemy)){
-              enemy.alive=false;score+=150;setHUD();continue;
+              defeatEnemy(enemy,150);continue;
             }
             if(invulnerable<=0&&isColliding(player,enemy)){
               if(player.vy>0&&player.y+player.h<=enemy.y+20){
-                enemy.alive=false;player.vy=player.jumpPower*0.8;score+=100;setHUD();
-              } else {loseLife();return;}
+                defeatEnemy(enemy,100);player.vy=player.jumpPower*.8;
+              }else{loseLife();return;}
             }
           }
         }
@@ -1905,11 +2032,14 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           if(player.y>GAME_HEIGHT+200){loseLife('fall');return;}
           if(level===3&&!skyCheckpointReached&&player.x+player.w>1650&&player.x<1720&&player.y+player.h>330){
             skyCheckpointReached=true;skyCheckpointX=1650;score+=250;setHUD();
+            emitPixelBurst(1675,347,['#a5f3fc','#e4c5ff','#fffde1'],18,130);checkpointChime();
           }
           if(level===2 && !checkpointReached && player.x+player.w>1760 &&
              player.x<1825 && player.y+player.h>305){
             checkpointReached=true;checkpointX=1730;score+=250;setHUD();
+            emitPixelBurst(1776,328,['#edcdff','#e9aaff','#fff6cc'],18,130);checkpointChime();
           }
+          tickCombatEffects(dt);
           updateLevelPickups();
           if(level===1)updateBurgerDrops(dt);
           if(level===3)updateSkyBirds(elapsedSeconds);
@@ -2105,12 +2235,11 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           ctx.save();ctx.translate(-Math.round(cameraX),0);
           for(const b of level1Blocks){
             if(b.type==='ground')drawOriginalGround(b);
-            else if(b.type==='surprise'&&collectedPickups.has(questionId(b)))
-              drawObject(processedAssets.brick,b.x,b.y,b.w,b.h);
-            else if(b.type==='surprise'&&questionBlocksHit.has(questionId(b)))
-              drawObject(processedAssets.brick,b.x,b.y,b.w,b.h);
-            else drawObject(processedAssets[b.type],b.x,
-              b.y-(b.bumpUntil>elapsedSeconds?Math.sin(((b.bumpUntil-elapsedSeconds)/.18)*Math.PI)*7:0),b.w,b.h);
+            else if(b.type==='surprise'&&(collectedPickups.has(questionId(b))||questionBlocksHit.has(questionId(b)))){
+              const bump=b.bumpUntil>elapsedSeconds?Math.sin(((b.bumpUntil-elapsedSeconds)/.25)*Math.PI)*9:0;
+              drawObject(processedAssets.brick,b.x,b.y-bump,b.w,b.h);
+            }else drawObject(processedAssets[b.type],b.x,
+              b.y-(b.bumpUntil>elapsedSeconds?Math.sin(((b.bumpUntil-elapsedSeconds)/.25)*Math.PI)*9:0),b.w,b.h);
           }
           drawObject(processedAssets.castle,castle.x,castle.y,castle.w,castle.h);
           if(state==='cutscene')drawCinematicCharacters(cinematicSeconds);
@@ -2123,11 +2252,19 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
         }
         function drawEnemies(){
           for(const e of enemies){if(!e.alive)continue;
-            const frame=processedAssets.enemyFrames?.[e.type==='mushroom'?0:1];
-            // Ambos os sprites da folha 37.jpg olham para a direita na imagem original.
-            // A direção visual deve acompanhar vx, evitando o 'moonwalk' da tartaruga.
-            const facing=e.vx<0?-1:1;
+            const poses=processedAssets.mobFrames?.[e.type]||{};
+            const frameName=e.aiState==='alert'?'alert':
+              (Math.abs(e.vx)>.05?(Math.floor(elapsedSeconds*8+e.x*.03)%2?'walk1':'walk2'):'idle');
+            const original=processedAssets.enemyFrames?.[e.type==='mushroom'?0:1];
+            const frame=poses[frameName]||poses.idle||original;
+            // Todos os sprites novos olham para a direita; espelho apenas para a esquerda.
+            const facing=e.facing||(e.vx<0?-1:1);
             drawSpriteOnFeet(frame,e.x+e.w/2,e.y+e.h,e.h,facing);
+            if(e.aiState==='alert'){
+              ctx.save();ctx.fillStyle='#ffdd65';ctx.strokeStyle='#392034';ctx.lineWidth=2;
+              ctx.font='bold 20px sans-serif';ctx.textAlign='center';ctx.strokeText('!',e.x+e.w/2,e.y-8);
+              ctx.fillText('!',e.x+e.w/2,e.y-8);ctx.restore();
+            }
           }
         }
         function drawHero(){
@@ -2730,7 +2867,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           if(state==='menu'){ctx.fillStyle='#0f1432';ctx.fillRect(0,0,GAME_WIDTH,GAME_HEIGHT);return;}
           if(state==='map'){drawMap();return;}
           if(level===1)drawLevelOne();else if(level===2)drawLevelTwo();else drawLevelThree();
-          if(state==='playing')drawLevelPickups();
+          if(state==='playing'){drawLevelPickups();drawCombatFxWorld();}
           if(state==='title2')overlay('FASE 2','A FLORESTA MISTERIOSA','ENTER OU BOTÃO A PARA COMEÇAR');
           if(state==='title3')overlay('FASE 3','O TEMPLO DOS VENTOS','ENTER OU BOTÃO A PARA COMEÇAR');
           if(state==='gameover')overlay('GAME OVER','AS VIDAS ACABARAM','CLIQUE EM RECOMEÇAR');
