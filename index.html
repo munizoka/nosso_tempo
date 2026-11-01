@@ -1748,7 +1748,7 @@ Contexto e Personalidade:
 
         function tokenize(text) {
             return String(text).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-                .split(/[^a-z0-9]+/).filter(word => word.length > 3 && !['para','voce','sobre','como','quem','qual','quais','isso','aqui','dele','dela'].includes(word));
+                .split(/[^a-z0-9]+/).filter(word => word.length > 3 && !['para','voce','sobre','como','quem','qual','quais','isso','aqui','dele','dela','tudo','certo','mano','eai','ola','beleza'].includes(word));
         }
         function knowledgeFor(question) {
             if (!isMember() || !memories.length) return 'Não há memórias adicionais aprovadas disponíveis.';
@@ -1760,9 +1760,15 @@ Contexto e Personalidade:
                 return { item, index, score };
             }).sort((a, b) => b.score - a.score || a.index - b.index);
             const chosen = ranked.filter(r => r.score > 0).slice(0, 10);
-            for (const entry of ranked.sort((a, b) => a.index - b.index)) {
-                if (chosen.length >= 12) break;
-                if (!chosen.find(x => x.item.id === entry.item.id)) chosen.push(entry);
+            // Perguntas simples não precisam carregar memórias sem ligação com o assunto.
+            // Mantém o contexto amplo para perguntas pessoais e pedidos de lembranças.
+            const normalizedQuestion = String(question).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+            const needsPersonalContext = /\b(gabriel|vitoria|gabi|lembra|lembrar|lembranca|lembrancas|memoria|memorias|nossa|nosso|namoro|namorado|namorada|relacionamento|familia|viagem|passeio|mae|pai|minha|mim|juntos|meu nome|sobre nos|quem sou|quem somos)\b/.test(normalizedQuestion);
+            if (needsPersonalContext) {
+                for (const entry of ranked.sort((a, b) => a.index - b.index)) {
+                    if (chosen.length >= 12) break;
+                    if (!chosen.find(x => x.item.id === entry.item.id)) chosen.push(entry);
+                }
             }
             let text = '';
             for (const { item } of chosen) {
