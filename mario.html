@@ -659,6 +659,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           if(button)button.setAttribute('aria-expanded',String(inventoryOpen));
           if(inventoryOpen){renderInventory();document.getElementById('inventory-close')?.focus();}
           else button?.focus();
+          updateDashButton(); // botão B reage imediatamente ao fechar o inventário.
         };
         renderInventory();
         let forestTotemActivated=false;
