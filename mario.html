@@ -135,21 +135,35 @@
 @media(max-width:560px){.inventory-window{padding:13px 10px}.inv-grid{gap:2px}.inv-slot{border-width:2px}.inv-detail{padding:9px}.inventory-head h2{font-size:12px}.inv-section-title{font-size:9px}}
 
 
-/* Menu inicial: usa o panorama já existente da Fase 3 até termos uma artwork exclusiva. */
+/* Menu cinematográfico: duas camadas alternadas, uma única imagem nova carregada por vez. */
 #sgb-menu{position:fixed;inset:0;z-index:150;display:flex;align-items:center;justify-content:center;box-sizing:border-box;padding:max(15px,env(safe-area-inset-top)) max(18px,env(safe-area-inset-right)) max(15px,env(safe-area-inset-bottom)) max(18px,env(safe-area-inset-left));overflow:auto;touch-action:pan-y;color:white;font-family:'Press Start 2P',monospace}
 #sgb-menu[hidden]{display:none!important}
-.sgb-menu-bg{position:absolute;inset:0;background:linear-gradient(110deg,rgba(8,10,31,.95) 0%,rgba(15,11,37,.79) 47%,rgba(20,9,50,.52) 100%),url('58.png') center/cover no-repeat;background-color:#0f1737;image-rendering:auto}
-.sgb-menu-bg::after{content:'';position:absolute;inset:0;background:radial-gradient(circle at 80% 32%,rgba(197,135,255,.3),transparent 38%),linear-gradient(0deg,#080e23 0%,transparent 44%);pointer-events:none}
+.sgb-menu-bg{position:absolute;inset:0;overflow:hidden;background:#0f1737 url('58.png') center/cover no-repeat;pointer-events:none}
+.sgb-menu-slide{position:absolute;inset:-3%;opacity:0;background-position:center;background-size:cover;background-repeat:no-repeat;transform:scale(1.05);transition:opacity 2.1s ease-in-out;will-change:opacity}
+.sgb-menu-slide.is-visible{opacity:1}
+.sgb-menu-slide.is-visible{animation:sgb-menu-camera 11s ease-in-out infinite alternate}
+@keyframes sgb-menu-camera{from{transform:scale(1.055) translate3d(-.5%,.2%,0) rotate(-.18deg)}to{transform:scale(1.105) translate3d(.5%,-.4%,0) rotate(.18deg)}}
+.sgb-menu-bg::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,rgba(6,8,28,.68),rgba(15,10,37,.38) 50%,rgba(6,8,28,.58)),radial-gradient(circle at 52% 43%,rgba(22,12,42,.42),transparent 68%),linear-gradient(0deg,rgba(6,9,25,.77),transparent 48%);pointer-events:none}
+.sgb-menu-bg .sgb-menu-slide:nth-child(2){background-position:center}
+.sgb-menu-card{animation:sgb-menu-entrance .58s cubic-bezier(.2,.85,.25,1) both}
+@keyframes sgb-menu-entrance{from{opacity:0;transform:translateY(15px) scale(.975)}to{opacity:1;transform:translateY(0) scale(1)}}
 .sgb-menu-card{position:relative;width:min(560px,100%);max-height:calc(100dvh - 24px);overflow-y:auto;text-align:center;background:rgba(15,13,35,.9);border:4px solid #a7a0cb;box-shadow:0 0 0 4px #332746,0 24px 70px rgba(0,0,0,.7);padding:clamp(12px,2.5vw,26px);box-sizing:border-box;scrollbar-width:thin}
 .sgb-logo{color:#ffe5a1;font-size:clamp(18px,3vw,30px);line-height:1.6;letter-spacing:1px;text-shadow:3px 3px #6e3d76,5px 5px #171028;margin:0 0 5px}
 .sgb-subtitle{color:#d1b9ef;font:700 clamp(10px,1.3vw,14px) system-ui,sans-serif;letter-spacing:2px;margin:0 0 14px}
 .sgb-menu-title{font-size:clamp(10px,1.8vw,14px);color:#e8d7ff;line-height:1.7;margin:6px 0 12px}
-.sgb-menu-btn{width:100%;display:block;box-sizing:border-box;border:2px solid #9188c9;border-radius:5px;background:#3e3769;color:#fff0ce;font:700 clamp(10px,1.7vw,13px) system-ui,sans-serif;letter-spacing:.7px;min-height:42px;padding:10px;margin:7px auto;cursor:pointer;box-shadow:0 3px 0 #201535;touch-action:manipulation}
-.sgb-menu-btn.primary{background:#5d4dc7;border-color:#d6baf0}
-.sgb-menu-btn.secondary{background:#26243b}
-.sgb-menu-btn:disabled{opacity:.4;cursor:not-allowed}
-.sgb-menu-btn:focus-visible{outline:3px solid #ffe5a1}
-.sgb-menu-btn:active{transform:translateY(2px);box-shadow:none}
+.sgb-menu-btn{--btn-color:#3e3769;--btn-border:#9188c9;position:relative;isolation:isolate;overflow:hidden;width:100%;display:block;box-sizing:border-box;border:2px solid var(--btn-border);border-radius:6px;background:var(--btn-color);color:#fff0ce;font:700 clamp(10px,1.7vw,13px) system-ui,sans-serif;letter-spacing:.7px;min-height:44px;padding:10px;margin:7px auto;cursor:pointer;box-shadow:0 4px 0 #201535,0 7px 12px rgba(0,0,0,.22),inset 0 1px rgba(255,255,255,.12);touch-action:manipulation;transform:translateY(0) scale(1);transition:transform .24s cubic-bezier(.2,1.4,.4,1),background-color .24s ease,border-color .24s ease,box-shadow .24s ease,filter .24s ease}
+.sgb-menu-btn.primary{--btn-color:#5d4dc7;--btn-border:#d6baf0}
+.sgb-menu-btn.secondary{--btn-color:#26243b}
+.sgb-menu-btn:not(:disabled):hover{background-color:color-mix(in srgb,var(--btn-color) 86%,#fff 14%);border-color:#e7d9ff;box-shadow:0 6px 0 #201535,0 10px 20px rgba(111,77,221,.33),inset 0 1px rgba(255,255,255,.22);filter:brightness(1.1)}
+.sgb-menu-btn:disabled{opacity:.4;cursor:not-allowed;transform:none!important;filter:none!important}
+.sgb-menu-btn:focus-visible{outline:3px solid #ffe5a1;outline-offset:3px;box-shadow:0 5px 0 #201535,0 0 20px rgba(255,223,141,.35)}
+.sgb-menu-btn:not(:disabled):active{transform:translateY(3px) scale(.985);box-shadow:0 1px 0 #201535,inset 0 3px 8px rgba(0,0,0,.36);filter:brightness(1.22);transition-duration:.08s}
+.sgb-menu-btn::before{content:'';position:absolute;inset:0;background:linear-gradient(110deg,transparent 15%,rgba(255,255,255,.22) 50%,transparent 85%);transform:translateX(-140%);transition:transform .55s ease;pointer-events:none}
+.sgb-menu-btn:not(:disabled):hover::before,.sgb-menu-btn:not(:disabled):focus-visible::before{transform:translateX(140%)}
+.sgb-button-ripple{position:absolute;z-index:2;border-radius:50%;background:rgba(255,255,255,.36);transform:translate(-50%,-50%) scale(0);animation:sgb-button-ripple .5s ease-out forwards;pointer-events:none}
+@keyframes sgb-button-ripple{to{transform:translate(-50%,-50%) scale(1);opacity:0}}
+@media(hover:hover) and (pointer:fine){.sgb-menu-btn:not(:disabled):hover{transform:translateY(-2px) scale(1.012)}.sgb-menu-btn:not(:disabled):active{transform:translateY(3px) scale(.985)}}
+@media(prefers-reduced-motion:reduce){.sgb-menu-slide{animation:none!important;transition:none!important;transform:none!important}.sgb-menu-card{animation:none!important}.sgb-menu-btn,.sgb-menu-btn::before{transition:none!important}.sgb-button-ripple{display:none!important}}
 .sgb-slot-name{color:#f4da9c;font-weight:800}
 .sgb-slot-meta{display:block;color:#d8d3e8;font:400 12px system-ui,sans-serif;margin-top:5px}
 .sgb-menu-small{color:#bfb8d0;font:400 12px/1.5 system-ui,sans-serif}
@@ -209,7 +223,10 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
     </section>
     <div id="item-toast" role="status" aria-live="polite"></div>
     <section id="sgb-menu" aria-label="Menu de Super Gabriel Bros">
-      <div class="sgb-menu-bg" aria-hidden="true"></div>
+      <div class="sgb-menu-bg" aria-hidden="true">
+        <div class="sgb-menu-slide is-visible" style="background-image:url('76.jpg')"></div>
+        <div class="sgb-menu-slide"></div>
+      </div>
       <div class="sgb-menu-card">
         <h1 class="sgb-logo">SUPER GABRIEL<br>BROS</h1>
         <p class="sgb-subtitle">UMA AVENTURA • TRÊS DESTINOS</p>
@@ -1119,9 +1136,81 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           updateCloudUser();
         }
         window.sgbMenuPage=sgbMenuPage;
+        // Cenários e personagens: key art -> fase 1 -> Gabriel -> fase 2 ->
+        // vilão -> fase 3 -> Vitoria -> confronto. Alternância de 10 em 10 s.
+        const SGB_MENU_SCENES=['76.jpg','69.jpg','72.jpg','70.jpg','74.jpg','71.jpg','73.jpg','75.jpg'];
+        const SGB_MENU_SCENE_DURATION=10000;
+        const sgbMenuSlides=Array.from(document.querySelectorAll('.sgb-menu-slide'));
+        const sgbReducedMotion=window.matchMedia?.('(prefers-reduced-motion: reduce)');
+        let sgbSceneIndex=0,sgbSceneLayer=0,sgbSceneTimeout=null,sgbSceneToken=0;
+        function sgbMenuIsVisible(){
+          return !document.hidden && !document.getElementById('sgb-menu').hidden;
+        }
+        function sgbStopSlideshow(){
+          if(sgbSceneTimeout!==null)clearTimeout(sgbSceneTimeout);
+          sgbSceneTimeout=null;
+          sgbSceneToken++; // invalida carregamentos de imagens pendentes
+        }
+        function sgbScheduleNextScene(){
+          if(sgbSceneTimeout!==null)clearTimeout(sgbSceneTimeout);
+          sgbSceneTimeout=null;
+          if(!sgbMenuIsVisible()||sgbReducedMotion?.matches)return;
+          sgbSceneTimeout=setTimeout(sgbAdvanceScene,SGB_MENU_SCENE_DURATION);
+        }
+        function sgbAdvanceScene(){
+          sgbSceneTimeout=null;
+          if(!sgbMenuIsVisible()||sgbReducedMotion?.matches)return;
+          const next=(sgbSceneIndex+1)%SGB_MENU_SCENES.length;
+          const token=++sgbSceneToken;
+          const image=new Image();
+          image.onload=()=>{
+            if(token!==sgbSceneToken||!sgbMenuIsVisible())return;
+            const incomingLayer=1-sgbSceneLayer;
+            const incoming=sgbMenuSlides[incomingLayer];
+            const outgoing=sgbMenuSlides[sgbSceneLayer];
+            incoming.style.backgroundImage='url("'+SGB_MENU_SCENES[next]+'")';
+            incoming.classList.add('is-visible');
+            outgoing.classList.remove('is-visible');
+            sgbSceneLayer=incomingLayer;
+            sgbSceneIndex=next;
+            sgbScheduleNextScene();
+          };
+          image.onerror=()=>{
+            if(token!==sgbSceneToken||!sgbMenuIsVisible())return;
+            // Uma imagem indisponível não paralisa nem apaga o slideshow.
+            sgbSceneIndex=next;
+            sgbSceneTimeout=setTimeout(sgbAdvanceScene,1500);
+          };
+          image.src=SGB_MENU_SCENES[next];
+        }
+        function sgbStartSlideshow(){
+          if(sgbSceneTimeout===null)sgbScheduleNextScene();
+        }
+        document.addEventListener('visibilitychange',()=>{
+          if(document.hidden)sgbStopSlideshow();
+          else sgbStartSlideshow();
+        });
+        sgbReducedMotion?.addEventListener?.('change',()=>{
+          sgbStopSlideshow();sgbStartSlideshow();
+        });
+        document.getElementById('sgb-menu').addEventListener('pointerdown',event=>{
+          const button=event.target.closest?.('.sgb-menu-btn');
+          if(!button||button.disabled||sgbReducedMotion?.matches)return;
+          const rect=button.getBoundingClientRect();
+          const size=Math.max(rect.width,rect.height)*2;
+          const ripple=document.createElement('span');
+          ripple.className='sgb-button-ripple';
+          ripple.style.width=size+'px';
+          ripple.style.height=size+'px';
+          ripple.style.left=(event.clientX-rect.left)+'px';
+          ripple.style.top=(event.clientY-rect.top)+'px';
+          ripple.addEventListener('animationend',()=>ripple.remove(),{once:true});
+          button.appendChild(ripple);
+        });
         function closeMainMenu(){
           if(activeSlot===null||state==='menu')return;
           menuOpen=false;document.getElementById('sgb-menu').hidden=true;
+          sgbStopSlideshow();
           document.body.classList.remove('sgb-menu-active');
           keys.left=keys.right=keys.up=keys.down=false;
         }
@@ -1131,6 +1220,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           menuOpen=true;keys.left=keys.right=keys.up=keys.down=false;
           document.getElementById('sgb-menu').hidden=false;
           document.body.classList.add('sgb-menu-active');
+          sgbStartSlideshow();
           menuMessage('');sgbMenuPage('home');
         };
         window.sgbSave=function(){saveCurrentSlot(true);sgbMenuPage('home');};
@@ -2428,6 +2518,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           requestAnimationFrame(loop);
         }
         setHUD();
+        sgbStartSlideshow();
         requestAnimationFrame(loop);
     </script>
 </body>
