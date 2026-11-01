@@ -102,7 +102,7 @@ check('Bloco de interrogação libera hambúrguer ao bater por baixo',mario.incl
 check('Hambúrguer vai ao inventário, sem uso automático',mario.includes("addConsumable('burger',1)")&&mario.includes("else if(id==='burger'){superPower.until="));
 check('Super Gabriel usa sprites de transformação e investida',mario.includes('processedAssets.superHeroFrames=makeFrames(sheet,4)')&&mario.includes('extras.dashSuper:extras.dashHero')&&mario.includes('trySuperDash()'));
 check('Investida tem input X e botão B condicionado',mario.includes("e.code==='KeyX'&&!e.repeat")&&mario.includes('id="btn-dash"')&&mario.includes("show=isSuperGabriel()&&state==='playing'"));
-check('Investida derrota inimigos e corvos',mario.includes('enemy.alive=false;score+=150;setHUD();continue;')&&mario.includes('bird.alive=false;score+=180;setHUD();continue;'));
+check('Investida derrota inimigos e corvos',mario.includes('defeatEnemy(enemy,150);continue;')&&mario.includes('bird.alive=false;score+=180;setHUD();continue;'));
 check('Power-up pausa e volta com seu tempo de duração',mario.includes('superRemaining:Math.max(0,superPower.until-elapsedSeconds)')&&mario.includes('superPower.until=elapsedSeconds+data.superRemaining')&&mario.includes('if(!inventoryOpen&&!menuOpen){'));
 check('Blocos coletados permanecem únicos no save',mario.includes('collectedPickups.add(drop.id)')&&mario.includes("collectedPickups.has(questionId(b))")&&mario.includes('collectedPickups=new Set();'));
 check('Firestore continua isolado e aceita burger + poder temporário',rules.includes("'jump','burger'")&&rules.includes("'superRemaining'")&&rules.includes('gbIsSelf(userId)'));
