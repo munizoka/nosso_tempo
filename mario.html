@@ -134,6 +134,31 @@
 #item-toast{position:fixed;z-index:65;top:65px;left:50%;transform:translateX(-50%);display:none;max-width:90%;padding:10px 15px;background:#231d3c;color:#ffeca7;border:2px solid #b99b64;border-radius:6px;font:700 12px system-ui,sans-serif;text-align:center;pointer-events:none}
 @media(max-width:560px){.inventory-window{padding:13px 10px}.inv-grid{gap:2px}.inv-slot{border-width:2px}.inv-detail{padding:9px}.inventory-head h2{font-size:12px}.inv-section-title{font-size:9px}}
 
+
+/* Menu inicial: usa o panorama já existente da Fase 3 até termos uma artwork exclusiva. */
+#sgb-menu{position:fixed;inset:0;z-index:150;display:flex;align-items:center;justify-content:center;box-sizing:border-box;padding:max(15px,env(safe-area-inset-top)) max(18px,env(safe-area-inset-right)) max(15px,env(safe-area-inset-bottom)) max(18px,env(safe-area-inset-left));overflow:auto;touch-action:pan-y;color:white;font-family:'Press Start 2P',monospace}
+#sgb-menu[hidden]{display:none!important}
+.sgb-menu-bg{position:absolute;inset:0;background:linear-gradient(110deg,rgba(8,10,31,.95) 0%,rgba(15,11,37,.79) 47%,rgba(20,9,50,.52) 100%),url('58.png') center/cover no-repeat;background-color:#0f1737;image-rendering:auto}
+.sgb-menu-bg::after{content:'';position:absolute;inset:0;background:radial-gradient(circle at 80% 32%,rgba(197,135,255,.3),transparent 38%),linear-gradient(0deg,#080e23 0%,transparent 44%);pointer-events:none}
+.sgb-menu-card{position:relative;width:min(560px,100%);max-height:calc(100dvh - 24px);overflow-y:auto;text-align:center;background:rgba(15,13,35,.9);border:4px solid #a7a0cb;box-shadow:0 0 0 4px #332746,0 24px 70px rgba(0,0,0,.7);padding:clamp(12px,2.5vw,26px);box-sizing:border-box;scrollbar-width:thin}
+.sgb-logo{color:#ffe5a1;font-size:clamp(18px,3vw,30px);line-height:1.6;letter-spacing:1px;text-shadow:3px 3px #6e3d76,5px 5px #171028;margin:0 0 5px}
+.sgb-subtitle{color:#d1b9ef;font:700 clamp(10px,1.3vw,14px) system-ui,sans-serif;letter-spacing:2px;margin:0 0 14px}
+.sgb-menu-title{font-size:clamp(10px,1.8vw,14px);color:#e8d7ff;line-height:1.7;margin:6px 0 12px}
+.sgb-menu-btn{width:100%;display:block;box-sizing:border-box;border:2px solid #9188c9;border-radius:5px;background:#3e3769;color:#fff0ce;font:700 clamp(10px,1.7vw,13px) system-ui,sans-serif;letter-spacing:.7px;min-height:42px;padding:10px;margin:7px auto;cursor:pointer;box-shadow:0 3px 0 #201535;touch-action:manipulation}
+.sgb-menu-btn.primary{background:#5d4dc7;border-color:#d6baf0}
+.sgb-menu-btn.secondary{background:#26243b}
+.sgb-menu-btn:disabled{opacity:.4;cursor:not-allowed}
+.sgb-menu-btn:focus-visible{outline:3px solid #ffe5a1}
+.sgb-menu-btn:active{transform:translateY(2px);box-shadow:none}
+.sgb-slot-name{color:#f4da9c;font-weight:800}
+.sgb-slot-meta{display:block;color:#d8d3e8;font:400 12px system-ui,sans-serif;margin-top:5px}
+.sgb-menu-small{color:#bfb8d0;font:400 12px/1.5 system-ui,sans-serif}
+#sgb-menu-status{color:#f6d7a4;font:700 12px/1.5 system-ui,sans-serif;min-height:20px;margin:8px 0}
+#sgb-menu select{display:block;margin:10px auto;padding:11px;color:white;background:#3e3769;border:2px solid #b0a1d4;border-radius:5px;font:700 14px system-ui,sans-serif;width:min(290px,95%)}
+#sgb-menu [hidden]{display:none!important}
+body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:none!important}
+@media (orientation:landscape) and (max-height:490px){.sgb-menu-card{padding:12px 19px}.sgb-menu-btn{min-height:34px;margin:5px auto;padding:7px}.sgb-logo{font-size:18px}.sgb-subtitle{margin-bottom:8px}}
+
     </style>
 </head>
 <body>
@@ -152,6 +177,7 @@
         </div>
 
         <div class="flex gap-2 pointer-events-auto">
+            <button onclick="sgbOpenMenu()" class="px-2 py-2 bg-zinc-900/90 border-2 border-white rounded-xl text-white font-bold text-sm" aria-label="Abrir menu do jogo" title="Menu, salvar e opções">☰</button>
             <button onclick="toggleInventario()" id="inventory-button" title="Inventário (tecla I)" aria-label="Abrir inventário" aria-expanded="false"><img src="68.png" alt="" onerror="this.onerror=null;this.src='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGAAAABgCAMAAADVRocKAAABgFBMVEXg5N+Qm6XdzaakoOGl2uGVe9CzlWOkp6SRd7amoqrHk2PDu7vEq5fBwbnZ4eEAAAAJAgdlSEouGi9MNElNNjlGKzk2JDNWRUtELEVmUm1lTGZvVVGKdWoFBAQ6J0ZoWI5JOmZ5aGkTFRdVRTyFaWcmFBg7NFFWSnJXVo6IaVi4ubdtdK3Fycfl5eb09PQYFis4NDhwY1lpZ5J1dncoKChTWHBsTYxqZKampqjSt4rV19cjCxk2PWtNIWdXWaRWYm9bZ6+BXVyHcVuli262trbDpW7FxccaDSIRERQZG0AUIzYiDCEnQW4qWmxNIpFLSatbWVNqeJJygLaHXHCCWo2LV6ychHW5m266poyptbususjav3PQ0NDlypXp1J0HMDIRXnocjLochMM+HYg7KhorXpU+bbE9dqMrfso3is5TTYlLZoNfephOjJlSgrNRlK9OkMpfrcRiNZxmSj9/c11/f39jidRllqdjk/VpoIt3xNZzw/5n2u2OYDyPZ6aDeYRU55x9AAAAgHRSTlP///////v/H/9C/yL/HSIA/v///v7//v///////9n/////+f////////8p/xclEfr/////yf///yn/J////////////xf/K//X/////////////////////////xv///////////////////////////////8C/////////////0uJ4lkAAAPASURBVHja7dhXcxs3EABgklLsdC+wi3KFx95Fsal3WZYd995Leu+9x389i5Mykzdr5uC3www1xwfth8UCuJUKZ17yKORADuRADuRADuRADuRANuAcwDsvEzgNf78ev+0bgOPBj/VHvR5t+AUAFGLnylb7FBNQeDgeD/0BZZ43Qf1R58pfHxfaAUExXr758C1fQBmEhsrdlfmv65998Gvpk3Zhd7eBRW9FXiMppdneLlRerX/7e+H9T9+9On/1vSK0+r6AWotXKNxeuXsH4Kf5zy/NFf787fqXoM97AvqIkVKAK9CMm/T9N3/sXLv2wxzX3FcGZ5a0INlsNvcjQmqNrs99CEZrveTvoC1RpDb3BREq3YBBAlopDT6vijKQ3txHJC0F9VTLSln2eheVJ6ClVlxrBoTbVeAZaMSx5rMWgSSE2gQaMfgFOHhsakSQHumeMb4z4DUBaALVox7BpEGgYckjMCLVYuI4A04BDOi6P6AsSUjkGvC8XX0NAywcL9Ir2QHQQmqE2XwwA9QSYoYaDakXPGWwQSSUoCLcoF0ghdJtJjgLuv/iBE4CLICLH8GMKzAmUkJxcNStiYRzXjJ4AkJEQsBspg2g4AsDGiQ1ROAHeKNuXHxhWno8loYBoXiNkCshYdEDMIRINIUITGzIJeAAmHDwHpf6SXZgEdL5iwCMqPFiiR+ZSGdvQElY8AGk8S/UhBklwrgvKSBBos0ODEEJ8U8YTkfPa3IUhOHt20KoqKbwsrSofAA84zCw0+nFSxerQTB3xyXQBEWXNcpEQj8j0GegGGBJ3drrDipJNXD7iS8jErWmtDqBjYwAR+IEHqjVQdKerrajIGSBS8CMJKstDLMCrsCVmAbJ03U96B5Wg9AIcKxoKeXWKDsQLnerTz8qtdsPUB92XApGMaBqmqwHgBzQxWeNX77bKpSSyvJXgTgaSikfgEIRVlZ3zGNzo9Tb2utOb6YngeOjtlpmB9Aas1K5ZdYfH9Jgb7WSVpkbC0TuMqQHwPW9Ab55CtcPzt63HD900yfDCZC12YHzwDPt3CO78+zgi/h+ECLfpXy4+QffFFbCa5kPmrQ2qXYqlfV73SqGlrs7VIabSAlpAlkP2s9rgIjGdKoHqlOt8jO/Mnn/IDe/1iIMF7Pepqe5lXAET9uFZ0BKVJZ7ACuTCy9+45zoncz3ZjqSND7KdGwigpc3mis0xzsirEozcNuT25c1b51dHZyh9dHHPXIT5rGz++8P2f+N8kl/L/93Tg7kQA7kQA7kQA6ccPwL/WBcH7ihz1IAAAAASUVORK5CYII='"><span style="display:none">🎒</span><span id="inventory-count">0</span></button>
             <button onclick="voltarAoMapa()" class="px-3 py-2 bg-indigo-900/80 border-2 border-white rounded-xl text-white font-sans font-bold shadow-lg text-sm" title="Voltar ao mapa">🗺️ Mapa</button>
             <button onclick="reiniciarFase()" class="px-4 py-3 bg-zinc-800/80 border-2 border-white rounded-xl flex items-center justify-center text-white font-sans font-bold backdrop-blur pointer-events-auto shadow-lg active:scale-95 transition-transform text-sm uppercase">
@@ -182,6 +208,48 @@
       </div>
     </section>
     <div id="item-toast" role="status" aria-live="polite"></div>
+    <section id="sgb-menu" aria-label="Menu de Super Gabriel Bros">
+      <div class="sgb-menu-bg" aria-hidden="true"></div>
+      <div class="sgb-menu-card">
+        <h1 class="sgb-logo">SUPER GABRIEL<br>BROS</h1>
+        <p class="sgb-subtitle">UMA AVENTURA • TRÊS DESTINOS</p>
+        <div id="sgb-menu-status" role="status" aria-live="polite"></div>
+        <div id="sgb-menu-home">
+          <button class="sgb-menu-btn primary" onclick="sgbMenuPage('new')">✨ NOVO JOGO</button>
+          <button class="sgb-menu-btn" onclick="sgbMenuPage('load')">📁 CARREGAR JOGO</button>
+          <button id="sgb-resume" class="sgb-menu-btn" onclick="sgbResume()">▶ CONTINUAR</button>
+          <button id="sgb-save" class="sgb-menu-btn" onclick="sgbSave()">💾 SALVAR JOGO</button>
+          <button class="sgb-menu-btn secondary" onclick="sgbMenuPage('options')">⚙ OPÇÕES</button>
+          <button class="sgb-menu-btn secondary" onclick="sgbMenuPage('cloud')">☁ NUVEM FIREBASE</button>
+          <button class="sgb-menu-btn secondary" onclick="sgbExit()">↩ SAIR DO JOGO</button>
+        </div>
+        <div id="sgb-menu-slots" hidden>
+          <h2 id="sgb-slots-title" class="sgb-menu-title">ESCOLHA UM ESPAÇO</h2>
+          <div id="sgb-slots-list"></div>
+          <button class="sgb-menu-btn secondary" onclick="sgbMenuPage('home')">← VOLTAR</button>
+        </div>
+        <div id="sgb-menu-options" hidden>
+          <h2 class="sgb-menu-title">DIFICULDADE</h2>
+          <label class="sgb-menu-small" for="sgb-difficulty">Escolha a intensidade dos desafios</label>
+          <select id="sgb-difficulty" onchange="sgbSetDifficulty(this.value)">
+            <option value="easy">FÁCIL — 7 vidas • inimigos mais lentos</option>
+            <option value="normal">NORMAL — 5 vidas • velocidade padrão</option>
+            <option value="hard">DIFÍCIL — 3 vidas • inimigos mais rápidos</option>
+          </select>
+          <p class="sgb-menu-small">A dificuldade será salva no espaço atual. Alterá-la não reinicia a fase.</p>
+          <button class="sgb-menu-btn secondary" onclick="sgbMenuPage('home')">← VOLTAR</button>
+        </div>
+        <div id="sgb-menu-cloud" hidden>
+          <h2 class="sgb-menu-title">☁ PROGRESSO NA NUVEM</h2>
+          <p id="sgb-cloud-user" class="sgb-menu-small">Conecte sua conta Google para sincronizar os três saves.</p>
+          <button class="sgb-menu-btn primary" onclick="sgbCloudLogin()">ENTRAR COM GOOGLE</button>
+          <button class="sgb-menu-btn" onclick="sgbCloudUpload()">⬆ ENVIAR SLOT ATUAL À NUVEM</button>
+          <button class="sgb-menu-btn" onclick="sgbCloudDownload()">⬇ BAIXAR SAVES DA NUVEM</button>
+          <p class="sgb-menu-small">A sincronização é manual: baixar exige confirmação e nunca apaga dados locais sem avisar.</p>
+          <button class="sgb-menu-btn secondary" onclick="sgbMenuPage('home')">← VOLTAR</button>
+        </div>
+      </div>
+    </section>
 
     <!-- Controles Mobile -->
     <div id="mobile-controls" class="game-control-panel">
@@ -199,6 +267,9 @@
         </div>
     </div>
 
+    <script src="https://www.gstatic.com/firebasejs/13.1.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/13.1.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/13.1.0/firebase-firestore-compat.js"></script>
     <script>
         // SUPER GABRIEL BROS — fase 1 preservada + aparições recorrentes do vilão e Vitoria
         // Todos os arquivos de imagem estão na RAIZ do repositório.
@@ -248,7 +319,7 @@
         };
         const keys = { left:false, right:false, up:false, down:false };
         let level = 1;
-        let state = 'map'; // map | playing | cutscene | title2 | forestIntro | forestTotemCharge | forestOutro | title3 | skyIntro | skyAltarCharge | skyOutro | chapterEnd | gameover
+        let state = 'menu'; // menu | map | playing | cutscene | title2 | forestIntro | forestTotemCharge | forestOutro | title3 | skyIntro | skyAltarCharge | skyOutro | chapterEnd | gameover
         let cutsceneStart = 0;
         let cinematicSeconds = 0;
         let forestSceneStart = 0;
@@ -306,30 +377,20 @@
         const CONSUMABLE_IDS=['life','shield','speed','jump'];
         const STORY_IDS=['medallion','drink'];
         function loadInventory(){
-          let saved=null;
-          try{saved=JSON.parse(localStorage.getItem(INVENTORY_KEY)||'null');}catch(e){}
-          const story=Array.isArray(saved?.story)?saved.story.filter(id=>STORY_IDS.includes(id)):[];
-          // Migração da pista legada, sem apagar a chave antiga.
-          try{if(localStorage.getItem(OLD_CLUE_KEY)==='true'&&!story.includes('medallion'))story.push('medallion');}catch(e){}
-          const consumables={};
-          for(const id of CONSUMABLE_IDS){
-            const raw=saved?.consumables?.[id];
-            consumables[id]=Number.isSafeInteger(raw)?Math.max(0,Math.min(99,raw)):0;
-          }
-          return {version:2,story,consumables};
+          // A versão de saves usa inventário em branco até o jogador escolher
+          // um slot. O arquivo antigo é migrado isoladamente para o espaço 1.
+          return {version:2,story:[],consumables:{life:0,shield:0,speed:0,jump:0}};
         }
         const inventory=loadInventory();
+        let activeSlot=null;
         let inventoryOpen=false,selectedInvItem=null;
         let inventoryUnlocked=false;
-        try{inventoryUnlocked=localStorage.getItem(INVENTORY_UNLOCK_KEY)==='true';}catch(e){}
-        if(inventory.story.includes('drink'))inventoryUnlocked=true;
+        // Desbloqueio exclusivo do slot: não reutilizar a flag global antiga.
         const activeBuffs={shield:0,speedUntil:0,jumpUntil:0};
         const worldPickups=[]; // Cadastro futuro: registerLevelPickup({id,level,x,y,itemId})
         let collectedPickups=new Set();
         let itemToastUntil=0,itemToastMessage='';
-        function persistInventory(){
-          try{localStorage.setItem(INVENTORY_KEY,JSON.stringify(inventory));}catch(e){console.warn('Inventário sem persistência local',e);}
-        }
+        function persistInventory(){if(activeSlot!==null)saveCurrentSlot(false);}
         function showItemToast(message){
           itemToastMessage=message;itemToastUntil=gameNow+3500;
           const toast=document.getElementById('item-toast');
@@ -341,13 +402,13 @@
         }
         function unlockInventory(){
           inventoryUnlocked=true;
-          try{localStorage.setItem(INVENTORY_UNLOCK_KEY,'true');}catch(e){}
           updateInventoryButton();
+          if(activeSlot!==null)saveCurrentSlot(false);
         }
         function updateInventoryButton(){
           const button=document.getElementById('inventory-button');
           if(!button)return;
-          const visible=inventoryUnlocked||level===3;
+          const visible=activeSlot!==null && (inventoryUnlocked||level===3);
           button.classList.toggle('inventory-visible',visible);
           // Quantidade de itens encontrados, incluindo pilhas de consumíveis.
           const count=document.getElementById('inventory-count');
@@ -357,9 +418,7 @@
           if(ITEM_CATALOG[id]?.kind!=='story')return false;
           if(inventory.story.includes(id))return false;
           inventory.story.push(id);
-          if(id==='medallion'){
-            try{localStorage.setItem(OLD_CLUE_KEY,'true');}catch(e){}
-          }
+          // Não escrever na chave global antiga; saves são independentes.
           persistInventory();renderInventory();showItemToast('PISTA ENCONTRADA: '+ITEM_CATALOG[id].name);
           return true;
         }
@@ -468,7 +527,7 @@
           }
         }
         window.toggleInventario=function(){
-          if(!inventoryOpen&&!(inventoryUnlocked||level===3))return;
+          if(!inventoryOpen&&!(activeSlot!==null&&(inventoryUnlocked||level===3)))return;
           inventoryOpen=!inventoryOpen;
           keys.left=keys.right=keys.up=keys.down=false;
           const panel=document.getElementById('inventory-panel'),button=document.getElementById('inventory-button');
@@ -494,6 +553,7 @@
         function returnToMap() {
           state='map';keys.left=keys.right=keys.up=keys.down=false;
           mapTip='MOVA A CABEÇA E ESCOLHA UMA FASE';setHUD();
+          if(activeSlot!==null)saveCurrentSlot(false);
         }
         window.voltarAoMapa=returnToMap;
         function chooseMapLevel() {
@@ -749,6 +809,13 @@
               originalLoaded++;
               if(originalLoaded===Object.keys(originalPaths).length){
                 sceneReady=true; previousFrame=performance.now(); gameNow=previousFrame;
+                // Atalhos de teste continuam diretos; jogadores comuns sempre
+                // veem o menu antes de iniciar a campanha.
+                if(testMode){
+                  state='map';menuOpen=false;
+                  document.getElementById('sgb-menu').hidden=true;
+                  document.body.classList.remove('sgb-menu-active');
+                }
                 // Testes opcionais: ?teste=final, ?teste=floresta, ?teste=intro2, ?teste=final2
                 if(testMode==='final'){
                   player.x=princess.x-40; player.y=340; player.grounded=true;
@@ -876,6 +943,275 @@
         function activeBlocks(){return level===1?level1Blocks:(level===2?level2Blocks:level3Blocks);}
         function isColliding(a,b){return a.x<b.x+b.w&&a.x+a.w>b.x&&a.y<b.y+b.h&&a.y+a.h>b.y;}
 
+
+        // Três saves locais separados. Nenhum é carregado automaticamente.
+        const GAME_SAVE_KEY='super-gabriel-bros-save-slots-v1';
+        const GAME_OPTIONS_KEY='super-gabriel-bros-options-v1';
+        const DIFFICULTIES=['easy','normal','hard'];
+        let difficulty='normal',menuOpen=true,menuPage='home',slotMode='load',saveAccumulator=0;
+        let slotTable=[null,null,null];
+        try{
+          const o=JSON.parse(localStorage.getItem(GAME_OPTIONS_KEY)||'null');
+          if(DIFFICULTIES.includes(o?.difficulty))difficulty=o.difficulty;
+        }catch(e){}
+        function sanitiseSave(data){
+          if(!data||data.version!==1)return null;
+          const lv=[1,2,3].includes(data.level)?data.level:1;
+          const story=Array.isArray(data.inventory?.story)?[...new Set(data.inventory.story.filter(x=>STORY_IDS.includes(x)))]:[];
+          const consumables={};
+          for(const id of CONSUMABLE_IDS){
+            const n=data.inventory?.consumables?.[id];
+            consumables[id]=Number.isSafeInteger(n)?Math.max(0,Math.min(99,n)):0;
+          }
+          const completed={};for(const i of [1,2,3])completed[i]=data.levelComplete?.[i]===true;
+          const clamp=(value,min,max,fallback)=>Number.isFinite(value)?Math.max(min,Math.min(max,value)):fallback;
+          return {
+            version:1,savedAt:clamp(data.savedAt,0,9999999999999,Date.now()),
+            difficulty:DIFFICULTIES.includes(data.difficulty)?data.difficulty:'normal',
+            level:lv,phase:data.phase==='playing'?'playing':'map',
+            score:Math.floor(clamp(data.score,0,9999999,0)),
+            lives:Math.floor(clamp(data.lives,1,99,5)),
+            elapsedSeconds:clamp(data.elapsedSeconds,0,999999,0),
+            player:{x:clamp(data.player?.x,0,3900,50),y:clamp(data.player?.y,-100,390,100),direction:data.player?.direction===-1?-1:1},
+            checkpoint:{reached:data.checkpoint?.reached===true,x:clamp(data.checkpoint?.x,0,3900,0)},
+            skyCheckpoint:{reached:data.skyCheckpoint?.reached===true,x:clamp(data.skyCheckpoint?.x,0,3900,0)},
+            levelComplete:completed,inventory:{version:2,story,consumables},
+            collectedPickups:Array.isArray(data.collectedPickups)?data.collectedPickups.filter(x=>typeof x==='string'&&x.length<=64).slice(0,100):[],
+            inventoryUnlocked:data.inventoryUnlocked===true||story.includes('drink')||lv===3,
+            legacy:data.legacy===true
+          };
+        }
+        function menuMessage(message){
+          const el=document.getElementById('sgb-menu-status');
+          if(el)el.textContent=message;
+        }
+        function readSlotTable(){
+          try{
+            const a=JSON.parse(localStorage.getItem(GAME_SAVE_KEY)||'null');
+            if(Array.isArray(a))return [0,1,2].map(i=>sanitiseSave(a[i]));
+          }catch(e){}
+          return [null,null,null];
+        }
+        function writeSlotTable(){
+          try{localStorage.setItem(GAME_SAVE_KEY,JSON.stringify(slotTable));return true;}
+          catch(e){menuMessage('Não foi possível gravar os saves neste navegador.');return false;}
+        }
+        slotTable=readSlotTable();
+        // O save único antigo é preservado num slot de recuperação, sem
+        // contaminar outras campanhas nem remover as chaves antigas.
+        if(slotTable.every(x=>!x)){
+          let old=null,legacyUnlock=false,legacyMedal=false;
+          try{old=JSON.parse(localStorage.getItem(INVENTORY_KEY)||'null');}catch(e){}
+          try{legacyUnlock=localStorage.getItem(INVENTORY_UNLOCK_KEY)==='true';}catch(e){}
+          try{legacyMedal=localStorage.getItem(OLD_CLUE_KEY)==='true';}catch(e){}
+          const story=Array.isArray(old?.story)?old.story.filter(x=>STORY_IDS.includes(x)):[];
+          if(legacyMedal&&!story.includes('medallion'))story.push('medallion');
+          if(story.length||legacyUnlock||Object.values(old?.consumables||{}).some(n=>n>0)){
+            const lv=story.includes('drink')||legacyUnlock?3:story.includes('medallion')?2:1;
+            slotTable[0]=sanitiseSave({
+              version:1,legacy:true,savedAt:Date.now(),level:lv,phase:'map',
+              inventory:{story,consumables:old?.consumables||{}},inventoryUnlocked:legacyUnlock,
+              levelComplete:{1:lv>1,2:story.includes('medallion'),3:story.includes('drink')}
+            });
+            writeSlotTable();
+          }
+        }
+        function gameLives(){return difficulty==='easy'?7:difficulty==='hard'?3:5;}
+        function enemyDifficultyMultiplier(){return difficulty==='easy'?.8:difficulty==='hard'?1.25:1;}
+        function makeSaveSnapshot(){
+          return sanitiseSave({
+            version:1,savedAt:Date.now(),difficulty,level,
+            phase:state==='playing'?'playing':'map',score,lives,elapsedSeconds,
+            player:{x:player.x,y:player.y,direction:player.direction},
+            checkpoint:{reached:checkpointReached,x:checkpointX},
+            skyCheckpoint:{reached:skyCheckpointReached,x:skyCheckpointX},
+            levelComplete:{...levelComplete},
+            inventory:{story:[...inventory.story],consumables:{...inventory.consumables}},
+            inventoryUnlocked,collectedPickups:[...collectedPickups]
+          });
+        }
+        function saveCurrentSlot(notify=true){
+          if(activeSlot===null)return false;
+          slotTable[activeSlot]=makeSaveSnapshot();
+          const ok=writeSlotTable();
+          if(notify)menuMessage(ok?'Espaço '+(activeSlot+1)+' salvo com sucesso.':'Erro ao salvar.');
+          return ok;
+        }
+        function clearForNewCampaign(){
+          level=1;state='playing';score=0;elapsedSeconds=0;
+          inventory.story.splice(0);for(const id of CONSUMABLE_IDS)inventory.consumables[id]=0;
+          inventoryUnlocked=false;inventoryOpen=false;selectedInvItem=null;
+          for(const n of [1,2,3])levelComplete[n]=false;
+          restartCurrentLevel();
+          state='map';mapHead.x=139;mapHead.y=319;
+          renderInventory();setHUD();
+        }
+        function startNewCampaign(index){
+          if(index<0||index>2)return;
+          if(slotTable[index]&&!window.confirm('Substituir o save do espaço '+(index+1)+'?'))return;
+          activeSlot=index;clearForNewCampaign();
+          saveCurrentSlot(false);closeMainMenu();menuMessage('');
+        }
+        function loadCampaign(index){
+          const data=sanitiseSave(slotTable[index]);
+          if(!data)return menuMessage('Espaço vazio ou save inválido.');
+          activeSlot=index;difficulty=data.difficulty;level=data.level;
+          state='playing';restartCurrentLevel();
+          for(const n of [1,2,3])levelComplete[n]=data.levelComplete[n];
+          inventory.story.splice(0,inventory.story.length,...data.inventory.story);
+          for(const id of CONSUMABLE_IDS)inventory.consumables[id]=data.inventory.consumables[id];
+          inventoryUnlocked=data.inventoryUnlocked;selectedInvItem=null;inventoryOpen=false;
+          score=data.score;lives=data.lives;elapsedSeconds=data.elapsedSeconds;
+          checkpointReached=data.checkpoint.reached;checkpointX=data.checkpoint.x;
+          skyCheckpointReached=data.skyCheckpoint.reached;skyCheckpointX=data.skyCheckpoint.x;
+          collectedPickups=new Set(data.collectedPickups);
+          if(data.phase==='playing'){
+            state='playing';player.x=data.player.x;player.y=data.player.y;
+            player.vx=0;player.vy=0;player.grounded=false;player.animFrame=0;
+            player.direction=data.player.direction;
+            const width=level===1?4000:level===2?FOREST_END:SKY_END;
+            cameraX=Math.max(0,Math.min(width-GAME_WIDTH,player.x-320));
+          }else{
+            state='map';
+            const node=mapLevels.find(x=>x.id===level)||mapLevels[0];
+            mapHead.x=node.x;mapHead.y=node.y;
+          }
+          renderInventory();setHUD();closeMainMenu();menuMessage('');
+        }
+
+
+        function renderSlotButtons(){
+          const host=document.getElementById('sgb-slots-list');
+          if(!host)return;
+          host.replaceChildren();
+          for(let i=0;i<3;i++){
+            const save=slotTable[i],button=document.createElement('button');
+            button.type='button';button.className='sgb-menu-btn'+(!save?' secondary':'');
+            const head=document.createElement('span');head.className='sgb-slot-name';
+            head.textContent='ESPAÇO '+(i+1)+(save?.legacy?' • LEGADO':'');
+            button.appendChild(head);
+            const meta=document.createElement('span');meta.className='sgb-slot-meta';
+            meta.textContent=save?'Fase '+save.level+' • '+save.difficulty.toUpperCase()+' • '+new Date(save.savedAt).toLocaleDateString('pt-BR'):
+              'VAZIO • NOVA AVENTURA';
+            button.appendChild(meta);
+            button.disabled=slotMode==='load'&&!save;
+            button.onclick=()=>slotMode==='new'?startNewCampaign(i):loadCampaign(i);
+            host.appendChild(button);
+          }
+        }
+        function sgbMenuPage(page){
+          menuPage=page;
+          const visible=page==='new'||page==='load'?'slots':page;
+          for(const name of ['home','slots','options','cloud']){
+            const el=document.getElementById('sgb-menu-'+name);
+            if(el)el.hidden=name!==visible;
+          }
+          if(visible==='slots'){
+            slotMode=page;
+            document.getElementById('sgb-slots-title').textContent=page==='new'?'NOVO JOGO • ESCOLHA ESPAÇO':'CARREGAR JOGO';
+            renderSlotButtons();
+          }
+          const sel=document.getElementById('sgb-difficulty');
+          if(sel)sel.value=difficulty;
+          const resume=document.getElementById('sgb-resume'),save=document.getElementById('sgb-save');
+          if(resume)resume.hidden=activeSlot===null||state==='menu';
+          if(save)save.hidden=activeSlot===null||state==='menu';
+          updateCloudUser();
+        }
+        window.sgbMenuPage=sgbMenuPage;
+        function closeMainMenu(){
+          if(activeSlot===null||state==='menu')return;
+          menuOpen=false;document.getElementById('sgb-menu').hidden=true;
+          document.body.classList.remove('sgb-menu-active');
+          keys.left=keys.right=keys.up=keys.down=false;
+        }
+        window.sgbResume=closeMainMenu;
+        window.sgbOpenMenu=function(){
+          if(inventoryOpen)window.toggleInventario();
+          menuOpen=true;keys.left=keys.right=keys.up=keys.down=false;
+          document.getElementById('sgb-menu').hidden=false;
+          document.body.classList.add('sgb-menu-active');
+          menuMessage('');sgbMenuPage('home');
+        };
+        window.sgbSave=function(){saveCurrentSlot(true);sgbMenuPage('home');};
+        window.sgbSetDifficulty=function(value){
+          if(!DIFFICULTIES.includes(value))return;
+          difficulty=value;
+          try{localStorage.setItem(GAME_OPTIONS_KEY,JSON.stringify({difficulty}));}catch(e){}
+          if(activeSlot!==null)saveCurrentSlot(false);
+          menuMessage('Dificuldade: '+value.toUpperCase());
+        };
+        window.sgbExit=function(){window.location.assign('index.html');};
+        const CLOUD_FIREBASE_CONFIG={
+          apiKey:'AIzaSyCbkO3-M-Ulz0Yg_ZuN-jpWVcD1EHmcUm0',
+          authDomain:'nosso-tempo-cd9c8.firebaseapp.com',
+          projectId:'nosso-tempo-cd9c8',
+          storageBucket:'nosso-tempo-cd9c8.firebasestorage.app',
+          messagingSenderId:'812792210449',
+          appId:'1:812792210449:web:df98d32608446979ae7db0'
+        };
+        function cloudServices(){
+          if(typeof firebase==='undefined')throw new Error('Firebase indisponível; verifique sua conexão.');
+          const app=firebase.apps.length?firebase.app():firebase.initializeApp(CLOUD_FIREBASE_CONFIG);
+          return {auth:firebase.auth(app),db:firebase.firestore(app)};
+        }
+        function cloudUser(){
+          try{return cloudServices().auth.currentUser;}catch(e){return null;}
+        }
+        function updateCloudUser(){
+          const user=cloudUser(),el=document.getElementById('sgb-cloud-user');
+          if(el)el.textContent=user?'Conectado: '+(user.email||user.uid):
+            'Entre com Google para acessar seus saves privados.';
+        }
+        window.sgbCloudLogin=async function(){
+          try{
+            const {auth}=cloudServices();
+            await auth.signInWithPopup(new firebase.auth.GoogleAuthProvider());
+            updateCloudUser();menuMessage('Conectado. Escolha enviar ou baixar.');
+          }catch(e){menuMessage('Login não concluído: '+(e?.message||e));}
+        };
+        window.sgbCloudUpload=async function(){
+          try{
+            const user=cloudUser();if(!user)throw new Error('Entre com Google primeiro.');
+            if(activeSlot===null)throw new Error('Crie ou carregue um save antes de enviar.');
+            if(!window.confirm('Substituir a cópia na nuvem do espaço '+(activeSlot+1)+'?'))return;
+            if(!saveCurrentSlot(false))throw new Error('Erro no save local.');
+            const {db}=cloudServices();
+            await db.collection('superGabrielSaves').doc(user.uid).collection('slots').doc('slot'+(activeSlot+1)).set({
+              version:1,slotId:'slot'+(activeSlot+1),payload:slotTable[activeSlot],
+              updatedAt:firebase.firestore.FieldValue.serverTimestamp()
+            });
+            menuMessage('Espaço '+(activeSlot+1)+' salvo na nuvem!');
+          }catch(e){menuMessage('Envio não concluído: '+(e?.message||e));}
+        };
+        window.sgbCloudDownload=async function(){
+          try{
+            const user=cloudUser();if(!user)throw new Error('Entre com Google primeiro.');
+            const {db}=cloudServices();
+            const docs=await Promise.all([1,2,3].map(n=>db.collection('superGabrielSaves').doc(user.uid).collection('slots').doc('slot'+n).get()));
+            const found=docs.map(d=>d.exists?sanitiseSave(d.data()?.payload):null);
+            if(!found.some(Boolean))return menuMessage('Ainda não há saves nesta conta.');
+            if(!window.confirm('Baixar os saves e substituir os espaços locais correspondentes?'))return;
+            try{localStorage.setItem(GAME_SAVE_KEY+'-backup-'+Date.now(),JSON.stringify(slotTable));}catch(e){}
+            found.forEach((save,i)=>{if(save)slotTable[i]=save;});
+            if(!writeSlotTable())throw new Error('Armazenamento local indisponível.');
+            // Não deixar uma partida ativa antiga sobrescrever a cópia recebida.
+            activeSlot=null;state='menu';inventoryOpen=false;
+            inventory.story.splice(0);
+            for(const id of CONSUMABLE_IDS)inventory.consumables[id]=0;
+            inventoryUnlocked=false;renderInventory();
+            sgbMenuPage('load');menuMessage('Saves baixados. Escolha um espaço para carregar.');
+          }catch(e){menuMessage('Download não concluído: '+(e?.message||e));}
+        };
+        try{cloudServices().auth.onAuthStateChanged(updateCloudUser);}catch(e){}
+        window.addEventListener('keydown',e=>{
+          if(e.code!=='Escape'||inventoryOpen)return;
+          if(menuOpen&&activeSlot!==null&&state!=='menu')closeMainMenu();
+          else if(!menuOpen&&state!=='menu')window.sgbOpenMenu();
+        });
+        document.body.classList.add('sgb-menu-active');
+        sgbMenuPage('home');
+
         function resetPosition(){
           player.x=level===1?50:level===2?(checkpointReached?checkpointX:50):(skyCheckpointReached?skyCheckpointX:50);
           player.y=100;player.vx=0;player.vy=0;player.grounded=false;
@@ -885,7 +1221,7 @@
         }
         function restartCurrentLevel() {
           if(state==='map'){mapHead.x=139;mapHead.y=319;return;}
-          state='playing';lives=5;score=0;elapsedSeconds=0;invulnerable=0;
+          state='playing';lives=gameLives();score=0;elapsedSeconds=0;invulnerable=0;
           checkpointReached=false;checkpointX=0;
           forestTotemActivated=false;forestTotemActivatedAt=0;
           skyAltarActivated=false;skyAltarActivatedAt=0;
@@ -905,7 +1241,7 @@
             showItemToast('ESCUDO PROTEGEU GABRIEL!');return;
           }
           lives--;
-          if(lives<=0){state='gameover';setHUD();return;}
+          if(lives<=0){state='gameover';setHUD();if(activeSlot!==null)saveCurrentSlot(false);return;}
           enemies=(level===1?level1EnemyTemplate:level===2?level2EnemyTemplate:[]).map(e=>({...e}));
           skyBirds=freshSkyBirds();
           resetPosition();invulnerable=1.5;setHUD();
@@ -958,6 +1294,7 @@
           if(state!=='skyOutro')return;
           giveStoryItem('drink');
           levelComplete[3]=true;state='chapterEnd';
+          if(activeSlot!==null)saveCurrentSlot(false);
           keys.left=keys.right=keys.up=keys.down=false;
           mapTip='FASE 3 CONCLUÍDA!';
         }
@@ -1015,7 +1352,8 @@
           // Pular a cena também não deve fazer o jogador perder a pista.
           giveVillainMedallion();
           levelComplete[2]=true;
-          state='chapterEnd';keys.left=keys.right=keys.up=false;
+          state='chapterEnd';
+          if(activeSlot!==null)saveCurrentSlot(false);keys.left=keys.right=keys.up=false;
           mapTip='FASE 2 CONCLUÍDA!';
         }
         function skipStoryScene(){
@@ -1030,6 +1368,7 @@
         }
 
         window.addEventListener('keydown', e=>{
+          if(menuOpen)return;
           if(e.code==='KeyI'){e.preventDefault();window.toggleInventario();return;}
           if(inventoryOpen){if(e.code==='Escape'){e.preventDefault();window.toggleInventario();}return;}
           if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','KeyA','KeyD','KeyW','KeyS','Enter'].includes(e.code))e.preventDefault();
@@ -1062,7 +1401,7 @@
           const el=document.getElementById(id);if(!el)return;
           const press=e=>{
             e.preventDefault();
-            if(inventoryOpen)return;
+            if(inventoryOpen||menuOpen)return;
             el.setPointerCapture?.(e.pointerId);
             if(state==='map'){
               if(id==='btn-jump'){chooseMapLevel();return;}
@@ -1097,7 +1436,7 @@
         function hasFloorAhead(enemy,terrain){
           // Consulta a borda dianteira e 5px abaixo dos pés; não depende do tamanho dos buracos.
           // Funciona nos dois mundos e impede que o inimigo ande para o vazio.
-          const nextX=enemy.x+enemy.vx;
+          const nextX=enemy.x+enemy.vx*enemyDifficultyMultiplier();
           const footX=enemy.vx>0?nextX+enemy.w+4:nextX-4;
           const footY=enemy.y+enemy.h+5;
           return terrain.some(b=>
@@ -1128,7 +1467,7 @@
               enemy.vx*=-1;
               turned=true;
             }
-            if(!turned)enemy.x+=enemy.vx;
+            if(!turned)enemy.x+=enemy.vx*enemyDifficultyMultiplier();
             for(const b of terrain){
               if(b.type!=='ground'&&b.type!=='forestGround'&&isColliding(enemy,b)){
                 if(enemy.vx<0)enemy.x=b.x+b.w;
@@ -1147,7 +1486,7 @@
         function updateSkyBirds(t){
           for(const bird of skyBirds){
             if(!bird.alive)continue;
-            bird.x+=bird.vx;
+            bird.x+=bird.vx*enemyDifficultyMultiplier();
             if(bird.x<bird.baseX-bird.range||bird.x>bird.baseX+bird.range){
               bird.vx*=-1;
               bird.x=Math.max(bird.baseX-bird.range,Math.min(bird.baseX+bird.range,bird.x));
@@ -1162,7 +1501,7 @@
         }
         function update(dt,now){
           document.body.classList.toggle('map-mode',state==='map');
-          if(!sceneReady||inventoryOpen)return;
+          if(!sceneReady||inventoryOpen||menuOpen||state==='menu')return;
           updateToast();
           if(state==='map'){updateMap(dt);return;}
           if(state==='cutscene'){
@@ -1204,6 +1543,7 @@
           }
           if(state!=='playing')return;
           elapsedSeconds+=dt;
+          if(activeSlot!==null){saveAccumulator+=dt;if(saveAccumulator>=15){saveAccumulator=0;saveCurrentSlot(false);}}
           invulnerable=Math.max(0,invulnerable-dt);
           const effectiveSpeed=player.speed*(elapsedSeconds<activeBuffs.speedUntil?1.5:1);
           if(keys.left){player.vx=-effectiveSpeed;player.direction=-1;}
@@ -2064,6 +2404,7 @@
         function draw(){
           ctx.imageSmoothingEnabled=false;
           if(!sceneReady){ctx.fillStyle='#5c94fc';ctx.fillRect(0,0,GAME_WIDTH,GAME_HEIGHT);pixelText('CARREGANDO A MAGIA...',GAME_HEIGHT/2,12);return;}
+          if(state==='menu'){ctx.fillStyle='#0f1432';ctx.fillRect(0,0,GAME_WIDTH,GAME_HEIGHT);return;}
           if(state==='map'){drawMap();return;}
           if(level===1)drawLevelOne();else if(level===2)drawLevelTwo();else drawLevelThree();
           if(state==='playing')drawLevelPickups();
@@ -2078,7 +2419,7 @@
         function loop(now){
           const dt=Math.min(.05,Math.max(0,(now-previousFrame)/1000));
           previousFrame=now;
-          if(!inventoryOpen){
+          if(!inventoryOpen&&!menuOpen){
             gameNow+=dt*1000;
             update(dt,gameNow);draw();
           }
@@ -2087,7 +2428,6 @@
           requestAnimationFrame(loop);
         }
         setHUD();
-        document.body.classList.add('map-mode');
         requestAnimationFrame(loop);
     </script>
 </body>

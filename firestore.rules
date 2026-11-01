@@ -28,6 +28,74 @@ service cloud.firestore {
         && data.createdAt is timestamp && data.updatedAt is timestamp;
     }
 
+    // Progresso do Super Gabriel Bros isolado por Firebase Auth UID.
+    // Nunca misturar com permissões de histórico do GabiBot.
+    function sgbValidSave(data,slotId) {
+      return data.keys().hasAll(['version','slotId','payload','updatedAt'])
+        && data.keys().hasOnly(['version','slotId','payload','updatedAt'])
+        && data.version == 1
+        && data.slotId == slotId
+        && data.updatedAt is timestamp
+        && data.payload is map
+        && data.payload.keys().hasAll([
+          'version','savedAt','difficulty','level','phase','score','lives','elapsedSeconds',
+          'player','checkpoint','skyCheckpoint','levelComplete','inventory',
+          'collectedPickups','inventoryUnlocked','legacy'
+        ])
+        && data.payload.keys().hasOnly([
+          'version','savedAt','difficulty','level','phase','score','lives','elapsedSeconds',
+          'player','checkpoint','skyCheckpoint','levelComplete','inventory',
+          'collectedPickups','inventoryUnlocked','legacy'
+        ])
+        && data.payload.version == 1
+        && data.payload.savedAt is number
+        && data.payload.difficulty in ['easy','normal','hard']
+        && data.payload.level in [1,2,3]
+        && data.payload.phase in ['playing','map']
+        && data.payload.score is number
+        && data.payload.lives is number
+        && data.payload.elapsedSeconds is number
+        && data.payload.player is map
+        && data.payload.player.keys().hasAll(['x','y','direction'])
+        && data.payload.player.keys().hasOnly(['x','y','direction'])
+        && data.payload.player.x is number
+        && data.payload.player.y is number
+        && data.payload.player.direction in [-1,1]
+        && data.payload.checkpoint is map
+        && data.payload.checkpoint.keys().hasAll(['reached','x'])
+        && data.payload.checkpoint.keys().hasOnly(['reached','x'])
+        && data.payload.checkpoint.reached is bool
+        && data.payload.checkpoint.x is number
+        && data.payload.skyCheckpoint is map
+        && data.payload.skyCheckpoint.keys().hasAll(['reached','x'])
+        && data.payload.skyCheckpoint.keys().hasOnly(['reached','x'])
+        && data.payload.skyCheckpoint.reached is bool
+        && data.payload.skyCheckpoint.x is number
+        && data.payload.levelComplete is map
+        && data.payload.levelComplete.keys().hasAll(['1','2','3'])
+        && data.payload.levelComplete.keys().hasOnly(['1','2','3'])
+        && data.payload.inventory is map
+        && data.payload.inventory.keys().hasAll(['version','story','consumables'])
+        && data.payload.inventory.keys().hasOnly(['version','story','consumables'])
+        && data.payload.inventory.version == 2
+        && data.payload.inventory.story is list
+        && data.payload.inventory.story.size() <= 9
+        && data.payload.inventory.story.hasOnly(['medallion','drink'])
+        && data.payload.inventory.consumables is map
+        && data.payload.inventory.consumables.keys().hasOnly(['life','shield','speed','jump'])
+        && data.payload.collectedPickups is list
+        && data.payload.collectedPickups.size() <= 100
+        && data.payload.inventoryUnlocked is bool
+        && data.payload.legacy is bool;
+    }
+    match /superGabrielSaves/{userId}/slots/{slotId} {
+      allow get, list: if gbIsSelf(userId);
+      allow create, update: if gbIsSelf(userId)
+        && slotId in ['slot1','slot2','slot3']
+        && sgbValidSave(request.resource.data,slotId);
+      allow delete: if false;
+    }
+
     match /config/{docId} {
       allow get: if docId in ['avatares', 'lugares'];
       allow list: if false;

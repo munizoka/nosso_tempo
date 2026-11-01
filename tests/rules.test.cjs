@@ -69,6 +69,29 @@ async function principal() {
   })));
   await verificar('Revogação bloqueia mensagem nova',()=>assertFails(setDoc(doc(admin,caminho,'sem-consentimento-depois'),mensagem())));
   await verificar('Titular apaga histórico mesmo após revogar',()=>assertSucceeds(deleteDoc(doc(admin,caminho,'consentida'))));
+
+  // Super Gabriel Bros: saves são privados por UID, sem exigir role do GabiBot.
+  const jogo=(id='slot1')=>'superGabrielSaves/'+ADMIN+'/slots/'+id;
+  const saveJogo=(slotId='slot1')=>({
+    version:1,slotId,updatedAt:serverTimestamp(),
+    payload:{
+      version:1,savedAt:Date.now(),difficulty:'normal',level:2,phase:'map',
+      score:150,lives:5,elapsedSeconds:45,
+      player:{x:100,y:340,direction:1},
+      checkpoint:{reached:false,x:0},skyCheckpoint:{reached:false,x:0},
+      levelComplete:{1:true,2:false,3:false},
+      inventory:{version:2,story:['medallion'],consumables:{life:0,shield:0,speed:0,jump:0}},
+      collectedPickups:[],inventoryUnlocked:false,legacy:false
+    }
+  });
+  await verificar('SGB dono pode criar slot1',()=>assertSucceeds(setDoc(doc(admin,jogo()),saveJogo())));
+  await verificar('SGB dono lê próprio save',()=>assertSucceeds(getDoc(doc(admin,jogo()))));
+  await verificar('SGB visitante não lê save',()=>assertFails(getDoc(doc(visitante,jogo()))));
+  await verificar('SGB Vitória não lê save do Gabriel',()=>assertFails(getDoc(doc(vitoria,jogo()))));
+  await verificar('SGB estranho não altera save de Gabriel',()=>assertFails(setDoc(doc(estranho,jogo()),saveJogo())));
+  await verificar('SGB limita nomes a três slots',()=>assertFails(setDoc(doc(admin,jogo('slot4')),saveJogo('slot4'))));
+  await verificar('SGB rejeita atributo extra',()=>assertFails(setDoc(doc(admin,jogo('slot2')),{...saveJogo('slot2'),publico:true})));
+  await verificar('SGB outro usuário cria próprio slot',()=>assertSucceeds(setDoc(doc(estranho,'superGabrielSaves/'+ESTRANHO+'/slots/slot1'),saveJogo())));
   console.log('\nRESULTADO: '+(total-falhas)+'/'+total+' testes aprovados.');
   if(falhas)process.exitCode=1;
 }
