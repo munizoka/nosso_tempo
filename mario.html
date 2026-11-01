@@ -196,6 +196,38 @@
         const FOREST_GOAL_X=FOREST_END-430;
         const FOREST_TOTEM_X=FOREST_GOAL_X+40;
         const FOREST_TOTEM_CHARGE_MS=1350;
+        const FOREST_CLUE_X=FOREST_END-170;
+        const FOREST_OUTRO_DURATION=21.7;
+        const INVENTORY_KEY='super-gabriel-bros-pistas-v1';
+        let inventoryOpen=false;
+        let hasVillainMedallion=false;
+        try{hasVillainMedallion=JSON.parse(localStorage.getItem(INVENTORY_KEY)||'false')===true;}
+        catch(e){hasVillainMedallion=false;}
+        function renderInventory(){
+          const count=document.getElementById('inventory-count');
+          const description=document.getElementById('inventory-description');
+          if(count)count.textContent=hasVillainMedallion?'1':'0';
+          if(description)description.textContent=hasVillainMedallion
+            ?'PISTA 01 — MEDALHÃO RACHADO. Caiu do manto do vilão quando ele fugiu da Floresta Misteriosa. Possui uma runa em forma de vento. Ainda não sabemos quem é o dono.'
+            :'Nenhuma pista encontrada ainda. Explore os finais das fases para descobrir mais.';
+        }
+        function giveVillainMedallion(){
+          if(hasVillainMedallion)return;
+          hasVillainMedallion=true;
+          try{localStorage.setItem(INVENTORY_KEY,'true');}catch(e){/* Continua na sessão. */}
+          renderInventory();
+        }
+        window.toggleInventario=function(){
+          if(!inventoryOpen&&!['map','playing','chapterEnd','gameover','title2','title3'].includes(state))return;
+          inventoryOpen=!inventoryOpen;
+          const panel=document.getElementById('inventory-panel');
+          const button=document.getElementById('inventory-button');
+          if(panel)panel.style.display=inventoryOpen?'flex':'none';
+          if(button)button.setAttribute('aria-expanded',String(inventoryOpen));
+          if(inventoryOpen){renderInventory();document.getElementById('inventory-close')?.focus();}
+          else button?.focus();
+        };
+        renderInventory();
         let forestTotemActivated=false;
         let forestTotemActivatedAt=0;
         const mapLevels=[
@@ -721,6 +753,8 @@
         }
         function finishForestOutro(){
           if(state!=='forestOutro')return;
+          // Pular a cena também não deve fazer o jogador perder a pista.
+          giveVillainMedallion();
           levelComplete[2]=true;
           state='chapterEnd';keys.left=keys.right=keys.up=false;
           mapTip='FASE 2 CONCLUÍDA!';
@@ -737,6 +771,8 @@
         }
 
         window.addEventListener('keydown', e=>{
+          if(e.code==='KeyI'){e.preventDefault();window.toggleInventario();return;}
+          if(inventoryOpen){if(e.code==='Escape'){e.preventDefault();window.toggleInventario();}return;}
           if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','KeyA','KeyD','KeyW','KeyS','Enter'].includes(e.code))e.preventDefault();
           if(state==='map'){
             if(e.repeat && (e.code==='Enter'||e.code==='Space'))return;
@@ -866,7 +902,7 @@
         }
         function update(dt,now){
           document.body.classList.toggle('map-mode',state==='map');
-          if(!sceneReady)return;
+          if(!sceneReady||inventoryOpen)return;
           if(state==='map'){updateMap(dt);return;}
           if(state==='cutscene'){
             cinematicSeconds=(now-cutsceneStart)/1000;
@@ -891,7 +927,13 @@
           if(state==='forestIntro'||state==='forestOutro'){
             forestSceneSeconds=(now-forestSceneStart)/1000;
             if(state==='forestIntro'&&forestSceneSeconds>=12.7)finishForestIntro();
-            else if(state==='forestOutro'&&forestSceneSeconds>=11.3)finishForestOutro();
+            else if(state==='forestOutro'){
+              // Gabriel caminha até a pista após a fuga do vilão.
+              const walk=easeOut((forestSceneSeconds-11.25)/3.6);
+              player.x=FOREST_END-455+(FOREST_CLUE_X-24-(FOREST_END-455))*walk;
+              if(forestSceneSeconds>=15.0)giveVillainMedallion();
+              if(forestSceneSeconds>=FOREST_OUTRO_DURATION)finishForestOutro();
+            }
             return;
           }
           if(state!=='playing')return;
@@ -1014,8 +1056,7 @@
             return t<2.5?'VITORIA':t<6.5?'GABRIEL':t<8.5?'VILÃO':t<10.6?'VITORIA':t<12.7?'GABRIEL':null;
           }
           if(state==='forestOutro'){
-            const t=forestSceneSeconds;
-            return t<2.1?'GABRIEL':t<4?'VITORIA':t<6?'VILÃO':t<8.1?'GABRIEL':t<9.8?'VITORIA':t<11.3?'GABRIEL':null;
+            return storyLine(forestSceneSeconds,FOREST_OUTRO_LINES)?.speaker||null;
           }
           if(state==='cutscene'){
             const t=cinematicSeconds;
@@ -1322,6 +1363,18 @@
           else{ctx.fillStyle='#211136';ctx.fillRect(-25,-90,50,87);}
           ctx.restore();
         }
+        const FOREST_OUTRO_LINES=[
+          {from:0,to:2.1,speaker:'GABRIEL',message:'FINALMENTE! AGORA EU TE PEGUEI!',color:'#ffe4a0'},
+          {from:2.1,to:4.0,speaker:'VITORIA',message:'GABRIEL! CUIDADO, ELE ESTÁ ABRINDO UM PORTAL!',color:'#ffadd1'},
+          {from:4.0,to:6.0,speaker:'VILÃO',message:'VOCÊ VENCEU A FLORESTA... MAS O JOGO ESTÁ SÓ COMEÇANDO!',color:'#d6a5ff'},
+          {from:6.0,to:8.1,speaker:'GABRIEL',message:'PARE DE TENTAR ME TALARICAR! EU VOU TE ALCANÇAR!',color:'#ffe4a0'},
+          {from:8.1,to:9.8,speaker:'VITORIA',message:'VOCÊ CONSEGUIU CHEGAR ATÉ O FIM! NÃO DESISTA!',color:'#ffadd1'},
+          {from:9.8,to:11.3,speaker:'GABRIEL',message:'ELE FUGIU... MAS NÃO VAI ESCAPAR!',color:'#ffe4a0'},
+          {from:11.3,to:13.8,speaker:'GABRIEL',message:'EI... O QUE FOI ISSO QUE ELE DEIXOU CAIR?',color:'#ffe4a0'},
+          {from:13.8,to:16.6,speaker:'GABRIEL',message:'HUM... ENTÃO ESSA É A PRIMEIRA PISTA QUE TENHO SOBRE O VILÃO?',color:'#ffe4a0'},
+          {from:16.6,to:19.1,speaker:'GABRIEL',message:'UM MEDALHÃO RACHADO COM UM SÍMBOLO DE VENTO! VOU GUARDAR!',color:'#ffe4a0'},
+          {from:19.1,to:21.7,speaker:'GABRIEL',message:'VOU DESCOBRIR QUEM É ESSE TALARICADOR!',color:'#ffe4a0'}
+        ];
         function drawForestStoryText(){
           const intro=state==='forestIntro';const t=forestSceneSeconds;
           const dialogue=intro?[
@@ -1331,14 +1384,7 @@
             {from:6.5,to:8.5,speaker:'VILÃO',message:'QUER MESMO A VITORIA? VENHA BUSCÁ-LA!',color:'#d6a5ff'},
             {from:8.5,to:10.6,speaker:'VITORIA',message:'GABRIEL! NÃO DESISTA DE MIM!',color:'#ffadd1'},
             {from:10.6,to:12.7,speaker:'GABRIEL',message:'EU VOU ATRÁS DE VOCÊS!',color:'#ffe4a0'}
-          ]:[
-            {from:0,to:2.1,speaker:'GABRIEL',message:'FINALMENTE! AGORA EU TE PEGUEI!',color:'#ffe4a0'},
-            {from:2.1,to:4.0,speaker:'VITORIA',message:'GABRIEL! CUIDADO, ELE ESTÁ ABRINDO UM PORTAL!',color:'#ffadd1'},
-            {from:4.0,to:6.0,speaker:'VILÃO',message:'VOCÊ VENCEU A FLORESTA... MAS O JOGO ESTÁ SÓ COMEÇANDO!',color:'#d6a5ff'},
-            {from:6.0,to:8.1,speaker:'GABRIEL',message:'PARE DE TENTAR ME TALARICAR! EU VOU TE ALCANÇAR!',color:'#ffe4a0'},
-            {from:8.1,to:9.8,speaker:'VITORIA',message:'VOCÊ CONSEGUIU CHEGAR ATÉ O FIM! NÃO DESISTA!',color:'#ffadd1'},
-            {from:9.8,to:11.3,speaker:'GABRIEL',message:'FASE 2 CONCLUÍDA! NA PRÓXIMA VOCÊ NÃO ESCAPA!',color:'#ffe4a0'}
-          ];
+          ]:FOREST_OUTRO_LINES;
           const line=storyLine(t,dialogue);
           if(line)drawStoryDialogue(line.speaker,line.message,line.color);
           pixelText('ENTER OU BOTÃO A: PULAR CENA',GAME_HEIGHT-17,7,'#cdd6e6');
