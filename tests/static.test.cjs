@@ -99,19 +99,27 @@ check('Seis novos sprites e itens foram enviados',superAssets.every(file=>fs.exi
 check('Fase 2 encara Gabriel antes da fuga',mario.includes('const princessFacing=slide>.12?')&&mario.includes('const villainFacing=slide>.12?')&&mario.includes('shrink*villainFacing'));
 check('Corações animados e dano sem recriação a cada frame',mario.includes('sgb-heart-hit')&&mario.includes('damagedHeartUntil')&&mario.includes('signature!==lastHeartSignature')&&mario.includes('83.png'));
 check('Bloco de interrogação libera hambúrguer ao bater por baixo',mario.includes("b.type==='surprise')hitQuestionBlock(b)")&&mario.includes('burgerDrops.push(')&&mario.includes('updateBurgerDrops(dt)'));
-check('Hambúrguer vai ao inventário, sem uso automático',mario.includes("addConsumable('burger',1)")&&mario.includes("else if(id==='burger'){superPower.until="));
+check('Hambúrguer continua guardado até ativação intencional',mario.includes("addConsumable('burger',1)") &&
+ mario.includes("if(id==='burger')return activateSuperFromBurger();") &&
+ mario.includes('function activateSuperFromBurger()'));
 check('Super Gabriel usa sprites de transformação e investida',mario.includes('processedAssets.superHeroFrames=makeFrames(sheet,4)')&&mario.includes('extras.dashSuper:extras.dashHero')&&mario.includes('trySuperDash()'));
 check('Investida tem input X e botão B condicionado',mario.includes("e.code==='KeyX'&&!e.repeat")&&mario.includes('id="btn-dash"')&&mario.includes("show=isSuperGabriel()&&state==='playing'"));
 check('Investida derrota inimigos e corvos',mario.includes('defeatEnemy(enemy,150);continue;')&&mario.includes('bird.alive=false;score+=180;setHUD();continue;'));
-check('Power-up pausa e volta com seu tempo de duração',mario.includes('superRemaining:Math.max(0,superPower.until-elapsedSeconds)')&&mario.includes('superPower.until=elapsedSeconds+data.superRemaining')&&mario.includes('if(!inventoryOpen&&!menuOpen){'));
+check('Super Forca dura fase inteira e conserva save legado dentro das regras',mario.includes('superPower.until=Number.POSITIVE_INFINITY') &&
+ mario.includes('superRemaining:isSuperGabriel()?SUPER_DURATION:0') &&
+ mario.includes("data.phase==='playing'&&data.superRemaining>0?Number.POSITIVE_INFINITY:0") &&
+ mario.includes('if(!inventoryOpen&&!menuOpen){') &&
+ rules.includes('data.payload.superRemaining <= 12'));
 check('Blocos coletados permanecem únicos no save',mario.includes('collectedPickups.add(drop.id)')&&mario.includes("collectedPickups.has(questionId(b))")&&mario.includes('collectedPickups=new Set();'));
 check('Firestore continua isolado e aceita burger + poder temporário',rules.includes("'jump','burger'")&&rules.includes("'superRemaining'")&&rules.includes('gbIsSelf(userId)'));
 
 
 check('Botao B vertical acima do A',mario.includes('flex-direction:column;align-items:center') &&
  mario.indexOf('id="btn-dash"')<mario.indexOf('id="btn-jump" class="action-btn"'));
-check('Barra de Super Forca usa o tempo ativo do jogo',mario.includes('id="sgb-super-meter"') &&
- mario.includes('remaining/SUPER_DURATION*100')&&mario.includes('superPower.until-elapsedSeconds'));
+check('Indicador de Super Forca agora mostra duracao da fase',mario.includes('id="sgb-super-meter" role="status"') &&
+ mario.includes("meter.classList.toggle('active',show)") &&
+ mario.includes("style.width='100%'") &&
+ mario.includes('SUPER FORÇA · ATÉ O FIM DA FASE'));
 check('Sprites opcionais de cinco poses para os dois inimigos',[
  '84 bolota idle.png','85 bolota walk 1.png','86 bolota walk 2.png',
  '87 bolota dead.png','88 bolota espanto.png','89 trutle espanto.png',
@@ -142,3 +150,60 @@ check('Inimigo nao ve Gabriel atras de parede ou longe',spotWithPlayer({x:175,y:
  sampleEnemy,[{x:145,y:335,w:25,h:70,type:'brick'}])===false &&
  spotWithPlayer({x:450,y:348,w:32,h:32})(sampleEnemy,[])===false);
 
+
+check('Novo botao de ativacao usa hamburguer e tecla T',mario.includes('id="btn-power"') &&
+ mario.includes('src="79.png"') && mario.includes("e.code==='KeyT'&&!e.repeat") &&
+ mario.includes("activateSuperFromBurger();") && mario.includes("e.code==='KeyX'&&!e.repeat"));
+check('Botao B deslocado para cima e direita',mario.includes('left:clamp(22px,4vw,52px)') &&
+ mario.includes('top:clamp(-42px,-7dvh,-22px)') &&
+ mario.includes("button.classList.toggle('sgb-dash-visible',show)"));
+check('Perseguicao possui retorno a patrulha apos 10 segundos',mario.includes('const ENEMY_LOST_SIGHT_SECONDS=10')&&
+ mario.includes('function enemyHasVisualContact(enemy,terrain)') &&
+ mario.includes("enemy.aiState='patrol'") &&
+ mario.includes('enemy.lastSeenAt=elapsedSeconds') &&
+ mario.includes('enemy.vx=enemy.patrolDirection*enemy.patrolSpeed'));
+
+const powerSource=mario.match(/        function activateSuperFromBurger\(\)\{[\s\S]*?\n        \}/)?.[0];
+check('Ativacao de Super Forca isolada para regressao',!!powerSource);
+const powerDemo=new Function(`
+ const inventory={consumables:{burger:2}},superPower={until:0,dashUntil:1,cooldownUntil:1};
+ let state='playing',menuOpen=false,elapsedSeconds=5,writes=0;
+ function isSuperGabriel(){return elapsedSeconds<superPower.until}
+ function persistInventory(){writes++}
+ function renderInventory(){}
+ function updateDashButton(){}
+ function showItemToast(){}
+ ${powerSource}
+ return {trigger:activateSuperFromBurger,get:()=>({burger:inventory.consumables.burger,until:superPower.until,writes})};
+`)();
+check('Ativacao consome um hamburguer e dura indefinidamente nesta fase',powerDemo.trigger()===true &&
+ powerDemo.get().burger===1 && powerDemo.get().until===Infinity && powerDemo.get().writes===1);
+check('Repetir atalho nao consome segundo hamburguer',powerDemo.trigger()===false &&
+ powerDemo.get().burger===1 && powerDemo.get().writes===1);
+
+const chaseSource=mario.match(/        function updateEnemies\(\)\{[\s\S]*?\n        \}/)?.[0];
+check('Loop de inimigos isolado para regressao',!!chaseSource);
+const chaseDemo=new Function(`
+ let elapsedSeconds=0, invulnerable=2;
+ const player={x:250,y:348,w:32,h:32,vy:0,jumpPower:-10};
+ const enemies=[{x:100,y:348,w:32,h:32,vx:1.5,type:'mushroom',alive:true,
+ aiState:'chase',patrolSpeed:1.5,patrolDirection:1,lastSeenAt:0}];
+ let canSee=false;
+ function enemyHasVisualContact(){return canSee}
+ function enemyCanSpotHero(){return false}
+ function activeBlocks(){return []}
+ function isColliding(){return false}
+ function hasFloorAhead(){return true}
+ function enemyDifficultyMultiplier(){return 1}
+ function isDashing(){return false}
+ function defeatEnemy(){}
+ function setHUD(){}
+ function loseLife(){throw Error('unexpected contact')}
+ const ENEMY_LOST_SIGHT_SECONDS=10;
+ ${chaseSource}
+ return {setTime:t=>elapsedSeconds=t,setVision:v=>canSee=v,step:updateEnemies,state:()=>enemies[0].aiState};
+`)();
+chaseDemo.setTime(9.9);chaseDemo.step();
+check('Perseguicao continua antes dos dez segundos sem contato',chaseDemo.state()==='chase');
+chaseDemo.setTime(10.1);chaseDemo.step();
+check('Perseguicao termina depois de dez segundos sem contato',chaseDemo.state()==='patrol');
