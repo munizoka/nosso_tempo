@@ -547,26 +547,23 @@
           {x:2390,y:380,w:220,h:140,type:'skyGround'},
           {x:2910,y:380,w:370,h:140,type:'skyGround'},
 
-          // Travessia 1: sobe até uma ilha entre as nuvens e desce.
-          {x:467,y:312,w:116,h:22,type:'skyPlatform'},
-          {x:615,y:222,w:116,h:22,type:'skyPlatform',moving:true,baseX:615,baseY:222,travel:24,speed:.75},
-          {x:763,y:284,w:126,h:22,type:'skyPlatform'},
+          // Travessia 1: apenas duas plataformas, subindo 160 px.
+          {x:485,y:295,w:140,h:22,type:'skyPlatform'},
+          {x:695,y:220,w:145,h:22,type:'skyPlatform',moving:true,baseX:695,baseY:220,travel:15,speed:.65},
 
-          // Travessia 2: vento ascendente ajuda a escalar.
-          {x:1148,y:312,w:115,h:22,type:'skyPlatform'},
-          {x:1290,y:212,w:118,h:22,type:'skyPlatform'},
-          {x:1437,y:278,w:115,h:22,type:'skyPlatform',moving:true,baseX:1437,baseY:278,travel:21,speed:.9},
+          // Travessia 2: zigue-zague com apoio de vento ascendente.
+          {x:1150,y:302,w:115,h:22,type:'skyPlatform'},
+          {x:1300,y:195,w:112,h:22,type:'skyPlatform'},
+          {x:1445,y:285,w:120,h:22,type:'skyPlatform',moving:true,baseX:1445,baseY:285,travel:15,speed:.85},
 
-          // Travessia 3: altura máxima, corvos e vento contrário.
-          {x:1843,y:308,w:118,h:22,type:'skyPlatform'},
-          {x:1993,y:222,w:114,h:22,type:'skyPlatform'},
-          {x:2143,y:158,w:114,h:22,type:'skyPlatform',moving:true,baseX:2143,baseY:158,travel:18,speed:1.05},
-          {x:2288,y:274,w:120,h:22,type:'skyPlatform'},
+          // Travessia 3: corvos, vento contrário e subida mais difícil.
+          {x:1860,y:292,w:120,h:22,type:'skyPlatform'},
+          {x:2035,y:186,w:110,h:22,type:'skyPlatform'},
+          {x:2215,y:255,w:140,h:22,type:'skyPlatform',moving:true,baseX:2215,baseY:255,travel:18,speed:.9},
 
-          // Travessia 4: subida final antes do altar.
-          {x:2582,y:308,w:112,h:22,type:'skyPlatform'},
-          {x:2718,y:222,w:116,h:22,type:'skyPlatform'},
-          {x:2857,y:288,w:116,h:22,type:'skyPlatform'}
+          // Travessia 4: duas plataformas até o altar.
+          {x:2613,y:290,w:135,h:22,type:'skyPlatform'},
+          {x:2790,y:213,w:140,h:22,type:'skyPlatform'}
         ];
         // Ventos visualizados com 64.png/65.png/66.png atrás do personagem.
         const skyWindZones=[
