@@ -188,6 +188,12 @@
         const SKY_END=3280;
         const SKY_ALTAR_X=SKY_END-170;
         const SKY_ALTAR_CHARGE_MS=1450;
+        // A fuga do vilão pela passagem celestial acontece antes do drink cair.
+        const SKY_ESCAPE_START=18.9;
+        const SKY_ESCAPE_FINISH=23.2;
+        const SKY_DRINK_DROP_START=23.35;
+        const SKY_DRINK_ROLL_MS=2750;
+        const SKY_OUTRO_POSTSCENE_MS=3900;
         let skyAltarActivated=false,skyAltarActivatedAt=0,skySceneStart=0,skySceneSeconds=0;
         let skyCheckpointReached=false,skyCheckpointX=0;
         let skyBirds=[];
@@ -424,7 +430,7 @@
           sky: '43.jpg', mountains: '44.png', trees: '45.png', giantTree: '46.png',
           forestGround: '47.png', dirt: '48.jpg', wood: '49.png', magic: '50.png',
           checkpointOff: '51.png', checkpointOn: '52.png', villain: '53.png', portal: '54.png', mapHead: '55.jpg',
-          totemOn: '56.png', totemOff: '57.png', skyTemple: '58.png', skyGround: '59.png', skyPlatform: '60.png', skyCrow: '61.png', skyAltarOff: '62.png', skyAltarOn: '63.png', windShort: '64.png', windLong: '65.png', windUp: '66.png'
+          totemOn: '56.png', totemOff: '57.png', skyTemple: '58.png', skyGround: '59.png', skyPlatform: '60.png', skyCrow: '61.png', skyAltarOff: '62.png', skyAltarOn: '63.png', windShort: '64.png', windLong: '65.png', windUp: '66.png', villainDrink: '67.png'
         };
 
         function cropSprite(img) {
@@ -681,6 +687,7 @@
           if(which==='skyOutro'){
             skyAltarActivated=true;
             player.x=SKY_ALTAR_X-58;player.y=340;player.grounded=true;
+            player.direction=-1; // Vitoria e o vilão começam à esquerda do Gabriel.
             cameraX=SKY_END-GAME_WIDTH;
           }else cameraX=0;
         }
@@ -921,7 +928,10 @@
           if(state==='skyIntro'||state==='skyOutro'){
             skySceneSeconds=(now-skySceneStart)/1000;
             if(state==='skyIntro'&&skySceneSeconds>=skyDialogueDuration())finishSkyIntro();
-            else if(state==='skyOutro'&&skySceneSeconds>=skyDialogueDuration())finishSkyOutro();
+            else if(state==='skyOutro'){
+              updateSkyOutroFacing();
+              if(skySceneSeconds>=skyDialogueDuration()+SKY_OUTRO_POSTSCENE_MS)finishSkyOutro();
+            }
             return;
           }
           if(state==='forestIntro'||state==='forestOutro'){
@@ -1593,30 +1603,96 @@
             ctx.restore();
           }
         }
+        // Posições compartilhadas pela câmera, personagens e objeto da cena final.
+        function skyEscapePosition(t){
+          const intro=state==='skyIntro';
+          const duration=skyDialogueDuration();
+          if(intro){
+            const travel=easeOut((t-(duration-5.6))/3.2);
+            return {
+              princessX:349+110*travel,
+              villainX:470+110*travel,
+              portalX:605,
+              fade:1-easeOut((t-(duration-1.8))/1.7),
+              floatY:Math.sin(t*3)*4,
+              portalOpen:t>duration-6.5,
+              travel
+            };
+          }
+          const portalX=SKY_END-115;
+          const travel=easeOut((t-SKY_ESCAPE_START)/(SKY_ESCAPE_FINISH-SKY_ESCAPE_START));
+          return {
+            princessX:(SKY_END-360)+(portalX-(SKY_END-360))*travel,
+            villainX:(SKY_END-280)+(portalX-(SKY_END-280))*travel,
+            portalX,
+            fade:1-easeOut((t-(SKY_ESCAPE_FINISH-.85))/.85),
+            floatY:Math.sin(t*3)*4,
+            portalOpen:t>=SKY_ESCAPE_START-.45,
+            travel
+          };
+        }
+        function updateSkyOutroFacing(){
+          if(state!=='skyOutro')return;
+          const pose=skyEscapePosition(skySceneSeconds);
+          // Enquanto os dois estiverem visíveis, Gabriel olha para onde eles estão.
+          // Depois que entrarem no portal, ele continua olhando para a saída.
+          const target=pose.fade>.02?pose.villainX:pose.portalX;
+          player.direction=target<player.x+player.w/2?-1:1;
+        }
         function drawSkyStoryActors(){
           const intro=state==='skyIntro',t=skySceneSeconds;
-          const princessX=intro?349:SKY_END-360;
-          const villainX=intro?470:SKY_END-280;
-          const portalX=intro?605:SKY_END-115;
-          const duration=skyDialogueDuration();
-          const fade=1-easeOut((t-(duration-1.8))/1.7);
-          const travel=easeOut((t-(duration-5.6))/3.2);
-          const shift=travel*110;
-          const floatY=Math.sin(t*3)*4;
-          if(t>duration-6.5){
-            ctx.save();ctx.globalAlpha=.75*easeOut((t-(duration-6.5))/1);
+          const pose=skyEscapePosition(t);
+          const {princessX,villainX,portalX,floatY}=pose;
+          if(pose.portalOpen){
+            ctx.save();ctx.globalAlpha=.75*easeOut((t-(intro?skyDialogueDuration()-6.5:SKY_ESCAPE_START-.45))/1);
             if(extras.portal)drawObject(extras.portal,portalX-39,226,78,150);
             else{ctx.fillStyle='#8f73d7';ctx.fillRect(portalX-30,235,60,136);}
             ctx.restore();
           }
-          ctx.save();ctx.globalAlpha=Math.max(0,fade);
-          ctx.translate(princessX+shift,358-18*travel+floatY);
-          drawSpeakingSprite(processedAssets.princess,0,0,48,'VITORIA');
-          ctx.restore();
-          ctx.save();ctx.globalAlpha=Math.max(0,fade);
-          ctx.translate(villainX+shift,372-18*travel+floatY);
-          if(extras.villain)drawObject(extras.villain,-37,-108,74,108);
-          else{ctx.fillStyle='#21142d';ctx.fillRect(-30,-85,60,85);}
+          if(pose.fade>.002){
+            ctx.save();ctx.globalAlpha=Math.max(0,pose.fade);
+            ctx.translate(princessX,358-(intro?18*pose.travel:13*pose.travel)+floatY);
+            drawSpeakingSprite(processedAssets.princess,0,0,48,'VITORIA');
+            ctx.restore();
+            ctx.save();ctx.globalAlpha=Math.max(0,pose.fade);
+            ctx.translate(villainX,372-(intro?18*pose.travel:13*pose.travel)+floatY);
+            if(extras.villain)drawObject(extras.villain,-37,-108,74,108);
+            else{ctx.fillStyle='#21142d';ctx.fillRect(-30,-85,60,85);}
+            ctx.restore();
+          }
+        }
+        // O drink 67.png rola da saída do portal em direção ao Gabriel.
+        // É apenas a introdução visual da pista; coleta/inventário serão definidos
+        // depois de revisar as falas da cena juntos.
+        function getSkyDrinkPose(t){
+          if(state!=='skyOutro'||t<SKY_DRINK_DROP_START)return null;
+          const secs=Math.max(0,(t-SKY_DRINK_DROP_START)*1000);
+          const travel=easeOut(secs/SKY_DRINK_ROLL_MS);
+          const portalX=SKY_END-115;
+          const destX=SKY_ALTAR_X-12; // Para aos pés do Gabriel, sem atravessá-lo.
+          const x=portalX-(portalX-destX)*travel;
+          // Cai de dentro do portal; faz um pequeno quique antes de repousar.
+          const dropProgress=easeOut(secs/420);
+          const bump=secs<1050?Math.abs(Math.sin(secs/90))*(1-dropProgress)*14:0;
+          const foot=379-(1-dropProgress)*43-bump;
+          const angle=(1-travel)*Math.PI*2.2;
+          return {x,foot,angle,travel};
+        }
+        function drawSkyDrink(){
+          const pose=getSkyDrinkPose(skySceneSeconds);
+          if(!pose)return;
+          ctx.save();
+          ctx.translate(Math.round(pose.x),Math.round(pose.foot));
+          ctx.rotate(pose.angle);
+          if(extras.villainDrink){
+            drawObject(extras.villainDrink,-21,-40,42,40);
+          }else{
+            // Sprite temporário para que a animação funcione antes do upload do 67.png.
+            ctx.fillStyle='#d3f1ff';ctx.fillRect(-11,-29,22,24);
+            ctx.fillStyle='#7d2fc6';ctx.fillRect(-9,-22,18,14);
+            ctx.fillStyle='#3c2358';ctx.fillRect(-12,-31,24,4);
+            ctx.fillStyle='#fff3d1';ctx.fillRect(8,-41,3,14);
+          }
           ctx.restore();
         }
         function drawSkyStoryText(){
@@ -1625,6 +1701,13 @@
           pixelText('ENTER OU BOTÃO A: PULAR CENA',GAME_HEIGHT-17,7,'#e8e9fc');
         }
         function drawLevelThree(){
+          // A tela treme enquanto Vitoria avisa que o templo está tremendo,
+          // mas o HUD e a caixa de texto permanecem estáveis e legíveis.
+          const shaking=state==='skyOutro'&&skySceneSeconds>=SKY_OUTRO_LINES[1].from&&skySceneSeconds<SKY_OUTRO_LINES[1].to;
+          const tremor=shaking?Math.sin((skySceneSeconds-SKY_OUTRO_LINES[1].from)*Math.PI/(SKY_OUTRO_LINES[1].to-SKY_OUTRO_LINES[1].from)):0;
+          const quakeX=shaking?Math.round(Math.sin(skySceneSeconds*73)*4*tremor):0;
+          const quakeY=shaking?Math.round(Math.cos(skySceneSeconds*95)*3*tremor):0;
+          ctx.save();ctx.translate(quakeX,quakeY);
           drawSkyBackground();drawSkyWind();
           ctx.save();ctx.translate(-Math.round(cameraX),0);
           for(const b of level3Blocks){
@@ -1638,9 +1721,14 @@
           if(flag)drawObject(flag,1657,310,40,70);
           drawSkyBirds();drawSkyAltar();
           if(state==='skyIntro'||state==='skyOutro')drawSkyStoryActors();
+          if(state==='skyOutro')drawSkyDrink();
           drawHero();
           ctx.restore();
+          ctx.restore();
           if(state==='skyIntro'||state==='skyOutro')drawSkyStoryText();
+          if(state==='skyOutro'&&skySceneSeconds>=skyDialogueDuration()){
+            pixelText('ALGO CAIU DO PORTAL...',GAME_HEIGHT-44,9,'#ffe9b0');
+          }
           if(state==='skyAltarCharge'){
             ctx.fillStyle='rgba(7,32,62,.76)';ctx.fillRect(186,72,430,57);
             pixelText('ALTAR CELESTIAL ATIVADO!',106,11,'#9cf7ff');
