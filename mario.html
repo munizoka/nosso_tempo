@@ -1257,6 +1257,153 @@
             pixelText('TOTEM DESPERTADO!',106,13,'#e4b5ff');
           }
         }
+
+        // VISUAIS DA FASE 3: 58.png a 63.png, sem alterações nos sprites das fases anteriores.
+        function drawSkyBackground(){
+          if(extras.skyTemple)drawObject(extras.skyTemple,0,0,GAME_WIDTH,GAME_HEIGHT);
+          else{
+            const g=ctx.createLinearGradient(0,0,0,GAME_HEIGHT);
+            g.addColorStop(0,'#369bdc');g.addColorStop(.58,'#aea1ed');g.addColorStop(1,'#f2d9ec');
+            ctx.fillStyle=g;ctx.fillRect(0,0,GAME_WIDTH,GAME_HEIGHT);
+          }
+          // Camada discreta de nuvens se move lentamente, independentemente do cenário.
+          const drift=(elapsedSeconds*9)%950;
+          ctx.save();ctx.globalAlpha=.13;ctx.fillStyle='#fff';
+          for(let i=0;i<5;i++){
+            const cx=((i*210-drift+1100)%1080)-100;
+            ctx.fillRect(cx,100+(i%3)*36,86,8);ctx.fillRect(cx+17,94+(i%3)*36,53,19);
+          }
+          ctx.restore();
+        }
+        function drawSkyGround(b){
+          ctx.save();ctx.beginPath();ctx.rect(b.x,b.y,b.w,b.h);ctx.clip();
+          ctx.fillStyle='#94774e';ctx.fillRect(b.x,b.y,b.w,b.h);
+          for(let y=b.y+29;y<b.y+b.h;y+=28)for(let x=b.x;x<b.x+b.w;x+=56){
+            ctx.strokeStyle='rgba(70,53,44,.46)';ctx.lineWidth=2;
+            ctx.strokeRect(x+((Math.floor(y/28)%2)*23),y,52,24);
+          }
+          ctx.fillStyle='#e1bf78';ctx.fillRect(b.x,b.y,b.w,6);
+          if(extras.skyGround){
+            // A própria arte de 59.png possui proporção horizontal de cornija.
+            const image=extras.skyGround, tileW=104;
+            for(let x=b.x;x<b.x+b.w;x+=tileW){
+              drawObject(image,x,b.y,Math.min(tileW,b.x+b.w-x),28);
+            }
+          }
+          ctx.restore();
+        }
+        function drawSkyWind(){
+          const t=elapsedSeconds;
+          for(const z of skyWindZones){
+            ctx.save();
+            const x=z.x-cameraX;
+            if(x>GAME_WIDTH+100||x+z.w<0){ctx.restore();continue;}
+            // Faixas translúcidas e flechas reforçam o sentido da corrente de vento.
+            ctx.fillStyle='rgba(180,238,255,.12)';
+            ctx.fillRect(x,135,z.w,220);
+            ctx.strokeStyle='rgba(240,252,255,.75)';ctx.lineWidth=2;
+            const sign=Math.sign(z.force);
+            for(let k=0;k<11;k++){
+              const q=((k*91+t*50*Math.abs(z.force))%z.w);
+              const px=x+(sign>0?q:z.w-q);
+              const py=167+(k%5)*35;
+              ctx.beginPath();ctx.moveTo(px-13*sign,py);ctx.lineTo(px+13*sign,py);
+              ctx.lineTo(px+5*sign,py-5);ctx.moveTo(px+13*sign,py);ctx.lineTo(px+5*sign,py+5);ctx.stroke();
+            }
+            ctx.restore();
+          }
+        }
+        function drawSkyAltar(){
+          const image=skyAltarActivated?extras.skyAltarOn:extras.skyAltarOff;
+          const x=SKY_ALTAR_X, foot=380, h=112, w=84;
+          ctx.save();const pulse=(1+Math.sin(performance.now()/200))*.5;
+          if(skyAltarActivated){
+            ctx.fillStyle='rgba(147,244,255,'+(.22+.18*pulse)+')';
+            ctx.beginPath();ctx.ellipse(x,foot-33,56+pulse*10,65+pulse*7,0,0,Math.PI*2);ctx.fill();
+            ctx.shadowColor='#74efff';ctx.shadowBlur=12+pulse*18;
+          }
+          if(image)drawObject(image,x-w/2,foot-h,w,h);
+          else{ctx.fillStyle='#c4a05e';ctx.fillRect(x-22,foot-70,44,70);ctx.fillStyle=skyAltarActivated?'#80f4ff':'#536577';ctx.fillRect(x-13,foot-106,26,37);}
+          ctx.shadowBlur=0;ctx.restore();
+        }
+        function drawSkyBirds(){
+          for(const bird of skyBirds){
+            if(!bird.alive)continue;
+            ctx.save();
+            if(bird.vx>0){ctx.translate(bird.x+bird.w,0);ctx.scale(-1,1);drawObject(extras.skyCrow,0,bird.y,bird.w,bird.h);}
+            else drawObject(extras.skyCrow,bird.x,bird.y,bird.w,bird.h);
+            if(!extras.skyCrow){ctx.fillStyle='#332548';ctx.fillRect(bird.x,bird.y,bird.w,bird.h);}
+            ctx.restore();
+          }
+        }
+        function drawSkyStoryActors(){
+          const intro=state==='skyIntro',t=skySceneSeconds;
+          const princessX=intro?349:SKY_END-360;
+          const villainX=intro?470:SKY_END-280;
+          const portalX=intro?605:SKY_END-115;
+          const fade=1-easeOut((t-(intro?9.8:9.7))/1.7);
+          const travel=easeOut((t-(intro?7.2:7.2))/2.9);
+          const shift=travel*110;
+          const floatY=Math.sin(t*3)*4;
+          if(t>6.0){
+            ctx.save();ctx.globalAlpha=.75*easeOut((t-6)/1);
+            if(extras.portal)drawObject(extras.portal,portalX-39,226,78,150);
+            else{ctx.fillStyle='#8f73d7';ctx.fillRect(portalX-30,235,60,136);}
+            ctx.restore();
+          }
+          ctx.save();ctx.globalAlpha=Math.max(0,fade);
+          ctx.translate(princessX+shift,358-18*travel+floatY);
+          drawSpriteOnFeet(processedAssets.princess,0,0,48);
+          ctx.restore();
+          ctx.save();ctx.globalAlpha=Math.max(0,fade);
+          ctx.translate(villainX+shift,372-18*travel+floatY);
+          if(extras.villain)drawObject(extras.villain,-37,-108,74,108);
+          else{ctx.fillStyle='#21142d';ctx.fillRect(-30,-85,60,85);}
+          ctx.restore();
+        }
+        function drawSkyStoryText(){
+          const t=skySceneSeconds,intro=state==='skyIntro';
+          const lines=intro?[
+            {from:0,to:2.2,speaker:'GABRIEL',message:'ONDE A GENTE FOI PARAR?! ESTAMOS NAS NUVENS?!',color:'#ffe4a0'},
+            {from:2.2,to:4.4,speaker:'VITORIA',message:'GABRIEL! ESSE LUGAR É PERIGOSO! CUIDADO COM O VENTO!',color:'#ffadd1'},
+            {from:4.4,to:7.3,speaker:'VILÃO',message:'VOCÊ CONSEGUIU ME SEGUIR ATÉ AQUI... MAS DUVIDO QUE CONSIGA ATRAVESSAR MEU TEMPLO TALARICAR!',color:'#d6a5ff'},
+            {from:7.3,to:10.2,speaker:'GABRIEL',message:'VOCÊ DE NOVO?! ALÉM DE TALARICADOR, AGORA É DONO DAS NUVENS?!',color:'#ffe4a0'},
+            {from:10.2,to:12.7,speaker:'GABRIEL',message:'COITADO, DEVE ACHAR QUE ESTÁ VOANDO ALTO.',color:'#ffe4a0'}
+          ]:[
+            {from:0,to:2,speaker:'GABRIEL',message:'O CRISTAL ESTÁ ACESO! ACABOU, TALARICADOR!',color:'#ffe4a0'},
+            {from:2,to:4,speaker:'VITORIA',message:'GABRIEL! O TEMPLO ESTÁ TREMENDO!',color:'#ffadd1'},
+            {from:4,to:6.2,speaker:'VILÃO',message:'CADA VITÓRIA SUA ME DEIXA MAIS PERTO DO MEU PLANO...',color:'#d6a5ff'},
+            {from:6.2,to:8.2,speaker:'GABRIEL',message:'QUE PLANO? QUEM É VOCÊ DE VERDADE?!',color:'#ffe4a0'},
+            {from:8.2,to:10,speaker:'VILÃO',message:'VOCÊ DESCOBRIRÁ... NA PRÓXIMA FASE!',color:'#d6a5ff'},
+            {from:10,to:11.8,speaker:'VITORIA',message:'NÃO DESISTA! ESTOU CONTANDO COM VOCÊ!',color:'#ffadd1'}
+          ];
+          const line=storyLine(t,lines);
+          if(line)drawStoryDialogue(line.speaker,line.message,line.color);
+          pixelText('ENTER OU BOTÃO A: PULAR CENA',GAME_HEIGHT-17,7,'#e8e9fc');
+        }
+        function drawLevelThree(){
+          drawSkyBackground();drawSkyWind();
+          ctx.save();ctx.translate(-Math.round(cameraX),0);
+          for(const b of level3Blocks){
+            if(b.type==='skyGround')drawSkyGround(b);
+            else if(b.type==='skyPlatform'){
+              if(extras.skyPlatform)drawObject(extras.skyPlatform,b.x,b.y,b.w,b.h);
+              else {ctx.fillStyle='#d9bf87';ctx.fillRect(b.x,b.y,b.w,b.h);}
+            }
+          }
+          const flag=skyCheckpointReached?extras.checkpointOn:extras.checkpointOff;
+          if(flag)drawObject(flag,1850,310,40,70);
+          drawSkyBirds();drawSkyAltar();
+          if(state==='skyIntro'||state==='skyOutro')drawSkyStoryActors();
+          drawHero();
+          ctx.restore();
+          if(state==='skyIntro'||state==='skyOutro')drawSkyStoryText();
+          if(state==='skyAltarCharge'){
+            ctx.fillStyle='rgba(7,32,62,.76)';ctx.fillRect(186,72,430,57);
+            pixelText('ALTAR CELESTIAL ATIVADO!',106,11,'#9cf7ff');
+          }
+        }
+
         function overlay(title,detail,foot){
           ctx.fillStyle='rgba(8,4,22,.77)';ctx.fillRect(0,0,GAME_WIDTH,GAME_HEIGHT);
           pixelText(title,176,20,'#f2eaff');
@@ -1267,10 +1414,14 @@
           ctx.imageSmoothingEnabled=false;
           if(!sceneReady){ctx.fillStyle='#5c94fc';ctx.fillRect(0,0,GAME_WIDTH,GAME_HEIGHT);pixelText('CARREGANDO A MAGIA...',GAME_HEIGHT/2,12);return;}
           if(state==='map'){drawMap();return;}
-          if(level===1)drawLevelOne();else drawLevelTwo();
+          if(level===1)drawLevelOne();else if(level===2)drawLevelTwo();else drawLevelThree();
           if(state==='title2')overlay('FASE 2','A FLORESTA MISTERIOSA','ENTER OU BOTÃO A PARA COMEÇAR');
+          if(state==='title3')overlay('FASE 3','O TEMPLO DOS VENTOS','ENTER OU BOTÃO A PARA COMEÇAR');
           if(state==='gameover')overlay('GAME OVER','AS VIDAS ACABARAM','CLIQUE EM RECOMEÇAR');
-          if(state==='chapterEnd')overlay('FASE 2 CONCLUÍDA!','VOCÊ CHEGOU AO FIM DA FLORESTA SOMBRIA.','FASE 3 EM BREVE  |  ENTER / A: MAPA');
+          if(state==='chapterEnd'){
+            if(level===3)overlay('FASE 3 CONCLUÍDA!','O TEMPLO DOS VENTOS FOI SUPERADO.','O MISTÉRIO CONTINUA...  |  ENTER / A: MAPA');
+            else overlay('FASE 2 CONCLUÍDA!','VOCÊ CHEGOU AO FIM DA FLORESTA SOMBRIA.','FASE 3 DISPONÍVEL  |  ENTER / A: MAPA');
+          }
         }
         function loop(now){
           const dt=Math.min(.05,(now-previousFrame)/1000);
