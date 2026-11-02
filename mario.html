@@ -1090,7 +1090,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
         }
 
         // Novo Gabriel (125–145): sprites individuais, sem depender do spritesheet antigo.
-        // O 145 tem cabelo escuro; reserva opcional de queda NORMAL, não Super.
+        // 145.png é o quadro de queda da forma Super, conforme a arte final escolhida.
         const gabrielSpritePaths={
           normal:{
             idle:'126 idle.png',idleAlt:'125.png',
@@ -1098,11 +1098,11 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
             lookUp:'129 up.png',lookDown:'130.png',
             talkOpen:'131.png',talkClosed:'132.png',
             surprised:'133.png',happy:'134.png',thinking:'135.png',
-            jumpRise:'136.png',jumpApex:'137.png',jumpFall:'138.png',jumpFallAlt:'145.png'
+            jumpRise:'136.png',jumpApex:'137.png',jumpFall:'138.png'
           },
           super:{
             idle:'139.png',talkOpen:'140.png',talkClosed:'141.png',
-            dash:'142.png',jumpRise:'143.png',jumpApex:'144.png'
+            dash:'142.png',jumpRise:'143.png',jumpApex:'144.png',jumpFall:'145.png'
           }
         };
         processedAssets.gabriel={normal:{},super:{}};
@@ -2521,8 +2521,8 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
             speaking,voiceOpen:Math.floor(gameNow/160)%2===0
           });
           const form=processedAssets.gabriel[powered?'super':'normal'];
-          // Super Gabriel NÃO usa cabelo escuro nos quadros de andar ou cair.
-          // Até termos sprites Super de caminhada/queda, preserva a forma loira.
+          // Queda Super usa 145.png; para caminhar usa o idle Super até
+          // haver quadros específicos dessa forma. Não mistura frames normais.
           const sprite=form[pose]||
             (powered&&pose==='jumpFall'?form.jumpApex:null)||
             form.idle||
