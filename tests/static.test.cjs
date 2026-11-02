@@ -102,7 +102,7 @@ check('Blocos de interrogação substituídos por moedas coletáveis',!mario.inc
 check('Hambúrguer 79.png continua no catálogo até ativação intencional',mario.includes("burger:{id:'burger'") && mario.includes("asset:'79.png'") &&
  mario.includes("if(id==='burger')return activateSuperFromBurger();") &&
  mario.includes('function activateSuperFromBurger()'));
-check('Super Gabriel usa sprites de transformação e investida',mario.includes('processedAssets.superHeroFrames=makeFrames(sheet,4)')&&mario.includes('extras.dashSuper:extras.dashHero')&&mario.includes('trySuperDash()'));
+check('Super Gabriel usa novas imagens de transformação e investida',mario.includes("idle:'139.png'")&&mario.includes("dash:'142.png'")&&mario.includes("jumpRise:'143.png'")&&mario.includes('trySuperDash()'));
 check('Investida tem input X e botão B condicionado',mario.includes("e.code==='KeyX'&&!e.repeat")&&mario.includes('id="btn-dash"')&&mario.includes("show=isSuperGabriel()&&state==='playing'"));
 check('Investida derrota inimigos e corvos',mario.includes('defeatEnemy(enemy,150);continue;')&&mario.includes('bird.alive=false;score+=180;setHUD();continue;'));
 check('Super Forca dura fase inteira e conserva save legado dentro das regras',mario.includes('superPower.until=Number.POSITIVE_INFINITY') &&
