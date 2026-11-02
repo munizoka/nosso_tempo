@@ -380,3 +380,14 @@ check('Sem saldo não desconta moedas nem concede item',
 const shopFull=simulateCanoPurchase(100,99);
 check('Inventário cheio impede compra e preserva saldo',
  shopFull.buy()===false&&shopFull.get().coins===100&&shopFull.get().stock===99);
+
+// Regressão: na hamburgueria, andar não pode usar sprites de pulo nem da 4ª pose.
+// No jogo principal só 0 e 1 são frames de caminhada.
+const shopFrameExpression=mario.match(/const index=\(keys\.left\|\|keys\.right\)\?Math\.floor\(shopHeroDistance\/32\)%2:0;/)?.[0];
+check('CANO BURGER usa somente dois quadros de caminhada de Gabriel',!!shopFrameExpression);
+const shopFrame=(moving,distance)=>moving?Math.floor(distance/32)%2:0;
+check('Gabriel alterna apenas os quadros 0 e 1 em caminhada',
+ [0,15,32,64,95,96,128,160].map(d=>shopFrame(true,d)).every(f=>f===0||f===1)&&
+ shopFrame(true,0)===0&&shopFrame(true,32)===1&&shopFrame(true,64)===0);
+check('Gabriel volta ao idle quando para na CANO BURGER',
+ shopFrame(false,32)===0&&shopFrame(false,70)===0);
