@@ -997,11 +997,31 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           turtle:{alert:'89 trutle espanto.png',dead:'90 turtle dead.png',walk1:'91 turtle walk 1.png',idle:'92 turtle idle.png',walk2:'93 turtle walk 2.png'}
         };
         processedAssets.mobFrames={mushroom:{},turtle:{}};
+        function alignEnemyWalkFrames(type){
+          // As poses têm recortes distintos. Uniformizar as duas caminhadas
+          // evita que a largura/altura mude ao alternar frames ou espelhar.
+          const frames=processedAssets.mobFrames[type];
+          if(!frames?.walk1||!frames?.walk2)return;
+          const width=Math.max(frames.walk1.width,frames.walk2.width);
+          const height=Math.max(frames.walk1.height,frames.walk2.height);
+          for(const pose of ['walk1','walk2']){
+            const source=frames[pose],aligned=document.createElement('canvas');
+            aligned.width=width;aligned.height=height;
+            const context=aligned.getContext('2d');
+            context.imageSmoothingEnabled=false;
+            // Mesmo eixo horizontal e pés alinhados ao solo, sem esticar o sprite.
+            context.drawImage(source,Math.round((width-source.width)/2),height-source.height);
+            frames[pose]=aligned;
+          }
+        }
         for(const [type,poses] of Object.entries(mobSpritePaths)){
           for(const [pose,path] of Object.entries(poses)){
             const img=new Image();
             img.onload=()=>{
-              try{processedAssets.mobFrames[type][pose]=trimTransparent(removeGreenScreen(img));}
+              try{
+                processedAssets.mobFrames[type][pose]=trimTransparent(removeGreenScreen(img));
+                if(pose==='walk1'||pose==='walk2')alignEnemyWalkFrames(type);
+              }
               catch(err){console.warn('Sprite do inimigo não pôde ser processado:',path,err);}
             };
             img.onerror=()=>{ /* Sem asset publicado: conserva o sprite 37.jpg. */ };
@@ -1898,6 +1918,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
             if(!enemy.aiState)enemy.aiState='patrol';
             if(!enemy.patrolSpeed)enemy.patrolSpeed=Math.abs(enemy.vx)||1.5;
             if(!enemy.patrolDirection)enemy.patrolDirection=enemy.vx<0?-1:1;
+            const oldX=enemy.x;
             const oldBottom=enemy.y+enemy.h;
             enemy.y+=4;
             let grounded=false;
@@ -1946,6 +1967,12 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
                 break;
               }
             }
+            // Animação depende apenas da distância que o inimigo REALMENTE andou.
+            // Em ambos os sentidos, o ciclo percorre os mesmos 2 frames e para
+            // durante espanto, colisão com paredes ou beira de precipícios.
+            const traveled=Math.abs(enemy.x-oldX);
+            enemy.walkMoving=enemy.aiState!=='alert'&&Math.abs(enemy.vx)>.05&&traveled>.05;
+            if(enemy.walkMoving)enemy.walkDistance=(enemy.walkDistance||0)+traveled;
             if(isDashing()&&isColliding(player,enemy)){
               defeatEnemy(enemy,150);continue;
             }
@@ -2186,13 +2213,35 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           }catch(e){/* Canvas com restrição: cor de pele alternativa. */}
           mouthSkinCache.set(sprite,color);return color;
         }
-        function drawSpeakingSprite(sprite,centerX,footY,height,character,facing=1){
+        function drawSpeakingSprite(sprite,centerX,footY,height,character,facing=1,superTalking=false){
           drawSpriteOnFeet(sprite,centerX,footY,height,facing);
           if(activeDialogueSpeaker()!==character||!sprite?.width||!sprite?.height)return;
           const open=Math.floor(gameNow/165)%2===0;
           const w=Math.max(1,Math.round(height*sprite.width/sprite.height));
           ctx.save();ctx.translate(Math.round(centerX),Math.round(footY));
           if(facing===-1)ctx.scale(-1,1);
+          if(superTalking){
+            // A cabeça do Super Gabriel (78.png) é maior e o rosto fica
+            // mais à frente que no sprite normal. Animação de quatro tempos.
+            const mouthX=Math.round(w*.23),mouthY=-Math.round(height*.57);
+            const pose=Math.floor(gameNow/125)%4;
+            ctx.fillStyle=getCharacterSkin(sprite,character);
+            ctx.fillRect(mouthX-4,mouthY-4,8,9);
+            ctx.fillStyle='#3c2027';
+            if(pose===0){
+              ctx.fillRect(mouthX-3,mouthY,6,2);
+              ctx.fillStyle='#b45a60';ctx.fillRect(mouthX-1,mouthY+1,3,1);
+            }else if(pose===2){
+              ctx.fillRect(mouthX-3,mouthY-2,7,6);
+              ctx.fillStyle='#ffb0a5';ctx.fillRect(mouthX-2,mouthY+2,5,1);
+              ctx.fillStyle='#fff4e1';ctx.fillRect(mouthX-2,mouthY-2,5,1);
+            }else{
+              ctx.fillRect(mouthX-3,mouthY-1,6,4);
+              ctx.fillStyle='#fa9ba6';ctx.fillRect(mouthX-1,mouthY+1,4,1);
+            }
+            ctx.restore();
+            return;
+          }
           // Substitui TODA a região da boca já desenhada (não apenas um pixel externo).
           // Âncora interna ao rosto, com cor adaptada aos pixels de pele de cada sprite.
           const mouthX=character==='GABRIEL'?Math.round(w*.11):0;
@@ -2298,7 +2347,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           for(const e of enemies){if(!e.alive)continue;
             const poses=processedAssets.mobFrames?.[e.type]||{};
             const frameName=e.aiState==='alert'?'alert':
-              (Math.abs(e.vx)>.05?(Math.floor(elapsedSeconds*8+e.x*.03)%2?'walk1':'walk2'):'idle');
+              (e.walkMoving?(Math.floor((e.walkDistance||0)/10)%2?'walk2':'walk1'):'idle');
             const original=processedAssets.enemyFrames?.[e.type==='mushroom'?0:1];
             const frame=poses[frameName]||poses.idle||original;
             // Todos os sprites novos olham para a direita; espelho apenas para a esquerda.
@@ -2322,7 +2371,8 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
             (isSuperGabriel()?extras.dashSuper:extras.dashHero):
             (isSuperGabriel()?powerful:null))||normal;
           const size=state==='playing'&&isDashing()?48:player.h;
-          drawSpeakingSprite(sprite,player.x+player.w/2,player.y+player.h,size,'GABRIEL',player.direction);
+          drawSpeakingSprite(sprite,player.x+player.w/2,player.y+player.h,size,'GABRIEL',player.direction,
+            isSuperGabriel()&&sprite===powerful);
         }
         function easeOut(v){const x=Math.max(0,Math.min(1,v));return 1-(1-x)*(1-x);}
         function drawCinematicCharacters(t){
@@ -2914,7 +2964,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           if(state==='playing'){drawLevelPickups();drawCombatFxWorld();}
           if(state==='title2')overlay('FASE 2','A FLORESTA MISTERIOSA','ENTER OU BOTÃO A PARA COMEÇAR');
           if(state==='title3')overlay('FASE 3','O TEMPLO DOS VENTOS','ENTER OU BOTÃO A PARA COMEÇAR');
-          if(state==='gameover')overlay('GAME OVER','AS VIDAS ACABARAM','CLIQUE EM RECOMEÇAR');
+          if(state==='gameover')overlay('GAME OVER','A VITORIA FOI TALARICADA','CLIQUE EM RECOMEÇAR');
           if(state==='chapterEnd'){
             if(level===3)overlay('FASE 3 CONCLUÍDA!','O TEMPLO DOS VENTOS FOI SUPERADO.','O MISTÉRIO CONTINUA...  |  ENTER / A: MAPA');
             else overlay('FASE 2 CONCLUÍDA!','PISTA 01: MEDALHÃO RACHADO NO INVENTÁRIO','FASE 3 DISPONÍVEL  |  ENTER / A: MAPA');
