@@ -469,7 +469,9 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
         let invulnerable = 0;
         // A Super Força dura até sair da fase. O valor 12 é apenas um marcador
         // compatível com o campo legado superRemaining (Firestore valida 0–12).
-        const SUPER_DURATION=12, DASH_DURATION=.52, DASH_COOLDOWN=.95;
+        // Investida mais curta e controlável: cerca de metade do alcance anterior.
+        // Velocidade normal do herói: 5.5; antes a investida usava 13 por .52s.
+        const SUPER_DURATION=12, DASH_SPEED=9, DASH_DURATION=.40, DASH_COOLDOWN=.95;
         const superPower={until:0,dashUntil:0,cooldownUntil:0,facing:1};
         const burgerDrops=[],questionBlocksHit=new Set();
         // Partículas e poses de derrota duram apenas no relógio ativo do jogo.
@@ -2049,7 +2051,12 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           if(activeSlot!==null){saveAccumulator+=dt;if(saveAccumulator>=15){saveAccumulator=0;saveCurrentSlot(false);}}
           invulnerable=Math.max(0,invulnerable-dt);
           const effectiveSpeed=player.speed*(elapsedSeconds<activeBuffs.speedUntil?1.5:1);
-          if(isDashing()){player.vx=superPower.facing*13;player.direction=superPower.facing;}
+          // Permite interromper a investida ao segurar a direção contrária.
+          // Assim Gabriel não fica preso ao avanço quando se aproxima de um buraco.
+          const reverseDash=isDashing()&&
+            ((superPower.facing>0&&keys.left)||(superPower.facing<0&&keys.right));
+          if(reverseDash)superPower.dashUntil=elapsedSeconds;
+          if(isDashing()){player.vx=superPower.facing*DASH_SPEED;player.direction=superPower.facing;}
           else if(keys.left){player.vx=-effectiveSpeed;player.direction=-1;}
           else if(keys.right){player.vx=effectiveSpeed;player.direction=1;}
           else player.vx=0;
