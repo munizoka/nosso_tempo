@@ -3281,8 +3281,10 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
             const sy=Math.floor(counter.height*.63),sh=counter.height-sy;
             ctx.drawImage(counter,0,sy,counter.width,sh,905,349,500,45);
           }else{ctx.fillStyle='#783f25';ctx.fillRect(905,348,500,46);}
-          // Gabriel sempre aparece à frente do balcão, podendo percorrer todo o salão.
-          const index=(keys.left||keys.right)?(Math.floor(shopHeroDistance/14)%3+1):0;
+          // Caminhada igual às fases originais: somente quadros 0 (parado/passo A)
+          // e 1 (passo B). Quadro 2 é salto; o 3 não pertence ao ciclo de andar.
+          // Troca a cada 32px (~130ms), evitando pulos/agachamentos e tremulação.
+          const index=(keys.left||keys.right)?Math.floor(shopHeroDistance/32)%2:0;
           const hero=processedAssets.heroFrames?.[index]||processedAssets.heroFrames?.[0];
           drawSpriteOnFeet(hero,player.x+player.w/2,CANO_FLOOR,player.h,player.direction);
           // Primeiro plano 120 separado da arte principal e sem obstáculos invisíveis.
