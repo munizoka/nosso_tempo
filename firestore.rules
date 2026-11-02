@@ -45,8 +45,10 @@ service cloud.firestore {
         && data.payload.keys().hasOnly([
           'version','savedAt','difficulty','level','phase','score','lives','elapsedSeconds',
           'player','checkpoint','skyCheckpoint','levelComplete','inventory',
-          'collectedPickups','inventoryUnlocked','legacy','superRemaining'
+          'collectedPickups','inventoryUnlocked','legacy','superRemaining','coins'
         ])
+        && (!('coins' in data.payload) ||
+          (data.payload.coins is int && data.payload.coins >= 0 && data.payload.coins <= 9999))
         && (!('superRemaining' in data.payload) ||
           (data.payload.superRemaining is number && data.payload.superRemaining >= 0 && data.payload.superRemaining <= 12))
         && data.payload.version == 1
