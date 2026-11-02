@@ -317,3 +317,66 @@ check('Direção oposta interrompe o dash e devolve controle',
  stopLeft.speed===5.5&&!stopLeft.active&&stopLeft.direction===1);
 check('Interromper dash não altera cooldown',
  stopRight.cooldown===1.1&&stopLeft.cooldown===1.1);
+
+ 
+// CANO BURGER: destino horizontal independente com economia de campanha.
+const canoSprites=[
+ '94 humberto.png','95 alan.png','96 alan walk 1.png','97 alan walk 2.png',
+ '98 alan up.png','99 alan down.png','100 alan open.png','101 alan close.png',
+ '102 alan greet.png','103 alan happy.png','104 thinking.png','105 alan surprised.png',
+ '106 alan cruzado.png','107 humberto idle.png','108 humberto walk 1.png',
+ '109 humberto walk 2.png','110 humberto up.png','111 humberto down.png',
+ '112 humbeto open.png','113 humberto close.png','114 humberto happy.png',
+ '115 humberto tchau.png','116 humberto braços cruzados.png',
+ '117 humberto surprised.png','118 braços cruzados.png',
+ '119.png','120.png','121.png','122.png','123.png','124.png'
+];
+check('31 arquivos CANO BURGER publicados na raiz',
+ canoSprites.every(file=>fs.existsSync(path.join(root,file))&&fs.statSync(path.join(root,file)).size>1000));
+check('CANO BURGER no mapa sem substituir fase 1–3',
+ mario.includes("id:'shop',name:'CANO BURGER'")&&
+ mario.includes("if(node.id==='shop'){enterCanoShop();return;}")&&
+ mario.includes("if(state==='shop'){drawCanoShop();return;}")
+);
+check('Duas portas utilizáveis e loja como fase horizontal',
+ mario.includes('CANO_WIDTH=2240')&&mario.includes('CANO_FRONT_X=160')&&
+ mario.includes("if(Math.abs(x-CANO_FRONT_X)<76)")&&mario.includes("if(Math.abs(x-CANO_BACK_X)<76)")&&
+ mario.includes('drawCanoShop()')&&mario.includes('updateCanoShop(dt)'));
+check('Balção vende apenas o hambúrguer da Super Força por 10 moedas',
+ mario.includes('CANO_PRICE=10')&&mario.includes("addConsumable('burger',1)")&&
+ mario.includes("coins-=CANO_PRICE")&&mario.includes('canoBuyBurger()'));
+check('NPCs usam sprites separados, escala normalizada e passeiam',
+ mario.includes('const canoNpcPaths=')&&mario.includes('const scale=height/img.height')&&
+ mario.includes('npc.x+=npc.dir*distance')&&mario.includes("npc.pose=Math.floor(npc.walked/12)%2?'walk2':'walk1'"));
+check('Dez discussões não se repetem até esgotar baralho',
+ (mario.match(/\[\['ALAN',/g)||[]).length>=10&&
+ mario.includes('function shuffledShopDeck()')&&
+ mario.includes('shopConversationDeck.shift()')&&mario.includes('shopLastConversation=index'));
+check('Discussão termina antes de NPC notar Gabriel',
+ mario.includes('shopConversation.noticed=true')&&
+ mario.includes('if(shopConversation.noticed&&!shopConversation.recognized)')&&
+ mario.includes("shopConversation.lines.push(['ALAN'")&&
+ mario.includes("shopConversation.lines.push(['HUMBERTO'"));
+const canoBuySource=mario.match(/        function canoBuyBurger\(\)\{[\s\S]*?\n        \}/)?.[0];
+check('Função de compra pode ser isolada para testes',!!canoBuySource);
+function simulateCanoPurchase(balance,stock){
+ const f=new Function(
+  "let state='shop',shopPanelOpen=true,coins="+balance+
+  ",inventory={consumables:{burger:"+stock+"}},CANO_PRICE=10,activeSlot=0,saveCount=0,shopClock=0,shopActors=[{name:'alan'},{name:'humberto'}];"+
+  "function addConsumable(id,n){if(inventory.consumables[id]>=99)return false;inventory.consumables[id]+=n;return true;}"+
+  "function unlockInventory(){}function renderInventory(){}function setHUD(){}"+
+  "function saveCurrentSlot(){saveCount++;}function canoUpdateCounter(){}function showItemToast(){}"+
+  canoBuySource+
+  "return {buy:canoBuyBurger,get:()=>({coins,stock:inventory.consumables.burger,saveCount})};"
+ );
+ return f();
+}
+const shopCanBuy=simulateCanoPurchase(20,0);
+check('Compra cobra 10 moedas e concede exatamente 1 hambúrguer',
+ shopCanBuy.buy()===true&&shopCanBuy.get().coins===10&&shopCanBuy.get().stock===1&&shopCanBuy.get().saveCount===1);
+const shopCannotBuy=simulateCanoPurchase(9,0);
+check('Sem saldo não desconta moedas nem concede item',
+ shopCannotBuy.buy()===false&&shopCannotBuy.get().coins===9&&shopCannotBuy.get().stock===0);
+const shopFull=simulateCanoPurchase(100,99);
+check('Inventário cheio impede compra e preserva saldo',
+ shopFull.buy()===false&&shopFull.get().coins===100&&shopFull.get().stock===99);
