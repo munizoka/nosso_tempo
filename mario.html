@@ -1472,6 +1472,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
         }
         function clearForNewCampaign(){
           level=1;state='playing';score=0;coins=0;elapsedSeconds=0;
+          shopConversationDeck=[];shopLastConversation=-1;
           inventory.story.splice(0);for(const id of CONSUMABLE_IDS)inventory.consumables[id]=0;
           inventoryUnlocked=false;inventoryOpen=false;selectedInvItem=null;
           collectedPickups=new Set();
@@ -3080,7 +3081,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
         }
         function enterCanoShop(){
           state='shop';shopPanelOpen=false;shopClock=0;shopNextConversation=6;shopConversation=null;
-          shopConversationDeck=shuffledShopDeck();
+          if(!shopConversationDeck.length)shopConversationDeck=shuffledShopDeck();
           document.getElementById('cano-shop-panel').hidden=true;
           player.x=CANO_FRONT_X+42;player.y=CANO_FLOOR-player.h;player.vx=player.vy=0;
           player.direction=1;player.animFrame=0;cameraX=0;shopHeroDistance=0;
@@ -3118,7 +3119,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           const stock=inventory.consumables.burger||0;
           if(coins<CANO_PRICE){canoUpdateCounter('MOEDAS INSUFICIENTES!');return false;}
           if(stock>=99){canoUpdateCounter('INVENTÁRIO CHEIO! LIMITE DE 99.');return false;}
-          // Transação atômica em memória: deduz moedas somente se o item entrar no inventário.
+          // Primeiro confere o estoque; saldo só cai depois da entrega confirmada.
           if(!addConsumable('burger',1)){canoUpdateCounter('NÃO FOI POSSÍVEL ENTREGAR O ITEM.');return false;}
           coins-=CANO_PRICE;
           unlockInventory();renderInventory();setHUD();
@@ -3152,7 +3153,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           showItemToast('APROXIME-SE DO BALCÃO OU DE UMA PORTA!');
         }
         function canoStartArgument(){
-          if(shopConversation||!shopConversationDeck.length)shopConversationDeck=shuffledShopDeck();
+          if(!shopConversationDeck.length)shopConversationDeck=shuffledShopDeck();
           const index=shopConversationDeck.shift();shopLastConversation=index;
           shopConversation={lines:canoArguments[index].map(pair=>pair.slice()),index:0,until:shopClock+3.05,noticed:false,recognized:false};
           for(const npc of shopActors){npc.rest=0;npc.pose='talkClosed';}
@@ -3267,7 +3268,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           }
           for(const npc of shopActors)drawCanoNpc(npc);
           // Balcão separado por cima dos NPCs: oculta pernas enquanto atendem.
-          if(extras.canoCounter)drawObject(extras.canoCounter,905,329,500,64);
+          if(extras.canoCounter)drawObject(extras.canoCounter,905,300,500,94);
           else{ctx.fillStyle='#783f25';ctx.fillRect(905,345,500,50);ctx.fillStyle='#f4b34b';ctx.fillRect(905,335,500,11);}
           // Gabriel sempre aparece à frente do balcão, podendo percorrer todo o salão.
           const index=(keys.left||keys.right)?(Math.floor(shopHeroDistance/14)%3+1):0;
