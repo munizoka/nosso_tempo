@@ -3179,7 +3179,8 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
               const speaker=shopConversation.lines[shopConversation.index]?.[0]?.toLowerCase();
               npc.pose=speaker===npc.name?(Math.floor(shopClock*3.4)%2?'talkOpen':'talkClosed'):
                 (shopConversation.index%3===1?'surprised':(npc.name==='alan'?'crossed':'thinking'));
-              npc.dir=npc.name==='alan'?1:-1;
+              const other=shopActors.find(actor=>actor!==npc);
+              npc.dir=other.x>=npc.x?1:-1; // Sempre se encaram, mesmo quando trocam de lado.
               continue;
             }
             if((npc.celebrateUntil||0)>shopClock){npc.pose='happy';continue;}
