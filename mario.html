@@ -2510,13 +2510,13 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           return moving?(walkFrame%2===0?'walk1':'walk2'):'idle';
         }
         function getGabrielVisual({inShop=false}={}){
-          const powered=state==='playing'&&isSuperGabriel();
+          const powered=!inShop&&isSuperGabriel();
           const shopLine=inShop?shopConversation?.lines[shopConversation.index]?.[0]:null;
           const speaking=(inShop?shopLine:activeDialogueSpeaker())==='GABRIEL';
           const moving=inShop?(keys.left!==keys.right):Math.abs(player.vx)>.05;
           const walkFrame=inShop?Math.floor(shopHeroDistance/30)%2:player.animFrame;
           const pose=gabrielPoseName({
-            powered,dashing:powered&&isDashing(),grounded:inShop||player.grounded,
+            powered,dashing:state==='playing'&&powered&&isDashing(),grounded:inShop||state!=='playing'||player.grounded,
             vy:inShop?0:player.vy,moving,walkFrame,
             speaking,voiceOpen:Math.floor(gameNow/160)%2===0
           });
