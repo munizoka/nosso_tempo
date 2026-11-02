@@ -98,8 +98,8 @@ const superAssets=['78.png','79.png','80.png','81.png','82.png','83.png'];
 check('Seis novos sprites e itens foram enviados',superAssets.every(file=>fs.existsSync(path.join(root,file))&&fs.statSync(path.join(root,file)).size>1000));
 check('Fase 2 encara Gabriel antes da fuga',mario.includes('const princessFacing=slide>.12?')&&mario.includes('const villainFacing=slide>.12?')&&mario.includes('shrink*villainFacing'));
 check('Corações animados e dano sem recriação a cada frame',mario.includes('sgb-heart-hit')&&mario.includes('damagedHeartUntil')&&mario.includes('signature!==lastHeartSignature')&&mario.includes('83.png'));
-check('Bloco de interrogação libera hambúrguer ao bater por baixo',mario.includes("b.type==='surprise')hitQuestionBlock(b)")&&mario.includes('burgerDrops.push(')&&mario.includes('updateBurgerDrops(dt)'));
-check('Hambúrguer continua guardado até ativação intencional',mario.includes("addConsumable('burger',1)") &&
+check('Blocos de interrogação substituídos por moedas coletáveis',!mario.includes("type:'surprise'")&&mario.includes('const COIN_PICKUPS=[')&&mario.includes('function updateLevelCoins()')&&mario.includes('drawLevelCoins()'));
+check('Hambúrguer 79.png continua no catálogo até ativação intencional',mario.includes("burger:{id:'burger'") && mario.includes("asset:'79.png'") &&
  mario.includes("if(id==='burger')return activateSuperFromBurger();") &&
  mario.includes('function activateSuperFromBurger()'));
 check('Super Gabriel usa sprites de transformação e investida',mario.includes('processedAssets.superHeroFrames=makeFrames(sheet,4)')&&mario.includes('extras.dashSuper:extras.dashHero')&&mario.includes('trySuperDash()'));
@@ -110,8 +110,9 @@ check('Super Forca dura fase inteira e conserva save legado dentro das regras',m
  mario.includes("data.phase==='playing'&&data.superRemaining>0?Number.POSITIVE_INFINITY:0") &&
  mario.includes('if(!inventoryOpen&&!menuOpen){') &&
  rules.includes('data.payload.superRemaining <= 12'));
-check('Blocos coletados permanecem únicos no save',mario.includes('collectedPickups.add(drop.id)')&&mario.includes("collectedPickups.has(questionId(b))")&&mario.includes('collectedPickups=new Set();'));
+check('Moedas coletadas ficam únicas no save da campanha',mario.includes('collectedPickups.add(coin.id)')&&mario.includes('collectedPickups.has(coin.id)')&&mario.includes('coins=data.coins')&&mario.includes('collectedPickups=new Set();'));
 check('Firestore continua isolado e aceita burger + poder temporário',rules.includes("'jump','burger'")&&rules.includes("'superRemaining'")&&rules.includes('gbIsSelf(userId)'));
+check('Firestore aceita saldo de moedas opcional sem quebrar saves antigos',rules.includes("'legacy','superRemaining','coins'")&&rules.includes("!('coins' in data.payload)")&&rules.includes('data.payload.coins <= 9999'));
 
 
 check('Botao B vertical acima do A',mario.includes('flex-direction:column;align-items:center') &&
