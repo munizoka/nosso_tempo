@@ -21,6 +21,20 @@
         #game-shell {position:fixed;inset:0;display:flex;align-items:center;justify-content:center;overflow:hidden;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);box-sizing:border-box;}
         #game-canvas {display:block;width:800px;height:450px;max-width:100%;max-height:100%;image-rendering:pixelated;image-rendering:crisp-edges;background:#d7c6a6;touch-action:none;}
         #game-hud {top:max(8px,env(safe-area-inset-top));left:max(8px,env(safe-area-inset-left));right:max(8px,env(safe-area-inset-right));}
+        body.sgb-shop-mode #ui-time,body.sgb-shop-mode #ui-level{display:none!important}
+        body.sgb-shop-mode #btn-up,body.sgb-shop-mode #btn-down{display:none!important}
+        #cano-shop-panel[hidden]{display:none!important}
+        #cano-shop-panel{position:fixed;inset:0;z-index:110;background:rgba(15,9,18,.83);display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box}
+        .cano-shop-card{width:min(480px,94vw);max-height:88dvh;overflow-y:auto;box-sizing:border-box;padding:22px;background:#2b1a24;border:4px solid #f7ab3d;box-shadow:0 0 0 5px #653519,0 15px 32px #000a;color:#fff3d5;text-align:center;font-family:'Press Start 2P',monospace}
+        .cano-shop-card h2{font-size:clamp(13px,2.6vw,18px);color:#ffcb67;line-height:1.65;margin:0 0 14px}
+        .cano-shop-card img{width:67px;height:67px;object-fit:contain;image-rendering:pixelated}
+        .cano-shop-card p{font-size:clamp(9px,1.7vw,12px);line-height:1.9}
+        .cano-shop-actions{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:15px}
+        .cano-shop-actions button{font:700 10px 'Press Start 2P',monospace;padding:13px 12px;color:#fff7d2;border:3px solid #f4c561;background:#8c4727;cursor:pointer}
+        .cano-shop-actions button:disabled{opacity:.45;cursor:default}
+        .cano-shop-actions button:focus-visible{outline:3px solid #fff;outline-offset:3px}
+        @media(max-height:540px){.cano-shop-card{padding:12px}.cano-shop-card img{width:44px;height:44px}.cano-shop-card p{margin:5px 0}.cano-shop-actions button{padding:8px}}
+
         .sgb-coins-hud{position:absolute;left:56px;top:9px;padding:7px 9px;border:2px solid #f4c458;border-radius:8px;background:rgba(36,24,35,.9);color:#ffed94;white-space:nowrap;font:700 clamp(9px,1.4vw,12px) 'Press Start 2P',monospace;text-shadow:1px 2px #4b311f;pointer-events:none;box-shadow:0 2px 0 #643e24}
         /* Reserva margens para o polegar, bordas curvas e sensor frontal do iPhone. */
         .game-control-panel {position:fixed;left:max(32px,calc(env(safe-area-inset-left) + 30px));right:max(32px,calc(env(safe-area-inset-right) + 30px));bottom:max(16px,calc(env(safe-area-inset-bottom) + 14px));z-index:40;pointer-events:none;display:flex;justify-content:space-between;align-items:flex-end;}
@@ -334,6 +348,20 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
       </div>
     </section>
     <div id="item-toast" role="status" aria-live="polite"></div>
+    <section id="cano-shop-panel" role="dialog" aria-modal="true" aria-labelledby="cano-shop-title" hidden>
+      <div class="cano-shop-card">
+        <h2 id="cano-shop-title">🍔 CANO BURGER</h2>
+        <img src="79.png" alt="Hambúrguer da Super Força">
+        <p>HAMBÚRGUER DA SUPER FORÇA</p>
+        <p>PREÇO: 🪙 10 MOEDAS</p>
+        <p id="cano-shop-money" aria-live="polite">SEU SALDO: 0</p>
+        <p id="cano-shop-message" aria-live="polite">TRANSFORMA GABRIEL ATÉ O FIM DA FASE.</p>
+        <div class="cano-shop-actions">
+          <button id="cano-shop-buy" type="button" onclick="canoBuyBurger()">COMPRAR 🪙 10</button>
+          <button id="cano-shop-close" type="button" onclick="canoCloseShop()">SAIR DO BALCÃO</button>
+        </div>
+      </div>
+    </section>
     <section id="sgb-menu" aria-label="Menu de Super Gabriel Bros">
       <div class="sgb-menu-bg" aria-hidden="true">
         <div class="sgb-menu-slide is-visible" style="background-image:url('76.jpg')"></div>
@@ -455,7 +483,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
         };
         const keys = { left:false, right:false, up:false, down:false };
         let level = 1;
-        let state = 'menu'; // menu | map | playing | cutscene | title2 | forestIntro | forestTotemCharge | forestOutro | title3 | skyIntro | skyAltarCharge | skyOutro | chapterEnd | gameover
+        let state = 'menu'; // menu | map | shop | playing | cutscene | title2 | forestIntro | forestTotemCharge | forestOutro | title3 | skyIntro | skyAltarCharge | skyOutro | chapterEnd | gameover
         let cutsceneStart = 0;
         let cinematicSeconds = 0;
         let forestSceneStart = 0;
@@ -752,7 +780,8 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
         const mapLevels=[
           {id:1,name:'PRIMEIRA AVENTURA',x:139,y:319,open:true,color:'#ff6158'},
           {id:2,name:'FLORESTA MISTERIOSA',x:340,y:236,open:true,color:'#fab53c'},
-          {id:3,name:'TEMPLO DOS VENTOS',x:674,y:163,open:true,color:'#91dafa'}
+          {id:3,name:'TEMPLO DOS VENTOS',x:674,y:163,open:true,color:'#91dafa'},
+          {id:'shop',name:'CANO BURGER',x:363,y:338,open:true,color:'#ff923b'}
         ];
         let mapTip='MOVA A CABEÇA E ESCOLHA UMA FASE';
         function mapClosest() {
@@ -761,6 +790,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           return best<=42?nearest:null;
         }
         function returnToMap() {
+          if(state==='shop'){shopPanelOpen=false;document.getElementById('cano-shop-panel').hidden=true;mapHead.x=mapLevels[3].x;mapHead.y=mapLevels[3].y;}
           state='map';keys.left=keys.right=keys.up=keys.down=false;
           superPower.until=superPower.dashUntil=superPower.cooldownUntil=0; // Fase encerrada.
           mapTip='MOVA A CABEÇA E ESCOLHA UMA FASE';setHUD();
@@ -772,6 +802,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           const node=mapClosest();
           if(!node){mapTip='APROXIME-SE DE UMA FASE';return;}
           if(!node.open){mapTip='FASE BLOQUEADA!';return;}
+          if(node.id==='shop'){enterCanoShop();return;}
           level=node.id;
           state='playing';
           restartCurrentLevel();
@@ -858,7 +889,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           ctx.fillStyle='#3999ff';ctx.fillRect(39,63,51,327);
           for(let y=71;y<380;y+=16){ctx.fillStyle='#bee5fd';ctx.fillRect(48,y,14,3);ctx.fillRect(73,y+5,10,3);}
           // Caminho amarelado, com um nó para cada fase.
-          const paths=[[[139,319],[227,319],[275,279],[340,236]],[[340,236],[340,176],[390,143],[612,143],[674,163]]];
+          const paths=[[[139,319],[227,319],[275,279],[340,236]],[[340,236],[340,176],[390,143],[612,143],[674,163]],[[340,236],[332,286],[363,338]]];
           for(const pts of paths){ctx.beginPath();ctx.moveTo(...pts[0]);for(let i=1;i<pts.length;i++)ctx.lineTo(...pts[i]);ctx.strokeStyle='#b38e53';ctx.lineWidth=25;ctx.lineJoin='round';ctx.lineCap='round';ctx.stroke();ctx.strokeStyle='#fae8a9';ctx.lineWidth=18;ctx.stroke();}
           // Destaque sombrio sobre a trilha da Fase 2.
           ctx.beginPath();ctx.moveTo(340,236);ctx.lineTo(340,176);ctx.lineTo(390,143);ctx.lineTo(612,143);ctx.lineTo(674,163);
@@ -888,7 +919,16 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           ctx.fillStyle='#252338';ctx.fillRect(711,130,12,18);
           ctx.fillStyle='rgba(188,142,255,.35)';ctx.fillRect(692,108,52,44);
           const chosen=mapClosest();
+          // Fachada da hamburgueria como ícone único no mapa.
+          if(extras.canoFront)drawObject(extras.canoFront,337,280,52,53);
+          else{ctx.fillStyle='#e77d32';ctx.fillRect(341,299,43,31);retroText('🍔',362,319,15);}
           for(const n of mapLevels){
+            if(n.id==='shop'){
+              ctx.fillStyle='#ffe5a8';ctx.fillRect(n.x-13,n.y-7,26,16);
+              ctx.fillStyle='#de8427';ctx.fillRect(n.x-10,n.y-8,20,11);
+              if(chosen===n){ctx.strokeStyle='#fff7ce';ctx.lineWidth=3;ctx.strokeRect(n.x-20,n.y-25,40,47);}
+              continue;
+            }
             const complete=!!levelComplete[n.id];
             ctx.fillStyle='#29242b';ctx.fillRect(n.x-13,n.y-8,28,18);
             ctx.fillStyle=complete?'#f8c545':n.color;ctx.fillRect(n.x-10,n.y-10,22,15);
@@ -904,8 +944,8 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           let footerText=mapTip;
           if(chosen){
             if(chosen.open){
-              const status=levelComplete[chosen.id]?' • CONCLUÍDA':'';
-              footerText='FASE '+chosen.id+' • '+chosen.name+status+' • ENTER / A';
+              const status=chosen.id!=='shop'&&levelComplete[chosen.id]?' • CONCLUÍDA':'';
+              footerText=chosen.id==='shop'?'🍔 CANO BURGER • LOJA • ENTER / A':('FASE '+chosen.id+' • '+chosen.name+status+' • ENTER / A');
             } else footerText='FASE 3 • EM BREVE';
           }
           retroText(footerText,400,432,8,'#fff8cf');
@@ -941,7 +981,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
         function setHUD() {
           HUD.score.textContent = `SCORE: ${score}`;
           if(HUD.coins && HUD.coins.textContent!=='🪙 '+coins)HUD.coins.textContent='🪙 '+coins;
-          if (HUD.level) HUD.level.textContent = `FASE: ${level}`;
+          if (HUD.level) HUD.level.textContent = state==='shop'?'CANO BURGER':('FASE: '+level);
           const showDamage=elapsedSeconds<damagedHeartUntil;
           const signature=[lives,gameLives(),showDamage?damagedHeartIndex:-1].join(':');
           if(HUD.lives&&signature!==lastHeartSignature){
@@ -982,7 +1022,9 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           forestGround: '47.png', dirt: '48.jpg', wood: '49.png', magic: '50.png',
           checkpointOff: '51.png', checkpointOn: '52.png', villain: '53.png', portal: '54.png', mapHead: '55.jpg',
           totemOn: '56.png', totemOff: '57.png', skyTemple: '58.png', skyGround: '59.png', skyPlatform: '60.png', skyCrow: '61.png', skyAltarOff: '62.png', skyAltarOn: '63.png', windShort: '64.png', windLong: '65.png', windUp: '66.png', villainDrink: '67.png',
-          superHero:'78.png', burger:'79.png', heart:'80.png', dashHero:'81.png', dashSuper:'82.png', heartHit:'83.png'
+          superHero:'78.png', burger:'79.png', heart:'80.png', dashHero:'81.png', dashSuper:'82.png', heartHit:'83.png',
+          canoBackground:'119.png',canoForeground:'120.png',canoCounter:'121.png',
+          canoFront:'122.png',canoBack:'123.png',canoDecor:'124.png'
         };
 
         function cropSprite(img) {
@@ -1084,6 +1126,39 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
             img.src=encodeURI(path);
           }
         }
+
+        // NPCs da CANO BURGER: nomes EXATOS dos arquivos existentes na main.
+        const canoNpcPaths={
+          alan:{
+            idle:'95 alan.png',walk1:'96 alan walk 1.png',walk2:'97 alan walk 2.png',
+            lookUp:'98 alan up.png',lookDown:'99 alan down.png',
+            talkOpen:'100 alan open.png',talkClosed:'101 alan close.png',
+            wave:'102 alan greet.png',happy:'103 alan happy.png',thinking:'104 thinking.png',
+            surprised:'105 alan surprised.png',crossed:'106 alan cruzado.png'
+          },
+          humberto:{
+            idle:'107 humberto idle.png',idleAlt:'94 humberto.png',
+            walk1:'108 humberto walk 1.png',walk2:'109 humberto walk 2.png',
+            lookUp:'110 humberto up.png',lookDown:'111 humberto down.png',
+            talkOpen:'112 humbeto open.png',talkClosed:'113 humberto close.png',
+            happy:'114 humberto happy.png',wave:'115 humberto tchau.png',
+            thinking:'116 humberto braços cruzados.png',surprised:'117 humberto surprised.png',
+            crossed:'118 braços cruzados.png'
+          }
+        };
+        processedAssets.canoNpc={alan:{},humberto:{}};
+        for(const [name,poses] of Object.entries(canoNpcPaths)){
+          for(const [pose,path] of Object.entries(poses)){
+            const image=new Image();
+            image.onload=()=>{
+              try{processedAssets.canoNpc[name][pose]=cropSprite(image);}
+              catch(error){console.warn('Sprite CANO BURGER:',path,error);}
+            };
+            image.onerror=()=>console.warn('Imagem de NPC ausente:',path);
+            image.src=encodeURI(path);
+          }
+        }
+
         Object.entries(originalPaths).forEach(([key,path])=>{
           const img=new Image();assets[key]=img;
           img.onload=()=>{
@@ -1654,6 +1729,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           if(level===3&&skyCheckpointReached)cameraX=Math.max(0,Math.min(SKY_END-GAME_WIDTH,player.x-320));
         }
         function restartCurrentLevel() {
+          if(state==='shop'){enterCanoShop();return;}
           if(state==='map'){mapHead.x=139;mapHead.y=319;return;}
           state='playing';lives=gameLives();score=0;elapsedSeconds=0;invulnerable=0;
           checkpointReached=false;checkpointX=0;
@@ -1809,9 +1885,17 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
 
         window.addEventListener('keydown', e=>{
           if(menuOpen)return;
+          if(state==='shop'&&shopPanelOpen){if(e.code==='Escape'){e.preventDefault();canoCloseShop();}return;}
           if(e.code==='KeyI'){e.preventDefault();window.toggleInventario();return;}
           if(inventoryOpen){if(e.code==='Escape'){e.preventDefault();window.toggleInventario();}return;}
           if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','KeyA','KeyD','KeyW','KeyS','KeyX','KeyT','Enter'].includes(e.code))e.preventDefault();
+          if(state==='shop'){
+            if((e.code==='Enter'||e.code==='Space'||e.code==='KeyE')&&!e.repeat){e.preventDefault();canoShopAction();return;}
+            if(e.code==='Escape'){e.preventDefault();returnToMap();return;}
+            if(e.code==='ArrowLeft'||e.code==='KeyA')keys.left=true;
+            if(e.code==='ArrowRight'||e.code==='KeyD')keys.right=true;
+            return;
+          }
           if(state==='map'){
             if(e.repeat && (e.code==='Enter'||e.code==='Space'))return;
             if(e.code==='Enter'||e.code==='Space'){chooseMapLevel();return;}
@@ -1843,8 +1927,13 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           const el=document.getElementById(id);if(!el)return;
           const press=e=>{
             e.preventDefault();
-            if(inventoryOpen||menuOpen)return;
+            if(inventoryOpen||menuOpen||shopPanelOpen)return;
             el.setPointerCapture?.(e.pointerId);
+            if(state==='shop'){
+              if(id==='btn-jump'){canoShopAction();return;}
+              if(key==='left'||key==='right')keys[key]=true;
+              return;
+            }
             if(state==='map'){
               if(id==='btn-jump'){chooseMapLevel();return;}
               keys[key]=true;return;
@@ -2014,9 +2103,11 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
         }
         function update(dt,now){
           document.body.classList.toggle('map-mode',state==='map');
+          document.body.classList.toggle('sgb-shop-mode',state==='shop');
           if(!sceneReady||inventoryOpen||menuOpen||state==='menu')return;
           updateToast();
           if(state==='map'){updateMap(dt);return;}
+          if(state==='shop'){updateCanoShop(dt);return;}
           if(state==='cutscene'){
             cinematicSeconds=(now-cutsceneStart)/1000;
             if(cinematicSeconds>=10.1){levelComplete[1]=true;returnToMap();}
@@ -2959,6 +3050,246 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           }
         }
 
+
+        // CANO BURGER: fase horizontal não-combatente, preserva a fase anterior.
+        const CANO_WIDTH=2240,CANO_FLOOR=381,CANO_PRICE=10;
+        const CANO_FRONT_X=160,CANO_BACK_X=CANO_WIDTH-168,CANO_REGISTER_X=1170;
+        let shopPanelOpen=false,shopClock=0,shopNextConversation=7,shopConversation=null;
+        let shopConversationDeck=[],shopLastConversation=-1,shopHeroDistance=0;
+        const shopActors=[
+          {name:'alan',x:1000,target:1000,walked:0,dir:1,rest:0,pose:'idle'},
+          {name:'humberto',x:1250,target:1250,walked:0,dir:-1,rest:0,pose:'idle'}
+        ];
+        const canoArguments=[
+          [['ALAN','HUMBERTO! EU ACABEI DE LIMPAR ESSE BALCÃO!'],['HUMBERTO','E EU ACABEI DE SUJAR. TRABALHO EM EQUIPE!'],['ALAN','VOCÊ NÃO TEM O MÍNIMO DE HIGIENE?!'],['HUMBERTO','TENHO SIM. TOMEI BANHO NA TERÇA!']],
+          [['ALAN','ESSE HAMBÚRGUER TÁ COMPLETAMENTE QUEIMADO!'],['HUMBERTO','É DEFUMADO, SEU FRESCO!'],['ALAN','ELE TÁ PRETO!'],['HUMBERTO','É A NOSSA EDIÇÃO NOTURNA!']],
+          [['ALAN','VOCÊ NÃO PODE COBRAR 900 MOEDAS NUM HAMBÚRGUER!'],['HUMBERTO','PODE SIM. ACABEI DE COBRAR!'],['ALAN','NINGUÉM VAI COMPRAR ISSO!'],['HUMBERTO','ENTÃO SOBRA MAIS PRA MIM!']],
+          [['ALAN','QUEM MEXEU NA MINHA RECEITA SECRETA?!'],['HUMBERTO','EU. TAVA SEM GRAÇA.'],['ALAN','VOCÊ COLOCOU O QUÊ?!'],['HUMBERTO','NÃO SEI. ACHEI NUM CANO VERDE.']],
+          [['ALAN','VOCÊ PRECISA SER MAIS EDUCADO COM OS CLIENTES!'],['HUMBERTO','EU SOU EDUCADO!'],['ALAN','VOCÊ MANDOU UM CLIENTE EMBORA!'],['HUMBERTO','ELE PEDIU HAMBÚRGUER SEM PÃO!']],
+          [['ALAN','RECEBEMOS UMA AVALIAÇÃO DE UMA ESTRELA!'],['HUMBERTO','ÓTIMO. UMA A MAIS DO QUE EU ESPERAVA!'],['ALAN','DISSERAM QUE O ATENDENTE ERA MAL-EDUCADO!'],['HUMBERTO','PELO MENOS LEMBRARAM DE MIM!']],
+          [['ALAN','SUMIRAM DEZ HAMBÚRGUERES DO ESTOQUE!'],['HUMBERTO','MISTÉRIO TERRÍVEL.'],['ALAN','POR QUE VOCÊ TÁ COM MOLHO NA BARBA?!'],['HUMBERTO','TÔ INVESTIGANDO AS PISTAS!']],
+          [['ALAN','VOCÊ PRECISA LAVAR ESSE AVENTAL!'],['HUMBERTO','ESSE AVENTAL TEM HISTÓRIA!'],['ALAN','TEM É UM ECOSSISTEMA INTEIRO!'],['HUMBERTO','ENTÃO RESPEITA OS MORADORES!']],
+          [['ALAN','QUEM PINTOU CANO BUGUER NA PLACA?!'],['HUMBERTO','EU. ECONOMIZEI UMA LETRA!'],['ALAN','VOCÊ ESCREVEU O NOME ERRADO!'],['HUMBERTO','MARKETING, ALAN! AGORA TODO MUNDO COMENTA!']],
+          [['ALAN','ÀS VEZES EU NÃO SEI COMO AINDA TRABALHO COM VOCÊ.'],['HUMBERTO','PORQUE NINGUÉM FAZ HAMBÚRGUER MELHOR QUE EU.'],['ALAN','...É, INFELIZMENTE VOCÊ COZINHA BEM.'],['HUMBERTO','E TU CUIDA BEM DA LOJA. MAS NÃO ESPALHA!']]
+        ];
+        function shuffledShopDeck(){
+          const deck=canoArguments.map((_,i)=>i);
+          for(let i=deck.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[deck[i],deck[j]]=[deck[j],deck[i]];}
+          if(deck[0]===shopLastConversation&&deck.length>1)[deck[0],deck[1]]=[deck[1],deck[0]];
+          return deck;
+        }
+        function enterCanoShop(){
+          state='shop';shopPanelOpen=false;shopClock=0;shopNextConversation=6;shopConversation=null;
+          shopConversationDeck=shuffledShopDeck();
+          document.getElementById('cano-shop-panel').hidden=true;
+          player.x=CANO_FRONT_X+42;player.y=CANO_FLOOR-player.h;player.vx=player.vy=0;
+          player.direction=1;player.animFrame=0;cameraX=0;shopHeroDistance=0;
+          shopActors[0].x=990;shopActors[0].target=990;shopActors[0].rest=1;
+          shopActors[1].x=1290;shopActors[1].target=1290;shopActors[1].rest=1;
+          keys.left=keys.right=keys.up=keys.down=false;
+          superPower.until=superPower.dashUntil=superPower.cooldownUntil=0;
+          setHUD();
+          showItemToast('CANO BURGER: A/ENTER/E PARA INTERAGIR');
+          if(activeSlot!==null)saveCurrentSlot(false);
+        }
+        function canoCloseShop(){
+          if(!shopPanelOpen)return;
+          shopPanelOpen=false;document.getElementById('cano-shop-panel').hidden=true;
+          document.getElementById('btn-jump')?.focus();
+          keys.left=keys.right=keys.up=keys.down=false;
+        }
+        window.canoCloseShop=canoCloseShop;
+        function canoOpenCounter(){
+          shopPanelOpen=true;keys.left=keys.right=keys.up=keys.down=false;
+          document.getElementById('cano-shop-panel').hidden=false;
+          canoUpdateCounter();
+          document.getElementById('cano-shop-buy')?.focus();
+        }
+        function canoUpdateCounter(message){
+          const money=document.getElementById('cano-shop-money');
+          const info=document.getElementById('cano-shop-message');
+          const buy=document.getElementById('cano-shop-buy');
+          if(money)money.textContent='SEU SALDO: '+coins+' MOEDAS';
+          if(info)info.textContent=message||'ATIVA A SUPER FORÇA ATÉ O FIM DA FASE.';
+          if(buy)buy.disabled=coins<CANO_PRICE||(inventory.consumables.burger||0)>=99;
+        }
+        function canoBuyBurger(){
+          if(state!=='shop'||!shopPanelOpen)return false;
+          const stock=inventory.consumables.burger||0;
+          if(coins<CANO_PRICE){canoUpdateCounter('MOEDAS INSUFICIENTES!');return false;}
+          if(stock>=99){canoUpdateCounter('INVENTÁRIO CHEIO! LIMITE DE 99.');return false;}
+          // Transação atômica em memória: deduz moedas somente se o item entrar no inventário.
+          if(!addConsumable('burger',1)){canoUpdateCounter('NÃO FOI POSSÍVEL ENTREGAR O ITEM.');return false;}
+          coins-=CANO_PRICE;
+          unlockInventory();renderInventory();setHUD();
+          if(activeSlot!==null)saveCurrentSlot(false);
+          const talker=Math.random()<.5?'ALAN':'HUMBERTO';
+          canoUpdateCounter(talker==='ALAN'?'ALAN: MUITO OBRIGADO! VOLTE SEMPRE!':'HUMBERTO: AGORA VAI SALVAR A PRINCESA!');
+          showItemToast('🍔 HAMBÚRGUER ADQUIRIDO POR 10 MOEDAS!');
+          return true;
+        }
+        window.canoBuyBurger=canoBuyBurger;
+        function canoShopAction(){
+          if(state!=='shop'||shopPanelOpen)return;
+          const x=player.x+player.w/2;
+          if(Math.abs(x-CANO_FRONT_X)<76){showItemToast('SAÍDA: PORTA PRINCIPAL');returnToMap();return;}
+          if(Math.abs(x-CANO_BACK_X)<76){showItemToast('SAÍDA: PORTA DOS FUNDOS');returnToMap();return;}
+          if(shopConversation){
+            shopConversation.noticed=true;
+            showItemToast('UM INSTANTE... ELES AINDA ESTÃO DISCUTINDO!');
+            return;
+          }
+          if(Math.abs(x-CANO_REGISTER_X)<155){canoOpenCounter();return;}
+          const npc=shopActors.find(n=>Math.abs(n.x-x)<75);
+          if(npc){
+            npc.dir=x>npc.x?1:-1;
+            shopConversation={lines:[
+              [npc.name.toUpperCase(),npc.name==='alan'?'BEM-VINDO! DEIXAMOS TUDO LIMPO PRA VOCÊ.':'VEIO COMER OU SÓ FISCALIZAR, CAMPEÃO?'],
+              ['GABRIEL','VOU DAR UMA OLHADA NOS HAMBÚRGUERES.']
+            ],index:0,until:shopClock+3,noticed:false,recognized:true};
+            return;
+          }
+          showItemToast('APROXIME-SE DO BALCÃO OU DE UMA PORTA!');
+        }
+        function canoStartArgument(){
+          if(shopConversation||!shopConversationDeck.length)shopConversationDeck=shuffledShopDeck();
+          const index=shopConversationDeck.shift();shopLastConversation=index;
+          shopConversation={lines:canoArguments[index].map(pair=>pair.slice()),index:0,until:shopClock+3.05,noticed:false,recognized:false};
+          for(const npc of shopActors){npc.rest=0;npc.pose='talkClosed';}
+        }
+        function updateCanoShop(dt){
+          if(shopPanelOpen)return;
+          shopClock+=dt;
+          const direction=(keys.right?1:0)-(keys.left?1:0);
+          player.x=Math.min(CANO_WIDTH-player.w-50,Math.max(45,player.x+direction*240*dt));
+          if(direction){player.direction=direction;shopHeroDistance+=Math.abs(direction*240*dt);}
+          player.y=CANO_FLOOR-player.h;
+          cameraX=Math.min(CANO_WIDTH-GAME_WIDTH,Math.max(0,player.x-GAME_WIDTH*.45));
+          const heroX=player.x+player.w/2;
+          if(!shopConversation&&shopClock>=shopNextConversation){
+            const gap=Math.abs(shopActors[0].x-shopActors[1].x);
+            if(gap<245)canoStartArgument();
+            else{shopActors[0].target=1120;shopActors[1].target=1255;}
+          }
+          for(const npc of shopActors){
+            if(shopConversation){
+              const speaker=shopConversation.lines[shopConversation.index]?.[0]?.toLowerCase();
+              npc.pose=speaker===npc.name?(Math.floor(shopClock*3.4)%2?'talkOpen':'talkClosed'):
+                (npc.name==='alan'?'crossed':'thinking');
+              npc.dir=npc.name==='alan'?1:-1;
+              continue;
+            }
+            if(npc.rest>0){npc.rest-=dt;npc.pose=Math.sin(shopClock+npc.x)*.5>.3?'lookUp':'idle';continue;}
+            if(Math.abs(npc.target-npc.x)<8){
+              npc.pose=npc.name==='alan'?'thinking':'crossed';
+              npc.rest=1.2+Math.random()*2.7;
+              npc.target=340+Math.random()*1540;
+            }else{
+              npc.dir=npc.target>npc.x?1:-1;
+              const speed=npc.name==='alan'?61:83;
+              const distance=Math.min(Math.abs(npc.target-npc.x),speed*dt);
+              npc.x+=npc.dir*distance;npc.walked+=distance;
+              npc.pose=Math.floor(npc.walked/12)%2?'walk2':'walk1';
+            }
+          }
+          if(shopConversation){
+            if(Math.min(...shopActors.map(n=>Math.abs(n.x-heroX)))<165)shopConversation.noticed=true;
+            if(shopClock>=shopConversation.until){
+              shopConversation.index++;
+              if(shopConversation.index>=shopConversation.lines.length){
+                if(shopConversation.noticed&&!shopConversation.recognized){
+                  shopConversation.lines.push(['ALAN','AH! GABRIEL! DESCULPA, NÃO TE VI!']);
+                  shopConversation.lines.push(['HUMBERTO','TÁ AÍ HÁ QUANTO TEMPO, SEU FOFOQUEIRO?']);
+                  shopConversation.recognized=true;
+                }else{
+                  shopConversation=null;
+                  shopNextConversation=shopClock+19+Math.random()*14;
+                }
+              }
+              if(shopConversation)shopConversation.until=shopClock+3.05;
+            }
+          }
+        }
+        function drawCanoNpc(npc){
+          const frames=processedAssets.canoNpc[npc.name];
+          const img=frames?.[npc.pose]||frames?.idle||frames?.idleAlt;
+          const height=80,center=npc.x,foot=CANO_FLOOR;
+          if(!img?.width||!img?.height){
+            ctx.fillStyle=npc.name==='alan'?'#ad3932':'#383f57';ctx.fillRect(center-16,foot-65,32,65);
+            return;
+          }
+          // Todos os frames são aparados pelo alfa e escalados para a MESMA ALTURA VISUAL.
+          // Evita o personagem "encolher" ao alternar PNGs do ChatGPT e do Gemini.
+          const scale=height/img.height;
+          const width=Math.min(76,Math.round(img.width*scale));
+          ctx.save();
+          if(npc.dir<0){ctx.translate(Math.round(center),0);ctx.scale(-1,1);ctx.drawImage(img,-Math.round(width/2),foot-height,width,height);}
+          else ctx.drawImage(img,Math.round(center-width/2),foot-height,width,height);
+          ctx.restore();
+          ctx.fillStyle='rgba(29,17,17,.33)';ctx.fillRect(Math.round(center-14),CANO_FLOOR+1,28,3);
+        }
+        function drawCanoLine(){
+          if(!shopConversation)return;
+          const near=shopActors.some(n=>Math.abs(n.x-cameraX-GAME_WIDTH/2)<600);
+          if(!near)return;
+          const line=shopConversation.lines[shopConversation.index];
+          if(!line)return;
+          const name=line[0],sentence=line[1],color=name==='ALAN'?'#ffe8aa':name==='HUMBERTO'?'#ffad8d':'#c5eeff';
+          ctx.save();ctx.fillStyle='rgba(20,13,22,.90)';ctx.fillRect(27,64,746,86);
+          ctx.strokeStyle='#f4b252';ctx.lineWidth=3;ctx.strokeRect(27,64,746,86);
+          ctx.font='10px "Press Start 2P",monospace';ctx.textAlign='left';ctx.fillStyle=color;ctx.fillText(name+':',45,89);
+          ctx.font='9px "Press Start 2P",monospace';ctx.fillStyle='#fff7e4';
+          let current='',y=114;const words=sentence.split(' ');
+          for(const word of words){
+            const candidate=current?current+' '+word:word;
+            if(ctx.measureText(candidate).width>706&&current){
+              ctx.fillText(current,45,y);y+=17;current=word;
+            }else current=candidate;
+          }
+          if(current&&y<151)ctx.fillText(current,45,y);
+          ctx.restore();
+        }
+        function drawCanoShop(){
+          ctx.fillStyle='#251521';ctx.fillRect(0,0,GAME_WIDTH,GAME_HEIGHT);
+          ctx.save();ctx.translate(-Math.round(cameraX),0);
+          const bg=extras.canoBackground;
+          if(bg?.width){for(let x=0;x<CANO_WIDTH;x+=1120)drawObject(bg,x,0,1120,GAME_HEIGHT);}
+          else{ctx.fillStyle='#9c623b';ctx.fillRect(0,0,CANO_WIDTH,CANO_FLOOR);ctx.fillStyle='#b88650';ctx.fillRect(0,CANO_FLOOR,CANO_WIDTH,69);}
+          // As portas são sprites diferentes, com a entrada à esquerda e o estoque à direita.
+          if(extras.canoFront)drawObject(extras.canoFront,CANO_FRONT_X-77,185,154,196);
+          if(extras.canoBack)drawObject(extras.canoBack,CANO_BACK_X-77,185,154,196);
+          // Decoração adicional da arte 124 sem colisões; atrás dos personagens.
+          if(extras.canoDecor){
+            ctx.save();ctx.globalAlpha=.83;
+            drawObject(extras.canoDecor,450,168,245,172);
+            drawObject(extras.canoDecor,1558,168,245,172);
+            ctx.restore();
+          }
+          for(const npc of shopActors)drawCanoNpc(npc);
+          // Balcão separado por cima dos NPCs: oculta pernas enquanto atendem.
+          if(extras.canoCounter)drawObject(extras.canoCounter,905,329,500,64);
+          else{ctx.fillStyle='#783f25';ctx.fillRect(905,345,500,50);ctx.fillStyle='#f4b34b';ctx.fillRect(905,335,500,11);}
+          // Gabriel sempre aparece à frente do balcão, podendo percorrer todo o salão.
+          const index=(keys.left||keys.right)?(Math.floor(shopHeroDistance/14)%3+1):0;
+          const hero=processedAssets.heroFrames?.[index]||processedAssets.heroFrames?.[0];
+          drawSpriteOnFeet(hero,player.x+player.w/2,CANO_FLOOR,player.h,player.direction);
+          // Primeiro plano 120 separado da arte principal e sem obstáculos invisíveis.
+          if(extras.canoForeground){ctx.save();ctx.globalAlpha=.47;drawObject(extras.canoForeground,660,315,965,88);ctx.restore();}
+          ctx.fillStyle='#e19a43';ctx.fillRect(0,CANO_FLOOR+6,CANO_WIDTH,5);
+          for(const [x,label] of [[CANO_FRONT_X,'SAÍDA'],[CANO_BACK_X,'FUNDOS'],[CANO_REGISTER_X,'🍔 10 MOEDAS']]){
+            ctx.font='9px "Press Start 2P",monospace';ctx.textAlign='center';
+            ctx.strokeStyle='#271322';ctx.lineWidth=3;ctx.strokeText(label,x,184);
+            ctx.fillStyle='#fff0b0';ctx.fillText(label,x,184);
+            if(Math.abs(player.x+player.w/2-x)<(x===CANO_REGISTER_X?155:76)){
+              ctx.fillStyle='#ffdb72';ctx.fillText('A / ENTER',x,169);
+            }
+          }
+          ctx.restore();
+          ctx.fillStyle='rgba(31,17,27,.85)';ctx.fillRect(0,417,GAME_WIDTH,33);
+          retroText('CANO BURGER   •   A/ENTER: INTERAGIR   •   MAPA: SAIR',GAME_WIDTH/2,438,7,'#fff0bf');
+          drawCanoLine();
+        }
+
         function overlay(title,detail,foot){
           ctx.fillStyle='rgba(8,4,22,.77)';ctx.fillRect(0,0,GAME_WIDTH,GAME_HEIGHT);
           pixelText(title,176,20,'#f2eaff');
@@ -2970,6 +3301,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           if(!sceneReady){ctx.fillStyle='#5c94fc';ctx.fillRect(0,0,GAME_WIDTH,GAME_HEIGHT);pixelText('CARREGANDO A MAGIA...',GAME_HEIGHT/2,12);return;}
           if(state==='menu'){ctx.fillStyle='#0f1432';ctx.fillRect(0,0,GAME_WIDTH,GAME_HEIGHT);return;}
           if(state==='map'){drawMap();return;}
+          if(state==='shop'){drawCanoShop();return;}
           if(level===1)drawLevelOne();else if(level===2)drawLevelTwo();else drawLevelThree();
           if(state==='playing'){drawLevelCoins();drawLevelPickups();drawCombatFxWorld();}
           if(state==='title2')overlay('FASE 2','A FLORESTA MISTERIOSA','ENTER OU BOTÃO A PARA COMEÇAR');
