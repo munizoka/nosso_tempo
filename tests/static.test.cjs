@@ -307,10 +307,11 @@ check('Caminhada só tem dois quadros e retorno ao Idle',
 check('Dialogo prioriza imagens de boca dos dois personagens',
  selectPose({powered:false,speaking:true,voiceOpen:true})==='talkOpen'&&
  selectPose({powered:true,speaking:true,voiceOpen:false})==='talkClosed');
-check('Queda Super nunca usa sprite 145 com cabelo escuro',
- mario.includes("powered&&pose==='jumpFall'?form.jumpApex:null")&&
- mario.includes("jumpFallAlt:'145.png'")&&
- !mario.includes("jumpFall:'145.png'"));
+check('145.png é a pose oficial de queda do Super Gabriel',
+ mario.includes("dash:'142.png',jumpRise:'143.png',jumpApex:'144.png',jumpFall:'145.png'")&&
+ mario.includes("jumpRise:'136.png',jumpApex:'137.png',jumpFall:'138.png'")&&
+ !mario.includes("jumpFallAlt:'145.png'")&&
+ mario.includes("const sprite=form[pose]||"));
 check('Gabriel usa tamanho compatível com NPCs na CANO BURGER',
  mario.includes('drawGabrielNew(player.x+player.w/2,CANO_FLOOR,{inShop:true})')&&
  mario.includes("const height=powered?(pose==='dash'?65:69):64"));
