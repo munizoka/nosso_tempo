@@ -698,7 +698,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           inventory.consumables.burger--;
           superPower.until=Number.POSITIVE_INFINITY; // Não expira enquanto esta fase estiver ativa.
           superPower.dashUntil=0;superPower.cooldownUntil=0;
-          superRunClock=0;superLandingUntil=0;superWasAirborne=!player.grounded;
+          superRunClock=0;superLandingUntil=0;superWasAirborne=false;
           persistInventory();renderInventory();updateDashButton();
           showItemToast('SUPER FORÇA ATIVA ATÉ O FIM DA FASE!');
           return true;
