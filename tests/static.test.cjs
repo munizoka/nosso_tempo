@@ -287,3 +287,32 @@ check('Super Gabriel alterna boca fechada, intermediária e aberta',
 check('Fala do Gabriel normal mantém desenho anterior',
  JSON.stringify(mouthAt(0,false))!==JSON.stringify(mouthAt(0,true)) &&
  mouthAt(0,false)[0][0]!==mouthAt(0,true)[0][0]);
+
+ 
+// Investida: ajuste pontual de ergonomia, com demais mecânicas preservadas.
+check('Investida menos intensa, com cooldown original',
+ mario.includes('DASH_SPEED=9, DASH_DURATION=.40, DASH_COOLDOWN=.95') &&
+ mario.includes('player.vx=superPower.facing*DASH_SPEED') &&
+ !mario.includes('player.vx=superPower.facing*13'));
+const moveSection=mario.match(/          const effectiveSpeed=player\.speed\*[\s\S]*?          else player\.vx=0;/)?.[0];
+check('Controle de movimento da investida disponível para regressão',!!moveSection);
+function checkDashMotion(facing,pressedLeft,pressedRight){
+ const player={vx:0,direction:facing,speed:5.5};
+ const superPower={facing,dashUntil:1,cooldownUntil:1.1};
+ const keys={left:pressedLeft,right:pressedRight};
+ const elapsedSeconds=.1,activeBuffs={speedUntil:0};
+ const DASH_SPEED=9;
+ const isDashing=()=>elapsedSeconds<superPower.dashUntil;
+ new Function('player','superPower','keys','elapsedSeconds','activeBuffs','isDashing','DASH_SPEED',moveSection)(
+ player,superPower,keys,elapsedSeconds,activeBuffs,isDashing,DASH_SPEED);
+ return {speed:player.vx,direction:player.direction,active:isDashing(),cooldown:superPower.cooldownUntil};
+}
+const dashRight=checkDashMotion(1,false,false),dashLeft=checkDashMotion(-1,false,false);
+check('Dash mantém mesma intensidade nos dois sentidos',
+ dashRight.speed===9&&dashLeft.speed===-9&&dashRight.active&&dashLeft.active);
+const stopRight=checkDashMotion(1,true,false),stopLeft=checkDashMotion(-1,false,true);
+check('Direção oposta interrompe o dash e devolve controle',
+ stopRight.speed===-5.5&&!stopRight.active&&stopRight.direction===-1&&
+ stopLeft.speed===5.5&&!stopLeft.active&&stopLeft.direction===1);
+check('Interromper dash não altera cooldown',
+ stopRight.cooldown===1.1&&stopLeft.cooldown===1.1);
