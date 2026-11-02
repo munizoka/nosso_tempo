@@ -267,29 +267,57 @@ check('Esquerda e direita alternam no mesmo ritmo por distância',
  walkRight.frames.includes(0)&&walkRight.frames.includes(1) &&
  walkLeft.distances.every((v,i)=>v===walkRight.distances[i]));
 
-check('Boca do Super Gabriel tem âncora e animação próprias',
- mario.includes('function drawSpeakingSprite(sprite,centerX,footY,height,character,facing=1,superTalking=false)') &&
- mario.includes('const mouthX=Math.round(w*.23),mouthY=-Math.round(height*.57)') &&
- mario.includes('Math.floor(gameNow/125)%4') &&
- mario.includes('isSuperGabriel()&&sprite===powerful)'));
-const talkSource=mario.match(/        function drawSpeakingSprite\(sprite,[\s\S]*?\n        \}/)?.[0];
-check('Animação de boca isolada para regressão',!!talkSource);
-function mouthAt(t,powered){
- const rects=[];
- const canvas={fillRect:(...a)=>rects.push(a),save(){},restore(){},translate(){},scale(){}};
- new Function('ctx','gameNow','activeDialogueSpeaker','drawSpriteOnFeet','getCharacterSkin',
- talkSource+'\ndrawSpeakingSprite({width:90,height:200},20,120,40,"GABRIEL",1,'+powered+');')(
- canvas,t,()=> 'GABRIEL',()=>{},()=> '#dfa77a');
- return rects;
-}
-check('Super Gabriel alterna boca fechada, intermediária e aberta',
- JSON.stringify(mouthAt(0,true))!==JSON.stringify(mouthAt(125,true)) &&
- JSON.stringify(mouthAt(125,true))!==JSON.stringify(mouthAt(250,true)));
-check('Fala do Gabriel normal mantém desenho anterior',
- JSON.stringify(mouthAt(0,false))!==JSON.stringify(mouthAt(0,true)) &&
- mouthAt(0,false)[0][0]!==mouthAt(0,true)[0][0]);
+// Gabriel 2026: imagens individuais substituem pintura da boca.
+const gabrielFiles=[
+ '125.png','126 idle.png','127 walk 1.png','128 walk 2.png','129 up.png',
+ '130.png','131.png','132.png','133.png','134.png','135.png',
+ '136.png','137.png','138.png','139.png','140.png','141.png',
+ '142.png','143.png','144.png','145.png'
+];
+check('21 novas imagens Gabriel publicadas no GitHub',
+ gabrielFiles.every(file=>fs.existsSync(path.join(root,file))&&fs.statSync(path.join(root,file)).size>1000));
+check('Poses adultas carregadas e recortadas pela transparência',
+ mario.includes('const gabrielSpritePaths=')&&
+ mario.includes("idle:'126 idle.png'")&&mario.includes("walk1:'127 walk 1.png'")&&
+ mario.includes("talkOpen:'131.png'")&&mario.includes("talkClosed:'132.png'")&&
+ mario.includes("dash:'142.png'")&&mario.includes("jumpApex:'144.png'")&&
+ mario.includes('processedAssets.gabriel[form][pose]=cropSprite(image)'));
+check('Diálogos do herói usam boca aberta e fechada sem pintura no rosto',
+ mario.includes("speaking,voiceOpen:Math.floor(gameNow/160)%2===0")&&
+ mario.includes("if(speaking)return voiceOpen?'talkOpen':'talkClosed'")&&
+ mario.includes('drawGabrielNew(player.x+player.w/2,player.y+player.h)')&&
+ !mario.includes("isSuperGabriel()&&sprite===powerful)"));
+check('Vitoria mantém animação de fala existente',
+ mario.includes('function drawSpeakingSprite(')&&
+ mario.includes('drawSpeakingSprite(processedAssets.princess,'));
+const poseSource=mario.match(/        function gabrielPoseName\(\{[\s\S]*?\n        \}/)?.[0];
+check('Seletor de poses do novo Gabriel está disponível',!!poseSource);
+const selectPose=new Function(poseSource+'\nreturn gabrielPoseName;')();
+check('Pulo em três fases guiado pela velocidade',
+ selectPose({grounded:false,vy:-10})==='jumpRise'&&
+ selectPose({grounded:false,vy:-1})==='jumpApex'&&
+ selectPose({grounded:false,vy:8})==='jumpFall');
+check('Somente Super Gabriel pode executar dash',
+ selectPose({powered:true,dashing:true})==='dash'&&
+ selectPose({powered:false,dashing:true})==='idle');
+check('Caminhada só tem dois quadros e retorno ao Idle',
+ selectPose({moving:true,walkFrame:0})==='walk1'&&
+ selectPose({moving:true,walkFrame:1})==='walk2'&&
+ selectPose({moving:false,walkFrame:1})==='idle');
+check('Dialogo prioriza imagens de boca dos dois personagens',
+ selectPose({powered:false,speaking:true,voiceOpen:true})==='talkOpen'&&
+ selectPose({powered:true,speaking:true,voiceOpen:false})==='talkClosed');
+check('Queda Super nunca usa sprite 145 com cabelo escuro',
+ mario.includes("powered&&pose==='jumpFall'?form.jumpApex:null")&&
+ mario.includes("jumpFallAlt:'145.png'")&&
+ !mario.includes("jumpFall:'145.png'"));
+check('Gabriel usa tamanho compatível com NPCs na CANO BURGER',
+ mario.includes('drawGabrielNew(player.x+player.w/2,CANO_FLOOR,{inShop:true})')&&
+ mario.includes("const height=powered?(pose==='dash'?65:69):64"));
+check('Sprites legados preservados apenas como fallback',
+ mario.includes('processedAssets.heroFrames?.[0]')&&
+ mario.includes('processedAssets.superHeroFrames?.[0]'));
 
- 
 // Investida: ajuste pontual de ergonomia, com demais mecânicas preservadas.
 check('Investida menos intensa, com cooldown original',
  mario.includes('DASH_SPEED=9, DASH_DURATION=.40, DASH_COOLDOWN=.95') &&
@@ -381,13 +409,10 @@ const shopFull=simulateCanoPurchase(100,99);
 check('Inventário cheio impede compra e preserva saldo',
  shopFull.buy()===false&&shopFull.get().coins===100&&shopFull.get().stock===99);
 
-// Regressão: na hamburgueria, andar não pode usar sprites de pulo nem da 4ª pose.
-// No jogo principal só 0 e 1 são frames de caminhada.
-const shopFrameExpression=mario.match(/const index=\(keys\.left\|\|keys\.right\)\?Math\.floor\(shopHeroDistance\/32\)%2:0;/)?.[0];
-check('CANO BURGER usa somente dois quadros de caminhada de Gabriel',!!shopFrameExpression);
-const shopFrame=(moving,distance)=>moving?Math.floor(distance/32)%2:0;
-check('Gabriel alterna apenas os quadros 0 e 1 em caminhada',
- [0,15,32,64,95,96,128,160].map(d=>shopFrame(true,d)).every(f=>f===0||f===1)&&
- shopFrame(true,0)===0&&shopFrame(true,32)===1&&shopFrame(true,64)===0);
-check('Gabriel volta ao idle quando para na CANO BURGER',
- shopFrame(false,32)===0&&shopFrame(false,70)===0);
+// A loja e as fases usam o mesmo seletor do Gabriel.
+check('CANO BURGER compartilha animação sem saltos indevidos',
+ mario.includes('const walkFrame=inShop?Math.floor(shopHeroDistance/30)%2:player.animFrame')&&
+ mario.includes("grounded:inShop||state!=='playing'||player.grounded")&&
+ mario.includes('drawGabrielNew(player.x+player.w/2,CANO_FLOOR,{inShop:true})'));
+check('Gabriel volta ao Idle quando para na loja',
+ selectPose({grounded:true,moving:false})==='idle');
