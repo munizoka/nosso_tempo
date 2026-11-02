@@ -208,7 +208,8 @@ check('Perseguicao continua antes dos dez segundos sem contato',chaseDemo.state(
 chaseDemo.setTime(10.1);chaseDemo.step();
 check('Perseguicao termina depois de dez segundos sem contato',chaseDemo.state()==='patrol');
 
-\n// Polimento antes da Fase 4: andar dos mobs, fala transformada e Game Over.
+
+// Polimento antes da Fase 4: andar dos mobs, fala transformada e Game Over.
 check('Game Over com mensagem de Vitoria sem acento',
  mario.includes("overlay('GAME OVER','A VITORIA FOI TALARICADA','CLIQUE EM RECOMEÇAR')") &&
  !mario.includes("overlay('GAME OVER','AS VIDAS ACABARAM'"));
