@@ -21,6 +21,7 @@
         #game-shell {position:fixed;inset:0;display:flex;align-items:center;justify-content:center;overflow:hidden;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);box-sizing:border-box;}
         #game-canvas {display:block;width:800px;height:450px;max-width:100%;max-height:100%;image-rendering:pixelated;image-rendering:crisp-edges;background:#d7c6a6;touch-action:none;}
         #game-hud {top:max(8px,env(safe-area-inset-top));left:max(8px,env(safe-area-inset-left));right:max(8px,env(safe-area-inset-right));}
+        .sgb-coins-hud{position:absolute;left:56px;top:9px;padding:7px 9px;border:2px solid #f4c458;border-radius:8px;background:rgba(36,24,35,.9);color:#ffed94;white-space:nowrap;font:700 clamp(9px,1.4vw,12px) 'Press Start 2P',monospace;text-shadow:1px 2px #4b311f;pointer-events:none;box-shadow:0 2px 0 #643e24}
         /* Reserva margens para o polegar, bordas curvas e sensor frontal do iPhone. */
         .game-control-panel {position:fixed;left:max(32px,calc(env(safe-area-inset-left) + 30px));right:max(32px,calc(env(safe-area-inset-right) + 30px));bottom:max(16px,calc(env(safe-area-inset-bottom) + 14px));z-index:40;pointer-events:none;display:flex;justify-content:space-between;align-items:flex-end;}
         .game-control-panel button {pointer-events:auto;touch-action:none;}
@@ -293,6 +294,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
     <div id="game-hud" class="absolute z-50 flex justify-between items-start pointer-events-none">
         <a href="index.html" class="w-12 h-12 bg-zinc-800/80 border-2 border-white rounded-full flex items-center justify-center text-white font-sans font-bold backdrop-blur pointer-events-auto shadow-lg text-2xl active:scale-90 transition-transform">←</a>
         
+        <div id="ui-coins" class="sgb-coins-hud" role="status" aria-live="polite" aria-label="Moedas da campanha">🪙 0</div>
         <div class="hud-stats flex gap-4 ui-text items-center mt-2 hidden sm:flex">
             <span id="ui-score">SCORE: 0</span>
             <span id="ui-lives" aria-label="Vidas">🍄 x5</span>
@@ -446,6 +448,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
 
         const HUD = {
           score: document.getElementById('ui-score'),
+          coins: document.getElementById('ui-coins'),
           lives: document.getElementById('ui-lives'),
           time: document.getElementById('ui-time'),
           level: document.getElementById('ui-level')
@@ -458,6 +461,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
         let forestSceneStart = 0;
         let forestSceneSeconds = 0;
         let score = 0;
+        let coins = 0; // Saldo por campanha, separado do SCORE.
         let lives = 5;
         let elapsedSeconds = 0;
         let previousFrame = performance.now();
@@ -473,7 +477,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
         // Velocidade normal do herói: 5.5; antes a investida usava 13 por .52s.
         const SUPER_DURATION=12, DASH_SPEED=9, DASH_DURATION=.40, DASH_COOLDOWN=.95;
         const superPower={until:0,dashUntil:0,cooldownUntil:0,facing:1};
-        const burgerDrops=[],questionBlocksHit=new Set();
+        // O hambúrguer 79.png permanece no catálogo; os '?' serão moedas.
         // Partículas e poses de derrota duram apenas no relógio ativo do jogo.
         const sgbParticles=[],fallenEnemies=[];
         let lastDashDustAt=-1;
@@ -533,6 +537,55 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
         // Desbloqueio exclusivo do slot: não reutilizar a flag global antiga.
         const activeBuffs={shield:0,speedUntil:0,jumpUntil:0};
         const worldPickups=[]; // Cadastro futuro: registerLevelPickup({id,level,x,y,itemId})
+        // Cada moeda pode ser coletada uma única vez por campanha.
+        // As duas primeiras tomam o lugar dos antigos blocos '?' da fase 1.
+        const COIN_PICKUPS=[
+          {level:1,x:260,y:228},
+          {level:1,x:555,y:228},
+          {level:1,x:850,y:327},
+          {level:1,x:1430,y:327},
+          {level:1,x:1830,y:327},
+          {level:1,x:2410,y:327},
+          {level:1,x:2770,y:327},
+          {level:1,x:3280,y:327},
+          {level:2,x:170,y:327},
+          {level:2,x:740,y:327},
+          {level:2,x:1060,y:327},
+          {level:2,x:1520,y:327},
+          {level:2,x:2000,y:327},
+          {level:2,x:2430,y:327},
+          {level:2,x:2890,y:327},
+          {level:3,x:130,y:327},
+          {level:3,x:985,y:327},
+          {level:3,x:1645,y:327},
+          {level:3,x:2450,y:327},
+          {level:3,x:2990,y:327}
+        ].map(c=>({...c,w:28,h:28,id:'coin:'+c.level+':'+c.x+':'+c.y}));
+        function updateLevelCoins(){
+          for(const coin of COIN_PICKUPS){
+            if(coin.level!==level||collectedPickups.has(coin.id)||!isColliding(player,coin))continue;
+            collectedPickups.add(coin.id);coins=Math.min(9999,coins+1);
+            emitPixelBurst(coin.x+14,coin.y+14,['#fff6ad','#ffe376','#eea534'],8,80);
+            setHUD();
+            if(activeSlot!==null)saveCurrentSlot(false);
+          }
+        }
+        function drawLevelCoins(){
+          ctx.save();ctx.translate(-Math.round(cameraX),0);
+          for(const coin of COIN_PICKUPS){
+            if(coin.level!==level||collectedPickups.has(coin.id))continue;
+            const x=coin.x,y=coin.y+Math.round(Math.sin(elapsedSeconds*4+coin.x*.035)*2);
+            ctx.fillStyle='#673612';
+            ctx.fillRect(x+8,y,12,28);ctx.fillRect(x+4,y+4,20,20);ctx.fillRect(x,y+9,28,10);
+            ctx.fillStyle='#f9b937';
+            ctx.fillRect(x+8,y+3,12,22);ctx.fillRect(x+3,y+8,22,12);
+            ctx.fillStyle='#ffe87b';
+            ctx.fillRect(x+8,y+6,12,3);ctx.fillRect(x+6,y+9,3,11);
+            ctx.fillStyle='#fff6bb';ctx.fillRect(x+11,y+9,5,8);
+            ctx.fillStyle='#bd741a';ctx.fillRect(x+19,y+10,3,12);ctx.fillRect(x+12,y+20,7,3);
+          }
+          ctx.restore();
+        }
         let collectedPickups=new Set();
         let itemToastUntil=0,itemToastMessage='';
         function persistInventory(){if(activeSlot!==null)saveCurrentSlot(false);}
@@ -887,6 +940,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
         }
         function setHUD() {
           HUD.score.textContent = `SCORE: ${score}`;
+          if(HUD.coins && HUD.coins.textContent!=='🪙 '+coins)HUD.coins.textContent='🪙 '+coins;
           if (HUD.level) HUD.level.textContent = `FASE: ${level}`;
           const showDamage=elapsedSeconds<damagedHeartUntil;
           const signature=[lives,gameLives(),showDamage?damagedHeartIndex:-1].join(':');
@@ -1095,9 +1149,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           {x:400,y:300,w:60,h:80,type:'pipe'},
           {x:750,y:260,w:60,h:120,type:'pipe'},
           {x:950,y:260,w:60,h:120,type:'pipe'},
-          {x:250,y:220,w:48,h:48,type:'surprise'},
           {x:500,y:220,w:48,h:48,type:'brick'},
-          {x:548,y:220,w:48,h:48,type:'surprise'},
           {x:596,y:220,w:48,h:48,type:'brick'},
           {x:2900,y:332,w:48,h:48,type:'brick'},
           {x:2948,y:284,w:48,h:96,type:'brick'},
@@ -1182,44 +1234,6 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
         let enemies=level1EnemyTemplate.map(e=>({...e}));
         function activeBlocks(){return level===1?level1Blocks:(level===2?level2Blocks:level3Blocks);}
         function isColliding(a,b){return a.x<b.x+b.w&&a.x+a.w>b.x&&a.y<b.y+b.h&&a.y+a.h>b.y;}
-        function questionId(b){return 'burger:1:'+Math.round(b.x)+':'+Math.round(b.y);}
-        function hitQuestionBlock(b){
-          if(level!==1||b.type!=='surprise')return;
-          const id=questionId(b);
-          if(collectedPickups.has(id)||questionBlocksHit.has(id))return;
-          questionBlocksHit.add(id);b.bumpUntil=elapsedSeconds+.25;
-          emitPixelBurst(b.x+b.w/2,b.y,['#ffe88a','#fff7bb','#dbaa64'],9,95);
-          // Sobe do ? e desliza para a direita, aterrissando em chão seguro.
-          burgerDrops.push({id,x:b.x+b.w/2-15,y:b.y-12,w:30,h:30,phase:'rise',
-            peak:b.y-42,drift:0,vy:0});
-          showItemToast('BLOCO SURPRESA: HAMBÚRGUER!');
-        }
-        function updateBurgerDrops(dt){
-          for(let i=burgerDrops.length-1;i>=0;i--){
-            const drop=burgerDrops[i];
-            if(drop.phase==='rise'){
-              drop.y-=105*dt;
-              if(drop.y<=drop.peak){drop.y=drop.peak;drop.phase='fall';}
-            }else if(drop.phase==='fall'){
-              drop.drift=Math.min(82,drop.drift+95*dt);
-              drop.x+=95*dt*(drop.drift<82?1:0);
-              drop.vy=Math.min(250,drop.vy+460*dt);
-              drop.y+=drop.vy*dt;
-              const floor=level1Blocks.find(b=>b.type==='ground'&&drop.x+drop.w/2>=b.x&&drop.x+drop.w/2<b.x+b.w);
-              if(floor&&drop.y+drop.h>=floor.y){drop.y=floor.y-drop.h;drop.phase='idle';}
-            }
-            if(isColliding(player,drop) && (inventory.consumables.burger||0)<99){
-              collectedPickups.add(drop.id);
-              if(addConsumable('burger',1)){
-                burgerDrops.splice(i,1);
-                // Exceção intencional ao desbloqueio da fase 3:
-                // o inventário abre ao ganhar o primeiro consumível.
-                unlockInventory();
-              }else collectedPickups.delete(drop.id);
-            }
-          }
-        }
-
         // Efeitos visuais sem novos recursos: respeitam pausa e o tempo ativo.
         function emitPixelBurst(x,y,colors,count=8,speed=95){
           for(let i=0;i<count;i++){
@@ -1273,12 +1287,6 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
             }
           }catch(err){/* Som opcional, sem afetar o jogo. */}
         }
-        function drawBurgerDrops(){
-          for(const drop of burgerDrops){
-            if(extras.burger)drawObject(extras.burger,drop.x,drop.y,drop.w,drop.h);
-            else{ctx.fillStyle='#e7a34f';ctx.fillRect(drop.x,drop.y,drop.w,drop.h);}
-          }
-        }
         function trySuperDash(){
           if(menuOpen||inventoryOpen||state!=='playing'||!isSuperGabriel()||
              isDashing()||elapsedSeconds<superPower.cooldownUntil)return false;
@@ -1317,6 +1325,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
             difficulty:DIFFICULTIES.includes(data.difficulty)?data.difficulty:'normal',
             level:lv,phase:data.phase==='playing'?'playing':'map',
             score:Math.floor(clamp(data.score,0,9999999,0)),
+            coins:Math.floor(clamp(data.coins,0,9999,0)),
             lives:Math.floor(clamp(data.lives,1,99,5)),
             elapsedSeconds:clamp(data.elapsedSeconds,0,999999,0),
             superRemaining:clamp(data.superRemaining,0,SUPER_DURATION,0),
@@ -1369,7 +1378,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
         function makeSaveSnapshot(){
           return sanitiseSave({
             version:1,savedAt:Date.now(),difficulty,level,
-            phase:state==='playing'?'playing':'map',score,lives,elapsedSeconds,
+            phase:state==='playing'?'playing':'map',score,coins,lives,elapsedSeconds,
             superRemaining:isSuperGabriel()?SUPER_DURATION:0, // Marcador compatível com saves antigos e Firestore.
             player:{x:player.x,y:player.y,direction:player.direction},
             checkpoint:{reached:checkpointReached,x:checkpointX},
@@ -1387,7 +1396,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           return ok;
         }
         function clearForNewCampaign(){
-          level=1;state='playing';score=0;elapsedSeconds=0;
+          level=1;state='playing';score=0;coins=0;elapsedSeconds=0;
           inventory.story.splice(0);for(const id of CONSUMABLE_IDS)inventory.consumables[id]=0;
           inventoryUnlocked=false;inventoryOpen=false;selectedInvItem=null;
           collectedPickups=new Set();
@@ -1411,7 +1420,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           inventory.story.splice(0,inventory.story.length,...data.inventory.story);
           for(const id of CONSUMABLE_IDS)inventory.consumables[id]=data.inventory.consumables[id];
           inventoryUnlocked=data.inventoryUnlocked;selectedInvItem=null;inventoryOpen=false;
-          score=data.score;lives=data.lives;elapsedSeconds=data.elapsedSeconds;
+          score=data.score;coins=data.coins;lives=data.lives;elapsedSeconds=data.elapsedSeconds;
           superPower.until=data.phase==='playing'&&data.superRemaining>0?Number.POSITIVE_INFINITY:0;
           superPower.dashUntil=0;superPower.cooldownUntil=0;
           checkpointReached=data.checkpoint.reached;checkpointX=data.checkpoint.x;
@@ -1654,9 +1663,8 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           activeBuffs.shield=0;activeBuffs.speedUntil=0;activeBuffs.jumpUntil=0;
           superPower.until=superPower.dashUntil=superPower.cooldownUntil=0;
           damagedHeartUntil=0;damagedHeartIndex=-1;lastHeartSignature='';
-          burgerDrops.length=0;questionBlocksHit.clear();
           sgbParticles.length=0;fallenEnemies.length=0;lastDashDustAt=-1;
-          // collectedPickups é do slot: reiniciar não pode duplicar hambúrguer coletado.
+          // collectedPickups é do slot: reiniciar não pode duplicar moedas coletadas.
           enemies=(level===1?level1EnemyTemplate:level===2?level2EnemyTemplate:[]).map(e=>({...e}));
           skyBirds=freshSkyBirds();
           for(const b of [...level2Blocks,...level3Blocks])if(b.moving){b.x=b.baseX;b.y=b.baseY;}
@@ -2104,7 +2112,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
             if(b.type==='skyPlatform' && !(player.vy>=0&&oldFootY<=b.y+7))continue;
             if(isColliding(player,b)){
               if(player.vy>0){player.y=b.y-player.h;player.vy=0;player.grounded=true;}
-              else if(player.vy<0){if(b.type==='surprise')hitQuestionBlock(b);player.y=b.y+b.h;player.vy=0;}
+              else if(player.vy<0){player.y=b.y+b.h;player.vy=0;}
             }
           }
           if(player.y>GAME_HEIGHT+200){loseLife('fall');return;}
@@ -2119,7 +2127,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           }
           tickCombatEffects(dt);
           updateLevelPickups();
-          if(level===1)updateBurgerDrops(dt);
+          updateLevelCoins();
           if(level===3)updateSkyBirds(elapsedSeconds);
           else updateEnemies();
           if(state!=='playing')return;
@@ -2335,16 +2343,11 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           ctx.save();ctx.translate(-Math.round(cameraX),0);
           for(const b of level1Blocks){
             if(b.type==='ground')drawOriginalGround(b);
-            else if(b.type==='surprise'&&(collectedPickups.has(questionId(b))||questionBlocksHit.has(questionId(b)))){
-              const bump=b.bumpUntil>elapsedSeconds?Math.sin(((b.bumpUntil-elapsedSeconds)/.25)*Math.PI)*9:0;
-              drawObject(processedAssets.brick,b.x,b.y-bump,b.w,b.h);
-            }else drawObject(processedAssets[b.type],b.x,
-              b.y-(b.bumpUntil>elapsedSeconds?Math.sin(((b.bumpUntil-elapsedSeconds)/.25)*Math.PI)*9:0),b.w,b.h);
+            else drawObject(processedAssets[b.type],b.x,b.y,b.w,b.h);
           }
           drawObject(processedAssets.castle,castle.x,castle.y,castle.w,castle.h);
           if(state==='cutscene')drawCinematicCharacters(cinematicSeconds);
           else drawSpriteOnFeet(processedAssets.princess,princess.x+princess.w/2,princess.y+princess.h,princess.h);
-          drawBurgerDrops();
           drawEnemies();
           drawHero();
           ctx.restore();
@@ -2968,7 +2971,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           if(state==='menu'){ctx.fillStyle='#0f1432';ctx.fillRect(0,0,GAME_WIDTH,GAME_HEIGHT);return;}
           if(state==='map'){drawMap();return;}
           if(level===1)drawLevelOne();else if(level===2)drawLevelTwo();else drawLevelThree();
-          if(state==='playing'){drawLevelPickups();drawCombatFxWorld();}
+          if(state==='playing'){drawLevelCoins();drawLevelPickups();drawCombatFxWorld();}
           if(state==='title2')overlay('FASE 2','A FLORESTA MISTERIOSA','ENTER OU BOTÃO A PARA COMEÇAR');
           if(state==='title3')overlay('FASE 3','O TEMPLO DOS VENTOS','ENTER OU BOTÃO A PARA COMEÇAR');
           if(state==='gameover')overlay('GAME OVER','A VITORIA FOI TALARICADA','CLIQUE EM RECOMEÇAR');
