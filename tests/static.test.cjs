@@ -412,8 +412,48 @@ check('Inventário cheio impede compra e preserva saldo',
 
 // A loja e as fases usam o mesmo seletor do Gabriel.
 check('CANO BURGER compartilha animação sem saltos indevidos',
- mario.includes('const walkFrame=inShop?Math.floor(shopHeroDistance/30)%2:player.animFrame')&&
+ mario.includes('const walkFrame=powered?Math.floor(superRunClock/.09)%4:')&&
+ mario.includes('inShop?Math.floor(shopHeroDistance/30)%2:player.animFrame')&&
  mario.includes("grounded:inShop||state!=='playing'||player.grounded")&&
  mario.includes('drawGabrielNew(player.x+player.w/2,CANO_FLOOR,{inShop:true})'));
 check('Gabriel volta ao Idle quando para na loja',
  selectPose({grounded:true,moving:false})==='idle');
+
+
+// Polimento Super Gabriel: conjunto mínimo 146, 147 e 149.
+// São arquivos opcionais até o upload ser publicado na branch main.
+// A ausência temporária não deve quebrar cenas nem o restante da campanha.
+check('Corrida Super referencia somente as duas novas poses enviadas',
+ mario.includes("runPassing1:'146 run 1.png'")&&
+ mario.includes("runPassing2:'147 run 2.png'")&&
+ !mario.includes('148 super jump takeoff.png')&&
+ mario.includes("landing:'149 landing.png'"));
+check('Renderizador tem fallback quando os novos PNGs ainda estão ausentes',
+ mario.includes('const sprite=form[pose]||')&&
+ mario.includes("form.idle||")&&
+ mario.includes('processedAssets.superHeroFrames?.[0]'));
+const superRunSource=mario.match(/        function gabrielPoseName\(\{[\s\S]*?\n        \}/)?.[0];
+check('Seletor da corrida Super pode ser testado isoladamente',!!superRunSource);
+const selectSuperPose=new Function(superRunSource+'\nreturn gabrielPoseName;')();
+const motion=[0,1,2,3,4,5,6,7].map(index=>selectSuperPose({powered:true,moving:true,walkFrame:index}));
+check('Corrida Super completa ciclo 139/146/139/147 sem Dash',
+ motion.join(',')==='idle,runPassing1,idle,runPassing2,idle,runPassing1,idle,runPassing2'&&
+ !motion.includes('dash'));
+check('Quadro 149 aparece apenas ao pousar como Super Gabriel',
+ selectSuperPose({powered:true,grounded:true,landing:true,moving:true})==='landing'&&
+ selectSuperPose({powered:false,grounded:true,landing:true,moving:true,walkFrame:0})==='walk1'&&
+ selectSuperPose({powered:true,grounded:false,landing:true,vy:10})==='jumpFall');
+check('Dash exclusivo continua prioritário ao pouso',
+ selectSuperPose({powered:true,dashing:true,landing:true,moving:true})==='dash');
+check('Salto original 143/144/145 continua sem uso de 148',
+ selectSuperPose({powered:true,grounded:false,vy:-12})==='jumpRise'&&
+ selectSuperPose({powered:true,grounded:false,vy:0})==='jumpApex'&&
+ selectSuperPose({powered:true,grounded:false,vy:9})==='jumpFall');
+check('Temporizador de aterrissagem usa colisão real com solo',
+ mario.includes('else if(superWasAirborne){')&&
+ mario.includes('superLandingUntil=elapsedSeconds+.12;')&&
+ mario.includes("landing:powered&&state==='playing'&&player.grounded&&elapsedSeconds<superLandingUntil"));
+check('Ciclo de corrida Super fica pausado no ar, no Dash e parado',
+ mario.includes('superRunClock+=dt;')&&
+ mario.includes('superRunClock=0;')&&
+ mario.includes('Math.floor(superRunClock/.09)%4'));
