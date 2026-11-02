@@ -3064,7 +3064,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
         const canoArguments=[
           [['ALAN','HUMBERTO! EU ACABEI DE LIMPAR ESSE BALCÃO!'],['HUMBERTO','E EU ACABEI DE SUJAR. TRABALHO EM EQUIPE!'],['ALAN','VOCÊ NÃO TEM O MÍNIMO DE HIGIENE?!'],['HUMBERTO','TENHO SIM. TOMEI BANHO NA TERÇA!']],
           [['ALAN','ESSE HAMBÚRGUER TÁ COMPLETAMENTE QUEIMADO!'],['HUMBERTO','É DEFUMADO, SEU FRESCO!'],['ALAN','ELE TÁ PRETO!'],['HUMBERTO','É A NOSSA EDIÇÃO NOTURNA!']],
-          [['ALAN','VOCÊ NÃO PODE COBRAR 900 MOEDAS NUM HAMBÚRGUER!'],['HUMBERTO','PODE SIM. ACABEI DE COBRAR!'],['ALAN','NINGUÉM VAI COMPRAR ISSO!'],['HUMBERTO','ENTÃO SOBRA MAIS PRA MIM!']],
+          [['ALAN','POR QUE VOCÊ ESCREVEU 900 MOEDAS NO CARDÁPIO?!'],['HUMBERTO','ERA O PREÇO DOS MEUS SERVIÇOS DE ALTO NÍVEL!'],['ALAN','O HAMBÚRGUER CUSTA DEZ MOEDAS, HUMBERTO!'],['HUMBERTO','TÁ BOM! MAS O SORRISO É COBRADO À PARTE!']],
           [['ALAN','QUEM MEXEU NA MINHA RECEITA SECRETA?!'],['HUMBERTO','EU. TAVA SEM GRAÇA.'],['ALAN','VOCÊ COLOCOU O QUÊ?!'],['HUMBERTO','NÃO SEI. ACHEI NUM CANO VERDE.']],
           [['ALAN','VOCÊ PRECISA SER MAIS EDUCADO COM OS CLIENTES!'],['HUMBERTO','EU SOU EDUCADO!'],['ALAN','VOCÊ MANDOU UM CLIENTE EMBORA!'],['HUMBERTO','ELE PEDIU HAMBÚRGUER SEM PÃO!']],
           [['ALAN','RECEBEMOS UMA AVALIAÇÃO DE UMA ESTRELA!'],['HUMBERTO','ÓTIMO. UMA A MAIS DO QUE EU ESPERAVA!'],['ALAN','DISSERAM QUE O ATENDENTE ERA MAL-EDUCADO!'],['HUMBERTO','PELO MENOS LEMBRARAM DE MIM!']],
@@ -3125,6 +3125,8 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           unlockInventory();renderInventory();setHUD();
           if(activeSlot!==null)saveCurrentSlot(false);
           const talker=Math.random()<.5?'ALAN':'HUMBERTO';
+          const seller=shopActors.find(n=>n.name===talker.toLowerCase());
+          if(seller)seller.celebrateUntil=shopClock+2.2;
           canoUpdateCounter(talker==='ALAN'?'ALAN: MUITO OBRIGADO! VOLTE SEMPRE!':'HUMBERTO: AGORA VAI SALVAR A PRINCESA!');
           showItemToast('🍔 HAMBÚRGUER ADQUIRIDO POR 10 MOEDAS!');
           return true;
@@ -3176,11 +3178,12 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
             if(shopConversation){
               const speaker=shopConversation.lines[shopConversation.index]?.[0]?.toLowerCase();
               npc.pose=speaker===npc.name?(Math.floor(shopClock*3.4)%2?'talkOpen':'talkClosed'):
-                (npc.name==='alan'?'crossed':'thinking');
+                (shopConversation.index%3===1?'surprised':(npc.name==='alan'?'crossed':'thinking'));
               npc.dir=npc.name==='alan'?1:-1;
               continue;
             }
-            if(npc.rest>0){npc.rest-=dt;npc.pose=Math.sin(shopClock+npc.x)*.5>.3?'lookUp':'idle';continue;}
+            if((npc.celebrateUntil||0)>shopClock){npc.pose='happy';continue;}
+            if(npc.rest>0){npc.rest-=dt;npc.pose=Math.sin(shopClock+npc.x)*.5>.3?'lookUp':(Math.sin(shopClock*.8+npc.x)>.6?'lookDown':'idle');continue;}
             if(Math.abs(npc.target-npc.x)<8){
               npc.pose=npc.name==='alan'?'thinking':'crossed';
               npc.rest=1.2+Math.random()*2.7;
