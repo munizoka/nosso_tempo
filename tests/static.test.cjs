@@ -362,7 +362,7 @@ check('Função de compra pode ser isolada para testes',!!canoBuySource);
 function simulateCanoPurchase(balance,stock){
  const f=new Function(
   "let state='shop',shopPanelOpen=true,coins="+balance+
-  ",inventory={consumables:{burger:"+stock+"}},CANO_PRICE=10,activeSlot=0,saveCount=0;"+
+  ",inventory={consumables:{burger:"+stock+"}},CANO_PRICE=10,activeSlot=0,saveCount=0,shopClock=0,shopActors=[{name:'alan'},{name:'humberto'}];"+
   "function addConsumable(id,n){if(inventory.consumables[id]>=99)return false;inventory.consumables[id]+=n;return true;}"+
   "function unlockInventory(){}function renderInventory(){}function setHUD(){}"+
   "function saveCurrentSlot(){saveCount++;}function canoUpdateCounter(){}function showItemToast(){}"+
