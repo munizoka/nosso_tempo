@@ -207,3 +207,83 @@ chaseDemo.setTime(9.9);chaseDemo.step();
 check('Perseguicao continua antes dos dez segundos sem contato',chaseDemo.state()==='chase');
 chaseDemo.setTime(10.1);chaseDemo.step();
 check('Perseguicao termina depois de dez segundos sem contato',chaseDemo.state()==='patrol');
+
+
+// Polimento antes da Fase 4: andar dos mobs, fala transformada e Game Over.
+check('Game Over com mensagem de Vitoria sem acento',
+ mario.includes("overlay('GAME OVER','A VITORIA FOI TALARICADA','CLIQUE EM RECOMEÇAR')") &&
+ !mario.includes("overlay('GAME OVER','AS VIDAS ACABARAM'"));
+
+check('Frames walk1/walk2 alinhados na mesma tela',mario.includes('function alignEnemyWalkFrames(type)') &&
+ mario.includes('alignEnemyWalkFrames(type);') &&
+ mario.includes('height-source.height') &&
+ mario.includes("for(const pose of ['walk1','walk2'])"));
+const walkAlignSource=mario.match(/        function alignEnemyWalkFrames\(type\)\{[\s\S]*?\n        \}/)?.[0];
+check('Alinhamento de sprites extraível',!!walkAlignSource);
+const walkingImages={mushroom:{walk1:{width:40,height:50},walk2:{width:44,height:46}}};
+const drawCalls=[];
+new Function('processedAssets','document',walkAlignSource+'\nalignEnemyWalkFrames("mushroom")')(
+ {mobFrames:walkingImages},
+ {createElement:()=>({width:0,height:0,getContext:()=>({imageSmoothingEnabled:false,
+   drawImage:(...args)=>drawCalls.push(args)})})}
+);
+check('Frames mantêm dimensão igual e pés na mesma base',
+ walkingImages.mushroom.walk1.width===44 && walkingImages.mushroom.walk2.width===44 &&
+ walkingImages.mushroom.walk1.height===50 && walkingImages.mushroom.walk2.height===50 &&
+ drawCalls[0][2]===0 && drawCalls[1][2]===4);
+
+check('Quadros do inimigo dependem de deslocamento e não da posição X',
+ mario.includes('const traveled=Math.abs(enemy.x-oldX)') &&
+ mario.includes('enemy.walkDistance=(enemy.walkDistance||0)+traveled') &&
+ mario.includes('Math.floor((e.walkDistance||0)/10)%2') &&
+ !mario.includes('elapsedSeconds*8+e.x*.03'));
+
+const actualEnemySource=mario.match(/        function updateEnemies\(\)\{[\s\S]*?\n        \}/)?.[0];
+function simulateWalk(vx){
+ return new Function(`
+ const enemies=[{x:100,y:348,w:32,h:32,vx:${vx},type:'mushroom',alive:true}];
+ const player={x:400,y:340,w:24,h:40,vy:0,jumpPower:-13};
+ let elapsedSeconds=0,invulnerable=2;
+ function activeBlocks(){return []} function enemyCanSpotHero(){return false}
+ function enemyHasVisualContact(){return false} function hasFloorAhead(){return true}
+ function isColliding(){return false} function enemyDifficultyMultiplier(){return 1}
+ function isDashing(){return false} function defeatEnemy(){}
+ function setHUD(){} function loseLife(){}
+ const ENEMY_LOST_SIGHT_SECONDS=10;
+ ${actualEnemySource}
+ const distances=[],frames=[];
+ for(let i=0;i<22;i++){
+   updateEnemies();
+   const e=enemies[0];distances.push(e.walkDistance);
+   frames.push(Math.floor((e.walkDistance||0)/10)%2);
+ }
+ return {distances,frames};
+ `)();
+}
+const walkRight=simulateWalk(2),walkLeft=simulateWalk(-2);
+check('Esquerda e direita alternam no mesmo ritmo por distância',
+ walkLeft.frames.join(',')===walkRight.frames.join(',') &&
+ walkRight.frames.includes(0)&&walkRight.frames.includes(1) &&
+ walkLeft.distances.every((v,i)=>v===walkRight.distances[i]));
+
+check('Boca do Super Gabriel tem âncora e animação próprias',
+ mario.includes('function drawSpeakingSprite(sprite,centerX,footY,height,character,facing=1,superTalking=false)') &&
+ mario.includes('const mouthX=Math.round(w*.23),mouthY=-Math.round(height*.57)') &&
+ mario.includes('Math.floor(gameNow/125)%4') &&
+ mario.includes('isSuperGabriel()&&sprite===powerful)'));
+const talkSource=mario.match(/        function drawSpeakingSprite\(sprite,[\s\S]*?\n        \}/)?.[0];
+check('Animação de boca isolada para regressão',!!talkSource);
+function mouthAt(t,powered){
+ const rects=[];
+ const canvas={fillRect:(...a)=>rects.push(a),save(){},restore(){},translate(){},scale(){}};
+ new Function('ctx','gameNow','activeDialogueSpeaker','drawSpriteOnFeet','getCharacterSkin',
+ talkSource+'\ndrawSpeakingSprite({width:90,height:200},20,120,40,"GABRIEL",1,'+powered+');')(
+ canvas,t,()=> 'GABRIEL',()=>{},()=> '#dfa77a');
+ return rects;
+}
+check('Super Gabriel alterna boca fechada, intermediária e aberta',
+ JSON.stringify(mouthAt(0,true))!==JSON.stringify(mouthAt(125,true)) &&
+ JSON.stringify(mouthAt(125,true))!==JSON.stringify(mouthAt(250,true)));
+check('Fala do Gabriel normal mantém desenho anterior',
+ JSON.stringify(mouthAt(0,false))!==JSON.stringify(mouthAt(0,true)) &&
+ mouthAt(0,false)[0][0]!==mouthAt(0,true)[0][0]);
