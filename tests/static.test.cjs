@@ -135,9 +135,9 @@ check('Perseguicao respeita chao e bloqueios',mario.includes('!hasFloorAhead(ene
 check('Sprites e particulas de inimigos derrotados',mario.includes('fallenEnemies.push(')&&
  mario.includes('processedAssets.mobFrames?.[e.type]?.dead')&&mario.includes('defeatEnemy(enemy,150)')&&
  mario.includes('defeatEnemy(enemy,100)'));
-check('Efeitos dos blocos e checkpoints',mario.includes('drawCombatFxWorld()')&&
+check('Efeitos das moedas e checkpoints',mario.includes('drawCombatFxWorld()')&&
  mario.includes('function checkpointChime()')&&
- mario.includes("['#ffe88a','#fff7bb','#dbaa64']")&&
+ mario.includes("['#fff6ad','#ffe376','#eea534']")&&
  mario.includes('skyCheckpointReached=true;skyCheckpointX=1650;score+=250;setHUD();'));
 const spotSource=mario.match(/        function enemyCanSpotHero\(enemy,terrain\)\{[\s\S]*?\n        \}/)?.[0];
 check('Deteccao de inimigos extraivel para regressao',!!spotSource);
