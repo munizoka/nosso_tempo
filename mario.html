@@ -1088,6 +1088,36 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           }
           return result;
         }
+
+        // Novo Gabriel (125–145): sprites individuais, sem depender do spritesheet antigo.
+        // O 145 tem cabelo escuro; reserva opcional de queda NORMAL, não Super.
+        const gabrielSpritePaths={
+          normal:{
+            idle:'126 idle.png',idleAlt:'125.png',
+            walk1:'127 walk 1.png',walk2:'128 walk 2.png',
+            lookUp:'129 up.png',lookDown:'130.png',
+            talkOpen:'131.png',talkClosed:'132.png',
+            surprised:'133.png',happy:'134.png',thinking:'135.png',
+            jumpRise:'136.png',jumpApex:'137.png',jumpFall:'138.png',jumpFallAlt:'145.png'
+          },
+          super:{
+            idle:'139.png',talkOpen:'140.png',talkClosed:'141.png',
+            dash:'142.png',jumpRise:'143.png',jumpApex:'144.png'
+          }
+        };
+        processedAssets.gabriel={normal:{},super:{}};
+        for(const [form,poses] of Object.entries(gabrielSpritePaths)){
+          for(const [pose,path] of Object.entries(poses)){
+            const image=new Image();
+            image.onload=()=>{
+              try{processedAssets.gabriel[form][pose]=cropSprite(image);}
+              catch(error){console.warn('Falha ao tratar sprite do Gabriel:',path,error);}
+            };
+            image.onerror=()=>console.warn('Sprite Gabriel indisponível:',path);
+            image.src=encodeURI(path);
+          }
+        }
+
         // Os PNGs 84–93 são opcionais até serem enviados ao GitHub.
         // Nomes correspondem exatamente aos arquivos gerados pelo Gabriel.
         const mobSpritePaths={
@@ -2235,9 +2265,14 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           cameraX=Math.max(0,Math.min(maxCamera,player.x-GAME_WIDTH/2.5));
           if(isDashing())player.animFrame=1;
           else if(!player.grounded)player.animFrame=2;
-          else if(player.vx!==0){player.animTimer++;
-            if(player.animTimer>8){player.animFrame=player.animFrame===1?0:1;player.animTimer=0;}}
-          else player.animFrame=0;
+          else if(player.vx!==0){
+            // Alternância temporal suave, independente da taxa de quadros.
+            player.animTimer+=dt;
+            if(player.animTimer>=.12){
+              player.animFrame=player.animFrame===1?0:1;
+              player.animTimer%=.12;
+            }
+          }else{player.animFrame=0;player.animTimer=0;}
           setHUD();
         }
 
@@ -2462,19 +2497,54 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
             }
           }
         }
+
+        // Seletor único para qualquer fase, diálogo, salto, dash e CANO BURGER.
+        function gabrielPoseName({powered=false,dashing=false,grounded=true,vy=0,moving=false,walkFrame=0,speaking=false,voiceOpen=false}={}){
+          if(speaking)return voiceOpen?'talkOpen':'talkClosed';
+          if(powered&&dashing)return 'dash';
+          if(!grounded){
+            if(vy< -5)return 'jumpRise';
+            if(vy<=3)return 'jumpApex';
+            return 'jumpFall';
+          }
+          return moving?(walkFrame%2===0?'walk1':'walk2'):'idle';
+        }
+        function getGabrielVisual({inShop=false}={}){
+          const powered=state==='playing'&&isSuperGabriel();
+          const shopLine=inShop?shopConversation?.lines[shopConversation.index]?.[0]:null;
+          const speaking=(inShop?shopLine:activeDialogueSpeaker())==='GABRIEL';
+          const moving=inShop?(keys.left!==keys.right):Math.abs(player.vx)>.05;
+          const walkFrame=inShop?Math.floor(shopHeroDistance/30)%2:player.animFrame;
+          const pose=gabrielPoseName({
+            powered,dashing:powered&&isDashing(),grounded:inShop||player.grounded,
+            vy:inShop?0:player.vy,moving,walkFrame,
+            speaking,voiceOpen:Math.floor(gameNow/160)%2===0
+          });
+          const form=processedAssets.gabriel[powered?'super':'normal'];
+          // Super Gabriel NÃO usa cabelo escuro nos quadros de andar ou cair.
+          // Até termos sprites Super de caminhada/queda, preserva a forma loira.
+          const sprite=form[pose]||
+            (powered&&pose==='jumpFall'?form.jumpApex:null)||
+            form.idle||
+            processedAssets.gabriel.normal.idle||
+            (powered?processedAssets.superHeroFrames?.[0]:processedAssets.heroFrames?.[0]);
+          const height=powered?(pose==='dash'?65:69):64;
+          const stride=moving&&!speaking&&(inShop||player.grounded);
+          return {sprite,height,powered,stride,pose};
+        }
+        function drawGabrielNew(centerX,footY,{inShop=false}={}){
+          const visual=getGabrielVisual({inShop});
+          if(!visual.sprite)return;
+          // Pés e centro permanecem alinhados, mesmo com PNGs de dimensões diferentes.
+          // Balanço sutil somente quando Super Gabriel caminha sem frames específicos.
+          const bob=visual.powered&&visual.stride?
+            Math.sin((inShop?shopHeroDistance:elapsedSeconds*230)/20)*1.5:0;
+          drawSpriteOnFeet(visual.sprite,centerX,footY+bob,visual.height,player.direction);
+        }
+
         function drawHero(){
           if(invulnerable>0 && Math.floor(elapsedSeconds*12)%2===0)return;
-          // Nos diálogos e nas telas de fim de fase, nunca herdar o frame de
-          // corrida ou salto do último instante de jogo. A boca segue animada.
-          const frame=state==='playing'?Math.min(3,player.animFrame):0;
-          const normal=processedAssets.heroFrames?.[frame]||processedAssets.heroFrames?.[0];
-          const powerful=processedAssets.superHeroFrames?.[frame]||processedAssets.superHeroFrames?.[0];
-          const sprite=(state==='playing'&&isDashing()?
-            (isSuperGabriel()?extras.dashSuper:extras.dashHero):
-            (isSuperGabriel()?powerful:null))||normal;
-          const size=state==='playing'&&isDashing()?48:player.h;
-          drawSpeakingSprite(sprite,player.x+player.w/2,player.y+player.h,size,'GABRIEL',player.direction,
-            isSuperGabriel()&&sprite===powerful);
+          drawGabrielNew(player.x+player.w/2,player.y+player.h);
         }
         function easeOut(v){const x=Math.max(0,Math.min(1,v));return 1-(1-x)*(1-x);}
         function drawCinematicCharacters(t){
@@ -3281,12 +3351,8 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
             const sy=Math.floor(counter.height*.63),sh=counter.height-sy;
             ctx.drawImage(counter,0,sy,counter.width,sh,905,349,500,45);
           }else{ctx.fillStyle='#783f25';ctx.fillRect(905,348,500,46);}
-          // Caminhada igual às fases originais: somente quadros 0 (parado/passo A)
-          // e 1 (passo B). Quadro 2 é salto; o 3 não pertence ao ciclo de andar.
-          // Troca a cada 32px (~130ms), evitando pulos/agachamentos e tremulação.
-          const index=(keys.left||keys.right)?Math.floor(shopHeroDistance/32)%2:0;
-          const hero=processedAssets.heroFrames?.[index]||processedAssets.heroFrames?.[0];
-          drawSpriteOnFeet(hero,player.x+player.w/2,CANO_FLOOR,player.h,player.direction);
+          // Mesmo visual da campanha: Gabriel adulto com 64px, NPCs com 66px.
+          drawGabrielNew(player.x+player.w/2,CANO_FLOOR,{inShop:true});
           // Primeiro plano 120 separado da arte principal e sem obstáculos invisíveis.
           if(extras.canoForeground){ctx.save();ctx.globalAlpha=.47;drawObject(extras.canoForeground,660,315,965,88);ctx.restore();}
           ctx.fillStyle='#e19a43';ctx.fillRect(0,CANO_FLOOR+6,CANO_WIDTH,5);
