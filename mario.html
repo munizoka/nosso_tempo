@@ -505,6 +505,8 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
         // Velocidade normal do herói: 5.5; antes a investida usava 13 por .52s.
         const SUPER_DURATION=12, DASH_SPEED=9, DASH_DURATION=.40, DASH_COOLDOWN=.95;
         const superPower={until:0,dashUntil:0,cooldownUntil:0,facing:1};
+        // Tempos transitórios da animação Super (não precisam entrar no save).
+        let superRunClock=0,superLandingUntil=0,superWasAirborne=false;
         // O hambúrguer 79.png permanece no catálogo; os '?' serão moedas.
         // Partículas e poses de derrota duram apenas no relógio ativo do jogo.
         const sgbParticles=[],fallenEnemies=[];
@@ -696,6 +698,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           inventory.consumables.burger--;
           superPower.until=Number.POSITIVE_INFINITY; // Não expira enquanto esta fase estiver ativa.
           superPower.dashUntil=0;superPower.cooldownUntil=0;
+          superRunClock=0;superLandingUntil=0;superWasAirborne=!player.grounded;
           persistInventory();renderInventory();updateDashButton();
           showItemToast('SUPER FORÇA ATIVA ATÉ O FIM DA FASE!');
           return true;
@@ -793,6 +796,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           if(state==='shop'){shopPanelOpen=false;document.getElementById('cano-shop-panel').hidden=true;mapHead.x=mapLevels[3].x;mapHead.y=mapLevels[3].y;}
           state='map';keys.left=keys.right=keys.up=keys.down=false;
           superPower.until=superPower.dashUntil=superPower.cooldownUntil=0; // Fase encerrada.
+          superRunClock=0;superLandingUntil=0;superWasAirborne=false;
           mapTip='MOVA A CABEÇA E ESCOLHA UMA FASE';setHUD();
           if(activeSlot!==null)saveCurrentSlot(false);
         }
@@ -1102,7 +1106,8 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           },
           super:{
             idle:'139.png',talkOpen:'140.png',talkClosed:'141.png',
-            dash:'142.png',jumpRise:'143.png',jumpApex:'144.png',jumpFall:'145.png'
+            dash:'142.png',jumpRise:'143.png',jumpApex:'144.png',jumpFall:'145.png',
+            runPassing1:'146 run 1.png',runPassing2:'147 run 2.png',landing:'149 landing.png'
           }
         };
         processedAssets.gabriel={normal:{},super:{}};
@@ -1769,6 +1774,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           skyCheckpointReached=false;skyCheckpointX=0;
           activeBuffs.shield=0;activeBuffs.speedUntil=0;activeBuffs.jumpUntil=0;
           superPower.until=superPower.dashUntil=superPower.cooldownUntil=0;
+          superRunClock=0;superLandingUntil=0;superWasAirborne=false;
           damagedHeartUntil=0;damagedHeartIndex=-1;lastHeartSignature='';
           sgbParticles.length=0;fallenEnemies.length=0;lastDashDustAt=-1;
           // collectedPickups é do slot: reiniciar não pode duplicar moedas coletadas.
@@ -2238,6 +2244,23 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
             }
           }
           if(player.y>GAME_HEIGHT+200){loseLife('fall');return;}
+          // Marca a aterrissagem uma única vez, após a colisão real com o solo.
+          // O salto mantém as poses 143/144/145; 149 aparece por apenas 120ms.
+          if(isSuperGabriel()){
+            if(!player.grounded){superWasAirborne=true;superLandingUntil=0;}
+            else if(superWasAirborne){
+              superWasAirborne=false;
+              superLandingUntil=elapsedSeconds+.12;
+              superRunClock=0;
+            }
+            // A corrida não avança quando Gabriel está no ar, parado ou no Dash.
+            if(player.grounded&&!isDashing()&&Math.abs(player.vx)>.05)
+              superRunClock+=dt;
+            else if(!player.grounded||isDashing()||Math.abs(player.vx)<=.05)
+              superRunClock=0;
+          }else{
+            superRunClock=0;superLandingUntil=0;superWasAirborne=false;
+          }
           if(level===3&&!skyCheckpointReached&&player.x+player.w>1650&&player.x<1720&&player.y+player.h>330){
             skyCheckpointReached=true;skyCheckpointX=1650;score+=250;setHUD();
             emitPixelBurst(1675,347,['#a5f3fc','#e4c5ff','#fffde1'],18,130);checkpointChime();
@@ -2499,7 +2522,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
         }
 
         // Seletor único para qualquer fase, diálogo, salto, dash e CANO BURGER.
-        function gabrielPoseName({powered=false,dashing=false,grounded=true,vy=0,moving=false,walkFrame=0,speaking=false,voiceOpen=false}={}){
+        function gabrielPoseName({powered=false,dashing=false,grounded=true,vy=0,moving=false,walkFrame=0,landing=false,speaking=false,voiceOpen=false}={}){
           if(speaking)return voiceOpen?'talkOpen':'talkClosed';
           if(powered&&dashing)return 'dash';
           if(!grounded){
@@ -2507,22 +2530,30 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
             if(vy<=3)return 'jumpApex';
             return 'jumpFall';
           }
-          return moving?(walkFrame%2===0?'walk1':'walk2'):'idle';
+          if(powered&&landing)return 'landing';
+          if(!moving)return 'idle';
+          // Aproveita as duas poses intermediárias; 139.png faz os contatos.
+          // Não recorre ao sprite de Dash para caminhar.
+          if(powered)return walkFrame%4===1?'runPassing1':
+            walkFrame%4===3?'runPassing2':'idle';
+          return walkFrame%2===0?'walk1':'walk2';
         }
         function getGabrielVisual({inShop=false}={}){
           const powered=!inShop&&isSuperGabriel();
           const shopLine=inShop?shopConversation?.lines[shopConversation.index]?.[0]:null;
           const speaking=(inShop?shopLine:activeDialogueSpeaker())==='GABRIEL';
           const moving=inShop?(keys.left!==keys.right):Math.abs(player.vx)>.05;
-          const walkFrame=inShop?Math.floor(shopHeroDistance/30)%2:player.animFrame;
+          const walkFrame=powered?Math.floor(superRunClock/.09)%4:
+            inShop?Math.floor(shopHeroDistance/30)%2:player.animFrame;
           const pose=gabrielPoseName({
             powered,dashing:state==='playing'&&powered&&isDashing(),grounded:inShop||state!=='playing'||player.grounded,
             vy:inShop?0:player.vy,moving,walkFrame,
+            landing:powered&&state==='playing'&&player.grounded&&elapsedSeconds<superLandingUntil,
             speaking,voiceOpen:Math.floor(gameNow/160)%2===0
           });
           const form=processedAssets.gabriel[powered?'super':'normal'];
-          // Queda Super usa 145.png; para caminhar usa o idle Super até
-          // haver quadros específicos dessa forma. Não mistura frames normais.
+          // Corrida Super usa 139→146→139→147; pouso usa 149.
+          // Se os PNGs ainda não estiverem publicados, Idle funciona como reserva.
           const sprite=form[pose]||
             (powered&&pose==='jumpFall'?form.jumpApex:null)||
             form.idle||
@@ -2535,11 +2566,11 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
         function drawGabrielNew(centerX,footY,{inShop=false}={}){
           const visual=getGabrielVisual({inShop});
           if(!visual.sprite)return;
-          // Pés e centro permanecem alinhados, mesmo com PNGs de dimensões diferentes.
-          // Balanço sutil somente quando Super Gabriel caminha sem frames específicos.
-          const bob=visual.powered&&visual.stride?
-            Math.sin((inShop?shopHeroDistance:elapsedSeconds*230)/20)*1.5:0;
-          drawSpriteOnFeet(visual.sprite,centerX,footY+bob,visual.height,player.direction);
+          // Mantém a base dos pés e a escala constantes em todos os PNGs.
+          // O quadro intermediário eleva 1px; quadros de contato ficam no solo.
+          const lift=visual.powered&&visual.stride&&
+            (visual.pose==='runPassing1'||visual.pose==='runPassing2')?1:0;
+          drawSpriteOnFeet(visual.sprite,centerX,footY-lift,visual.height,player.direction);
         }
 
         function drawHero(){
