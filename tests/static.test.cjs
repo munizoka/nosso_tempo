@@ -412,7 +412,8 @@ check('Inventário cheio impede compra e preserva saldo',
 
 // A loja e as fases usam o mesmo seletor do Gabriel.
 check('CANO BURGER compartilha animação sem saltos indevidos',
- mario.includes('const walkFrame=inShop?Math.floor(shopHeroDistance/30)%2:player.animFrame')&&
+ mario.includes('const walkFrame=powered?Math.floor(superRunClock/.09)%4:')&&
+ mario.includes('inShop?Math.floor(shopHeroDistance/30)%2:player.animFrame')&&
  mario.includes("grounded:inShop||state!=='playing'||player.grounded")&&
  mario.includes('drawGabrielNew(player.x+player.w/2,CANO_FLOOR,{inShop:true})'));
 check('Gabriel volta ao Idle quando para na loja',
