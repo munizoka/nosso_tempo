@@ -3218,7 +3218,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
         function drawCanoNpc(npc){
           const frames=processedAssets.canoNpc[npc.name];
           const img=frames?.[npc.pose]||frames?.idle||frames?.idleAlt;
-          const height=80,center=npc.x,foot=CANO_FLOOR;
+          const height=66,center=npc.x,foot=npc.x>905&&npc.x<1405?CANO_FLOOR-10:CANO_FLOOR;
           if(!img?.width||!img?.height){
             ctx.fillStyle=npc.name==='alan'?'#ad3932':'#383f57';ctx.fillRect(center-16,foot-65,32,65);
             return;
@@ -3270,10 +3270,17 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
             drawObject(extras.canoDecor,1558,168,245,172);
             ctx.restore();
           }
+          const counter=extras.canoCounter;
+          // Caixa registradora e vitrine ficam ATRÁS dos NPCs.
+          if(counter)drawObject(counter,905,283,500,111);
+          else{ctx.fillStyle='#f6b44d';ctx.fillRect(905,329,500,12);}
           for(const npc of shopActors)drawCanoNpc(npc);
-          // Balcão separado por cima dos NPCs: oculta pernas enquanto atendem.
-          if(extras.canoCounter)drawObject(extras.canoCounter,905,300,500,94);
-          else{ctx.fillStyle='#783f25';ctx.fillRect(905,345,500,50);ctx.fillStyle='#f4b34b';ctx.fillRect(905,335,500,11);}
+          // Apenas a frente do balcão passa na frente dos vendedores:
+          // evita esconder suas cabeças e expressões durante os diálogos.
+          if(counter){
+            const sy=Math.floor(counter.height*.63),sh=counter.height-sy;
+            ctx.drawImage(counter,0,sy,counter.width,sh,905,349,500,45);
+          }else{ctx.fillStyle='#783f25';ctx.fillRect(905,348,500,46);}
           // Gabriel sempre aparece à frente do balcão, podendo percorrer todo o salão.
           const index=(keys.left||keys.right)?(Math.floor(shopHeroDistance/14)%3+1):0;
           const hero=processedAssets.heroFrames?.[index]||processedAssets.heroFrames?.[0];
