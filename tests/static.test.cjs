@@ -377,9 +377,9 @@ check('Balção vende apenas o hambúrguer da Super Força por 10 moedas',
 check('NPCs usam sprites separados, escala normalizada e passeiam',
  mario.includes('const canoNpcPaths=')&&mario.includes('const scale=height/img.height')&&
  mario.includes('npc.x+=npc.dir*distance')&&mario.includes("npc.pose=Math.floor(npc.walked/12)%2?'walk2':'walk1'"));
-check('Dez discussões não se repetem até esgotar baralho',
+check('Discussões são embaralhadas e não repetem antes de esgotar baralho',
  (mario.match(/\[\['ALAN',/g)||[]).length>=10&&
- mario.includes('function shuffledShopDeck()')&&
+ mario.includes('function shuffledShopDeck(avoidFirst=shopLastConversation)')&&
  mario.includes('shopConversationDeck.shift()')&&mario.includes('shopLastConversation=index'));
 check('Discussão termina antes de NPC notar Gabriel',
  mario.includes('shopConversation.noticed=true')&&
