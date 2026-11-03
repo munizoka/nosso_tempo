@@ -175,6 +175,7 @@ const powerDemo=new Function(`
  function renderInventory(){}
  function updateDashButton(){}
  function showItemToast(){}
+ function cancelGabrielAfk(){} // AFK é cosmético no simulador isolado do poder.
  ${powerSource}
  return {trigger:activateSuperFromBurger,get:()=>({burger:inventory.consumables.burger,until:superPower.until,writes})};
 `)();
@@ -638,3 +639,90 @@ check('Sprite antigo de Vitoria disponível somente como fallback',
 check('Todas as poses adicionais estão nomeadas e prontas para futuras ações',
  ['lookUp','lookDown','surprised','happy','thinking','jumpRise','jumpApex','landing',
  'worried','celebrating','ok'].every(p=>new RegExp('\\b'+p+':').test(mario)));
+
+// AFK Gabriel: oito imagens, três rotinas e retomada imediata do controle.
+const gabrielAfkFiles=[
+ '182 picking.png','183 playingg.png','184 playing 2.png',
+ '185 watching 1.png','186 watching 2.png',
+ '187 sleeping.png','188 bocejo.png','189 guardando portatil.png'
+];
+check('Oito novos sprites AFK do Gabriel existem no repositorio',
+ gabrielAfkFiles.every(name=>fs.existsSync(path.join(root,name))&&
+ fs.statSync(path.join(root,name)).size>1000));
+check('Carregador mapeia exatamente os oito PNGs AFK',
+ mario.includes("afkTakeout:'182 picking.png'")&&
+ mario.includes("afkPlay1:'183 playingg.png'")&&
+ mario.includes("afkPlay2:'184 playing 2.png'")&&
+ mario.includes("afkWatch1:'185 watching 1.png'")&&
+ mario.includes("afkWatch2:'186 watching 2.png'")&&
+ mario.includes("afkSleep:'187 sleeping.png'")&&
+ mario.includes("afkYawn:'188 bocejo.png'")&&
+ mario.includes("afkPutaway:'189 guardando portatil.png'"));
+check('AFK substitui somente Idle de Gabriel normal e não interfere no Super',
+ mario.includes("if(!powered&&!moving&&!speaking&&")&&
+ mario.includes("pose=currentGabrielAfkPose()||pose;")&&
+ mario.includes("!isSuperGabriel()&&!isDashing()")&&
+ mario.includes("pose==='idle'"));
+check('AFK é cosmético, sem alterar hitbox, moedas ou estado salvo',
+ mario.includes('const gabrielAfk={idle:0,wait:12,action:null,time:0,last:null}')&&
+ !/gabrielAfk/.test(mario.match(/function makeSaveSnapshot\(\)\{[\s\S]*?\n        \}/)?.[0]||''));
+check('AFK respeita controles mobile, teclado, menus e diálogo',
+ mario.includes("if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','KeyA','KeyD',")&&
+ mario.includes('cancelGabrielAfk();')&&
+ mario.includes("state==='shop'&&!shopPanelOpen&&!shopConversation")&&
+ mario.includes("tickGabrielAfk(dt,player.grounded&&Math.abs(player.vx)<.05)")&&
+ mario.includes('tickGabrielAfk(dt,direction===0)'));
+const afkStart=mario.indexOf('        const GABRIEL_AFK_DURATIONS=');
+const afkEnd=mario.indexOf('        // Seletor único para qualquer fase',afkStart);
+const afkSource=mario.slice(afkStart,afkEnd);
+check('Rotina AFK isolável para testes de comportamento',
+ afkStart>=0&&afkEnd>afkStart&&afkSource.includes('function tickGabrielAfk(dt,stationary)'));
+function afkSimulator(){
+ return new Function(
+  "const gabrielAfk={idle:0,wait:12,action:null,time:0,last:null};"+
+  "let state='playing',shopPanelOpen=false,shopConversation=null,menuOpen=false,"+
+  "inventoryOpen=false,invulnerable=0,powered=false;"+
+  "const enemies=[],player={x:50,y:100},"+
+  "keys={left:false,right:false,up:false,down:false};"+
+  "function isSuperGabriel(){return powered;}function isDashing(){return false;}"+
+  afkSource+
+  "return {tick:tickGabrielAfk,cancel:cancelGabrielAfk,"+
+  "pose:currentGabrielAfkPose,choose:nextGabrielAfkAction,"+
+  "at:gabrielAfkPoseAt,state:()=>({...gabrielAfk}),"+
+  "setPowered:x=>{powered=x},setMenu:x=>{menuOpen=x},"+
+  "setShop:x=>{state='shop';shopConversation=x},"+
+  "press:x=>{keys.left=x}};"
+ )();
+}
+const afk=afkSimulator();
+check('AFK espera 12 segundos sem se iniciar prematuramente',
+ (afk.tick(11.9,true),afk.state().action===null)&&
+ (afk.tick(.11,true),!!afk.state().action));
+check('AFK escolhe atividades distintas em sequencia',
+ ['console','watch','sleep'].every(previous=>afk.choose(previous,.3)!==previous));
+check('AFK encerra a atividade e espera antes de repetir',
+ (afk.tick(6,true),afk.state().action===null)&&
+ (afk.tick(10,true),afk.state().action===null)&&
+ (afk.tick(8,true),!!afk.state().action));
+check('Um comando interrompe a animação imediatamente',
+ (afk.press(true),afk.tick(.01,false),afk.state().action===null)&&
+ afk.state().idle===0);
+check('AFK não é reproduzido durante menu, Super ou conversa de NPC',
+ (afk.press(false),afk.tick(12.1,true),afk.setPowered(true),
+  afk.tick(.01,true),afk.state().action===null)&&
+ (afk.setPowered(false),afk.tick(12.1,true),afk.setMenu(true),
+  afk.tick(.01,true),afk.state().action===null)&&
+ (afk.setMenu(false),afk.setShop({lines:[]}),afk.tick(15,true),
+  afk.state().action===null));
+const afkPose=afk.at;
+check('Portatil: pegar, jogar dois quadros, guardar',
+ afkPose('console',.1)==='afkTakeout'&&
+ afkPose('console',.9)==='afkPlay1'&&
+ afkPose('console',1.05)==='afkPlay2'&&
+ afkPose('console',4.8)==='afkPutaway');
+check('Relogio e cochilo utilizam todos os seus quadros',
+ afkPose('watch',.5)==='afkWatch1'&&
+ afkPose('watch',2.1)==='afkWatch2'&&
+ afkPose('sleep',.3)==='afkYawn'&&
+ afkPose('sleep',2)==='afkSleep'&&
+ afkPose('sleep',4.4)==='afkYawn');

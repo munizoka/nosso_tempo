@@ -747,6 +747,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
         }
         function activateSuperFromBurger(){
           if(state!=='playing'||menuOpen||isSuperGabriel()||(inventory.consumables.burger||0)<1)return false;
+          cancelGabrielAfk();
           inventory.consumables.burger--;
           superPower.until=Number.POSITIVE_INFINITY; // Não expira enquanto esta fase estiver ativa.
           superPower.dashUntil=0;superPower.cooldownUntil=0;
@@ -819,6 +820,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           }
         }
         window.toggleInventario=function(){
+          cancelGabrielAfk();
           if(!inventoryOpen&&!(activeSlot!==null&&(inventoryUnlocked||level===3)))return;
           inventoryOpen=!inventoryOpen;
           keys.left=keys.right=keys.up=keys.down=false;
@@ -845,6 +847,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           return best<=42?nearest:null;
         }
         function returnToMap() {
+          cancelGabrielAfk();
           if(state==='shop'){shopPanelOpen=false;document.getElementById('cano-shop-panel').hidden=true;mapHead.x=mapLevels[3].x;mapHead.y=mapLevels[3].y;}
           state='map';keys.left=keys.right=keys.up=keys.down=false;
           superPower.until=superPower.dashUntil=superPower.cooldownUntil=0; // Fase encerrada.
@@ -1156,7 +1159,11 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
             lookUp:'129 up.png',lookDown:'130.png',
             talkOpen:'131.png',talkClosed:'132.png',
             surprised:'133.png',happy:'134.png',thinking:'135.png',
-            jumpRise:'136.png',jumpApex:'137.png',jumpFall:'138.png'
+            jumpRise:'136.png',jumpApex:'137.png',jumpFall:'138.png',
+            afkTakeout:'182 picking.png',afkPlay1:'183 playingg.png',
+            afkPlay2:'184 playing 2.png',afkWatch1:'185 watching 1.png',
+            afkWatch2:'186 watching 2.png',afkSleep:'187 sleeping.png',
+            afkYawn:'188 bocejo.png',afkPutaway:'189 guardando portatil.png'
           },
           super:{
             idle:'139.png',talkOpen:'140.png',talkClosed:'141.png',
@@ -1329,6 +1336,8 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
         });
 
         const player={x:50,y:100,w:24,h:40,vx:0,vy:0,speed:5.5,jumpPower:-13,gravity:0.6,grounded:false,direction:1,animFrame:0,animTimer:0};
+        // AFK: cosmético, nunca altera posição, hitbox, inventário ou salvamento.
+        const gabrielAfk={idle:0,wait:12,action:null,time:0,last:null};
         // Vitoria com escala de jovem adulta (Gabriel normal = 64px; Vitoria = 68px).
         // Pé permanece em y=380; a caixa de interação acompanha a nova altura.
         const princess={x:3400,y:312,w:32,h:68};
@@ -1758,6 +1767,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
         }
         window.sgbResume=closeMainMenu;
         window.sgbOpenMenu=function(){
+          cancelGabrielAfk();
           if(inventoryOpen)window.toggleInventario();
           menuOpen=true;keys.left=keys.right=keys.up=keys.down=false;
           document.getElementById('sgb-menu').hidden=false;
@@ -1845,6 +1855,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
         sgbMenuPage('home');
 
         function resetPosition(){
+          cancelGabrielAfk();
           player.x=level===1?50:level===2?(checkpointReached?checkpointX:50):(skyCheckpointReached?skyCheckpointX:50);
           player.y=100;player.vx=0;player.vy=0;player.grounded=false;
           player.direction=1;player.animFrame=0;cameraX=0;
@@ -1872,6 +1883,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
         }
         window.reiniciarFase=restartCurrentLevel;
         function loseLife(reason='enemy'){
+          cancelGabrielAfk();
           if(state!=='playing')return;
           if(reason!=='fall'&&activeBuffs.shield>0){
             activeBuffs.shield--;invulnerable=1.25;
@@ -1887,6 +1899,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           resetPosition();invulnerable=1.5;setHUD();
         }
         function startCutscene(){
+          cancelGabrielAfk();
           if(state!=='playing'||level!==1)return;
           state='cutscene';cutsceneStart=gameNow;cinematicSeconds=0;
           player.vx=0;player.vy=0;keys.left=false;keys.right=false;keys.up=false;
@@ -2008,6 +2021,10 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
         }
 
         window.addEventListener('keydown', e=>{
+          // Reação imediata ao teclado, mesmo antes do próximo frame.
+          if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','KeyA','KeyD',
+            'KeyW','KeyS','Space','KeyX','KeyT','KeyI','KeyE','Enter','Escape'].includes(e.code))
+            cancelGabrielAfk();
           if(menuOpen)return;
           if(state==='shop'&&shopPanelOpen){if(e.code==='Escape'){e.preventDefault();canoCloseShop();}return;}
           if(e.code==='KeyI'){e.preventDefault();window.toggleInventario();return;}
@@ -2046,11 +2063,15 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           if(e.code==='Space'||e.code==='ArrowUp'||e.code==='KeyW')keys.up=false;
           if(e.code==='ArrowDown'||e.code==='KeyS')keys.down=false;
         });
-        window.addEventListener('blur',()=>{keys.left=keys.right=keys.up=keys.down=false;});
+        window.addEventListener('blur',()=>{
+          keys.left=keys.right=keys.up=keys.down=false;
+          cancelGabrielAfk();
+        });
         function bindInput(id,key){
           const el=document.getElementById(id);if(!el)return;
           const press=e=>{
             e.preventDefault();
+            cancelGabrielAfk();
             if(inventoryOpen||menuOpen||shopPanelOpen)return;
             el.setPointerCapture?.(e.pointerId);
             if(state==='shop'){
@@ -2076,10 +2097,10 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
         bindInput('btn-left','left');bindInput('btn-right','right');
         bindInput('btn-up','up');bindInput('btn-down','down');bindInput('btn-jump','up');
         document.getElementById('btn-power')?.addEventListener('pointerdown',e=>{
-          e.preventDefault();activateSuperFromBurger();
+          e.preventDefault();cancelGabrielAfk();activateSuperFromBurger();
         });
         document.getElementById('btn-dash')?.addEventListener('pointerdown',e=>{
-          e.preventDefault();trySuperDash();
+          e.preventDefault();cancelGabrielAfk();trySuperDash();
         });
 
         function updateMovingPlatforms(t){
@@ -2383,6 +2404,8 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
               player.animTimer%=.12;
             }
           }else{player.animFrame=0;player.animTimer=0;}
+          // Após colisões, só avança AFK parado em chão seguro.
+          tickGabrielAfk(dt,player.grounded&&Math.abs(player.vx)<.05);
           setHUD();
         }
 
@@ -2610,6 +2633,71 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           }
         }
 
+
+        // AFK do Gabriel NORMAL: videogame, relógio, bocejo e cochilo.
+        // 12s para a primeira ação; repetição com pausas e sem repetir a anterior.
+        const GABRIEL_AFK_DURATIONS={console:5.4,watch:3.6,sleep:4.8};
+        function nextGabrielAfkAction(previous,randomValue=Math.random()){
+          const options=['console','watch','sleep'].filter(name=>name!==previous);
+          const index=Math.max(0,Math.min(options.length-1,Math.floor(randomValue*options.length)));
+          return options[index];
+        }
+        function gabrielAfkPoseAt(action,time){
+          if(action==='console'){
+            if(time<.65)return 'afkTakeout';
+            if(time<4.55)return Math.floor((time-.65)/.32)%2?'afkPlay2':'afkPlay1';
+            return 'afkPutaway';
+          }
+          if(action==='watch'){
+            if(time<1.75)return 'afkWatch1';
+            if(time<3.05)return 'afkWatch2';
+            return 'afkWatch1';
+          }
+          if(action==='sleep'){
+            if(time<.95)return 'afkYawn';
+            if(time<4.1)return 'afkSleep';
+            return 'afkYawn';
+          }
+          return null;
+        }
+        function cancelGabrielAfk(){
+          gabrielAfk.idle=0;
+          gabrielAfk.time=0;
+          gabrielAfk.action=null;
+          gabrielAfk.wait=12; // Após voltar a jogar, espera 12 segundos completos.
+        }
+        function tickGabrielAfk(dt,stationary){
+          const validArea=(state==='playing'||(state==='shop'&&!shopPanelOpen&&!shopConversation));
+          const closeEnemy=state==='playing'&&enemies.some(e=>e.alive&&
+            Math.abs(e.x-player.x)<125&&Math.abs(e.y-player.y)<85);
+          const eligible=validArea&&!menuOpen&&!inventoryOpen&&!shopPanelOpen&&
+            !isSuperGabriel()&&!isDashing()&&invulnerable<=0&&
+            !closeEnemy&&stationary&&
+            !keys.left&&!keys.right&&!keys.up&&!keys.down;
+          if(!eligible){cancelGabrielAfk();return;}
+          if(gabrielAfk.action){
+            gabrielAfk.time+=dt;
+            if(gabrielAfk.time>=GABRIEL_AFK_DURATIONS[gabrielAfk.action]){
+              gabrielAfk.last=gabrielAfk.action;
+              gabrielAfk.action=null;gabrielAfk.time=0;
+              gabrielAfk.idle=0;
+              gabrielAfk.wait=12+Math.random()*6;
+            }
+            return;
+          }
+          gabrielAfk.idle+=dt;
+          if(gabrielAfk.idle>=gabrielAfk.wait){
+            gabrielAfk.action=nextGabrielAfkAction(gabrielAfk.last);
+            gabrielAfk.idle=0;gabrielAfk.time=0;
+          }
+        }
+        function currentGabrielAfkPose(){
+          if((state!=='playing'&&state!=='shop')||
+            (state==='shop'&&(shopPanelOpen||shopConversation))||
+            !gabrielAfk.action)return null;
+          return gabrielAfkPoseAt(gabrielAfk.action,gabrielAfk.time);
+        }
+
         // Seletor único para qualquer fase, diálogo, salto, dash e CANO BURGER.
         function gabrielPoseName({powered=false,dashing=false,grounded=true,vy=0,moving=false,walkFrame=0,landing=false,speaking=false,voiceOpen=false}={}){
           if(speaking)return voiceOpen?'talkOpen':'talkClosed';
@@ -2634,12 +2722,17 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           const moving=inShop?(keys.left!==keys.right):Math.abs(player.vx)>.05;
           const walkFrame=powered?Math.floor(superRunClock/.09)%4:
             inShop?Math.floor(shopHeroDistance/30)%2:player.animFrame;
-          const pose=gabrielPoseName({
+          let pose=gabrielPoseName({
             powered,dashing:state==='playing'&&powered&&isDashing(),grounded:inShop||state!=='playing'||player.grounded,
             vy:inShop?0:player.vy,moving,walkFrame,
             landing:powered&&state==='playing'&&player.grounded&&elapsedSeconds<superLandingUntil,
             speaking,voiceOpen:Math.floor(gameNow/160)%2===0
           });
+          // Ações AFK só substituem Idle; diálogo, salto, corrida e Super vencem.
+          if(!powered&&!moving&&!speaking&&
+            (inShop||player.grounded)&&pose==='idle'){
+            pose=currentGabrielAfkPose()||pose;
+          }
           const form=processedAssets.gabriel[powered?'super':'normal'];
           // Corrida Super usa 139→146→139→147; pouso usa 149.
           // Se os PNGs ainda não estiverem publicados, Idle funciona como reserva.
@@ -3343,6 +3436,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           return deck;
         }
         function enterCanoShop(){
+          cancelGabrielAfk();
           state='shop';shopPanelOpen=false;shopClock=0;shopNextConversation=6;shopConversation=null;
           shopConversationCount=0;
           shopConversationDeck=shuffledShopDeck(shopFirstEventPrevious);
@@ -3369,6 +3463,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
         }
         window.canoCloseShop=canoCloseShop;
         function canoOpenCounter(){
+          cancelGabrielAfk();
           shopPanelOpen=true;keys.left=keys.right=keys.up=keys.down=false;
           canoSelectedItem='burger';canoPreviewItem=null;canoCounterMessage='';
           canoSelectedSlot=document.querySelector('#cano-shop-panel .cano-stock-slot[data-cano-item="burger"]');
@@ -3449,6 +3544,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
         }
         window.canoBuyBurger=canoBuyBurger;
         function canoShopAction(){
+          cancelGabrielAfk();
           if(state!=='shop'||shopPanelOpen)return;
           const x=player.x+player.w/2;
           if(Math.abs(x-CANO_FRONT_X)<76){showItemToast('SAÍDA: PORTA PRINCIPAL');returnToMap();return;}
@@ -3563,6 +3659,8 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           const direction=(keys.right?1:0)-(keys.left?1:0);
           player.x=Math.min(CANO_WIDTH-player.w-50,Math.max(45,player.x+direction*240*dt));
           if(direction){player.direction=direction;shopHeroDistance+=Math.abs(direction*240*dt);}
+          // Na loja AFK só acontece fora do balcão e longe das conversas.
+          tickGabrielAfk(dt,direction===0);
           player.y=CANO_FLOOR-player.h;
           cameraX=Math.min(CANO_WIDTH-GAME_WIDTH,Math.max(0,player.x-GAME_WIDTH*.45));
           const heroX=player.x+player.w/2;
