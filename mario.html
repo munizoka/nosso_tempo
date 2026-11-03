@@ -747,6 +747,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
         }
         function activateSuperFromBurger(){
           if(state!=='playing'||menuOpen||isSuperGabriel()||(inventory.consumables.burger||0)<1)return false;
+          cancelGabrielAfk();
           inventory.consumables.burger--;
           superPower.until=Number.POSITIVE_INFINITY; // Não expira enquanto esta fase estiver ativa.
           superPower.dashUntil=0;superPower.cooldownUntil=0;
@@ -819,6 +820,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           }
         }
         window.toggleInventario=function(){
+          cancelGabrielAfk();
           if(!inventoryOpen&&!(activeSlot!==null&&(inventoryUnlocked||level===3)))return;
           inventoryOpen=!inventoryOpen;
           keys.left=keys.right=keys.up=keys.down=false;
@@ -1765,6 +1767,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
         }
         window.sgbResume=closeMainMenu;
         window.sgbOpenMenu=function(){
+          cancelGabrielAfk();
           if(inventoryOpen)window.toggleInventario();
           menuOpen=true;keys.left=keys.right=keys.up=keys.down=false;
           document.getElementById('sgb-menu').hidden=false;
