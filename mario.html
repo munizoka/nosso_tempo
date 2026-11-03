@@ -387,12 +387,12 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           <div>
             <span class="cano-shop-label">VITRINE · 1/6</span>
             <div class="cano-stock-grid" aria-label="Itens da loja">
-              <button type="button" class="cano-stock-slot is-selected" data-cano-item="burger" aria-label="Hambúrguer da Super Força" aria-pressed="true" onmouseenter="canoPreviewShopItem('burger')" onmouseleave="canoClearShopPreview()" onfocus="canoPreviewShopItem('burger')" onclick="canoSelectShopItem('burger')"><img src="79.png" alt=""></button>
-              <button type="button" class="cano-stock-slot" data-cano-item="empty" aria-label="Espaço vazio 2, em breve" aria-pressed="false" onmouseenter="canoPreviewShopItem('empty')" onmouseleave="canoClearShopPreview()" onfocus="canoPreviewShopItem('empty')" onclick="canoSelectShopItem('empty')"><span class="cano-slot-plus" aria-hidden="true">+</span></button>
-              <button type="button" class="cano-stock-slot" data-cano-item="empty" aria-label="Espaço vazio 3, em breve" aria-pressed="false" onmouseenter="canoPreviewShopItem('empty')" onmouseleave="canoClearShopPreview()" onfocus="canoPreviewShopItem('empty')" onclick="canoSelectShopItem('empty')"><span class="cano-slot-plus" aria-hidden="true">+</span></button>
-              <button type="button" class="cano-stock-slot" data-cano-item="empty" aria-label="Espaço vazio 4, em breve" aria-pressed="false" onmouseenter="canoPreviewShopItem('empty')" onmouseleave="canoClearShopPreview()" onfocus="canoPreviewShopItem('empty')" onclick="canoSelectShopItem('empty')"><span class="cano-slot-plus" aria-hidden="true">+</span></button>
-              <button type="button" class="cano-stock-slot" data-cano-item="empty" aria-label="Espaço vazio 5, em breve" aria-pressed="false" onmouseenter="canoPreviewShopItem('empty')" onmouseleave="canoClearShopPreview()" onfocus="canoPreviewShopItem('empty')" onclick="canoSelectShopItem('empty')"><span class="cano-slot-plus" aria-hidden="true">+</span></button>
-              <button type="button" class="cano-stock-slot" data-cano-item="empty" aria-label="Espaço vazio 6, em breve" aria-pressed="false" onmouseenter="canoPreviewShopItem('empty')" onmouseleave="canoClearShopPreview()" onfocus="canoPreviewShopItem('empty')" onclick="canoSelectShopItem('empty')"><span class="cano-slot-plus" aria-hidden="true">+</span></button>
+              <button type="button" class="cano-stock-slot is-selected" data-cano-item="burger" aria-label="Hambúrguer da Super Força" aria-pressed="true" onmouseenter="canoPreviewShopItem('burger',this)" onmouseleave="canoClearShopPreview()" onfocus="canoPreviewShopItem('burger',this)" onblur="canoClearShopPreview()" onclick="canoSelectShopItem('burger',this)"><img src="79.png" alt=""></button>
+              <button type="button" class="cano-stock-slot" data-cano-item="empty" aria-label="Espaço vazio 2, em breve" aria-pressed="false" onmouseenter="canoPreviewShopItem('empty',this)" onmouseleave="canoClearShopPreview()" onfocus="canoPreviewShopItem('empty',this)" onblur="canoClearShopPreview()" onclick="canoSelectShopItem('empty',this)"><span class="cano-slot-plus" aria-hidden="true">+</span></button>
+              <button type="button" class="cano-stock-slot" data-cano-item="empty" aria-label="Espaço vazio 3, em breve" aria-pressed="false" onmouseenter="canoPreviewShopItem('empty',this)" onmouseleave="canoClearShopPreview()" onfocus="canoPreviewShopItem('empty',this)" onblur="canoClearShopPreview()" onclick="canoSelectShopItem('empty',this)"><span class="cano-slot-plus" aria-hidden="true">+</span></button>
+              <button type="button" class="cano-stock-slot" data-cano-item="empty" aria-label="Espaço vazio 4, em breve" aria-pressed="false" onmouseenter="canoPreviewShopItem('empty',this)" onmouseleave="canoClearShopPreview()" onfocus="canoPreviewShopItem('empty',this)" onblur="canoClearShopPreview()" onclick="canoSelectShopItem('empty',this)"><span class="cano-slot-plus" aria-hidden="true">+</span></button>
+              <button type="button" class="cano-stock-slot" data-cano-item="empty" aria-label="Espaço vazio 5, em breve" aria-pressed="false" onmouseenter="canoPreviewShopItem('empty',this)" onmouseleave="canoClearShopPreview()" onfocus="canoPreviewShopItem('empty',this)" onblur="canoClearShopPreview()" onclick="canoSelectShopItem('empty',this)"><span class="cano-slot-plus" aria-hidden="true">+</span></button>
+              <button type="button" class="cano-stock-slot" data-cano-item="empty" aria-label="Espaço vazio 6, em breve" aria-pressed="false" onmouseenter="canoPreviewShopItem('empty',this)" onmouseleave="canoClearShopPreview()" onfocus="canoPreviewShopItem('empty',this)" onblur="canoClearShopPreview()" onclick="canoSelectShopItem('empty',this)"><span class="cano-slot-plus" aria-hidden="true">+</span></button>
             </div>
             <p class="cano-shop-hint">Passe o mouse ou toque para ver os detalhes.</p>
           </div>
@@ -3216,6 +3216,8 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
         const CANO_WIDTH=2240,CANO_FLOOR=381,CANO_PRICE=10;
         const CANO_FRONT_X=160,CANO_BACK_X=CANO_WIDTH-168,CANO_REGISTER_X=1170;
         let shopPanelOpen=false,shopClock=0,shopNextConversation=7,shopConversation=null;
+        let canoSelectedItem='burger',canoPreviewItem=null,canoCounterMessage='';
+        let canoSelectedSlot=null,canoHoveredSlot=null;
         let shopConversationDeck=[],shopLastConversation=-1,shopHeroDistance=0;
         let shopFirstEventPrevious=-1,shopConversationCount=0;
         // A dança é uma das cenas sorteadas, não um evento obrigatório de entrada.
@@ -3306,20 +3308,68 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
         window.canoCloseShop=canoCloseShop;
         function canoOpenCounter(){
           shopPanelOpen=true;keys.left=keys.right=keys.up=keys.down=false;
+          canoSelectedItem='burger';canoPreviewItem=null;canoCounterMessage='';
+          canoSelectedSlot=document.querySelector('#cano-shop-panel .cano-stock-slot[data-cano-item="burger"]');
+          canoHoveredSlot=null;
           document.getElementById('cano-shop-panel').hidden=false;
-          canoUpdateCounter();
-          document.getElementById('cano-shop-buy')?.focus();
+          canoRenderCounter();
+          canoSelectedSlot?.focus();
         }
-        function canoUpdateCounter(message){
+        function canoRenderCounter(){
+          const item=canoPreviewItem??canoSelectedItem;
+          const burger=item==='burger',stock=inventory.consumables.burger||0;
           const money=document.getElementById('cano-shop-money');
-          const info=document.getElementById('cano-shop-message');
+          const name=document.getElementById('cano-shop-item-name');
+          const desc=document.getElementById('cano-shop-description');
+          const price=document.getElementById('cano-shop-price');
+          const count=document.getElementById('cano-shop-stock');
+          const msg=document.getElementById('cano-shop-message');
           const buy=document.getElementById('cano-shop-buy');
-          if(money)money.textContent='SEU SALDO: '+coins+' MOEDAS';
-          if(info)info.textContent=message||'ATIVA A SUPER FORÇA ATÉ O FIM DA FASE.';
-          if(buy)buy.disabled=coins<CANO_PRICE||(inventory.consumables.burger||0)>=99;
+          if(money)money.textContent='🪙 '+coins+' moedas';
+          if(name)name.textContent=burger?'Hambúrguer da Super Força':'Espaço reservado';
+          if(desc)desc.textContent=burger?'Ativa a Super Força até o fim da fase.':'Novo item chegando em breve à CANO BURGER.';
+          if(price)price.textContent=burger?'🪙 '+CANO_PRICE+' moedas':'—';
+          if(count)count.textContent=burger?String(stock):'—';
+          if(msg)msg.textContent=!burger?'Este slot ainda não está disponível.':
+            canoCounterMessage||
+              (stock>=99?'Inventário cheio (99).':
+              coins<CANO_PRICE?'Faltam '+(CANO_PRICE-coins)+' moedas para comprar.':
+              canoSelectedItem==='burger'?'Disponível para comprar.':'Clique no hambúrguer para selecioná-lo.');
+          if(buy){
+            buy.textContent='Comprar · 🪙 '+CANO_PRICE;
+            buy.disabled=!burger||canoSelectedItem!=='burger'||coins<CANO_PRICE||stock>=99;
+          }
+          document.querySelectorAll('#cano-shop-panel .cano-stock-slot').forEach(slot=>{
+            slot.classList.toggle('is-selected',slot===canoSelectedSlot);
+            slot.classList.toggle('is-preview',slot===canoHoveredSlot&&slot!==canoSelectedSlot);
+            slot.setAttribute('aria-pressed',String(slot===canoSelectedSlot));
+          });
+        }
+        function canoPreviewShopItem(item,slot){
+          if(!shopPanelOpen)return;
+          canoPreviewItem=item;canoHoveredSlot=slot;
+          canoRenderCounter();
+        }
+        function canoClearShopPreview(){
+          if(!shopPanelOpen)return;
+          canoPreviewItem=null;canoHoveredSlot=null;
+          canoRenderCounter();
+        }
+        function canoSelectShopItem(item,slot){
+          if(!shopPanelOpen)return;
+          canoSelectedItem=item;canoSelectedSlot=slot;
+          canoPreviewItem=null;canoHoveredSlot=null;canoCounterMessage='';
+          canoRenderCounter();
+        }
+        window.canoPreviewShopItem=canoPreviewShopItem;
+        window.canoClearShopPreview=canoClearShopPreview;
+        window.canoSelectShopItem=canoSelectShopItem;
+        function canoUpdateCounter(message){
+          if(typeof message==='string')canoCounterMessage=message;
+          canoRenderCounter();
         }
         function canoBuyBurger(){
-          if(state!=='shop'||!shopPanelOpen)return false;
+          if(state!=='shop'||!shopPanelOpen||canoSelectedItem!=='burger')return false;
           const stock=inventory.consumables.burger||0;
           if(coins<CANO_PRICE){canoUpdateCounter('MOEDAS INSUFICIENTES!');return false;}
           if(stock>=99){canoUpdateCounter('INVENTÁRIO CHEIO! LIMITE DE 99.');return false;}
