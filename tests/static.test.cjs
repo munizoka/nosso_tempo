@@ -457,3 +457,72 @@ check('Ciclo de corrida Super fica pausado no ar, no Dash e parado',
  mario.includes('superRunClock+=dt;')&&
  mario.includes('superRunClock=0;')&&
  mario.includes('Math.floor(superRunClock/.09)%4'));
+
+
+// CANO BURGER: NPCs autônomos e cena especial de dança.
+const canoNewSprites=[
+ '150 alan falling.png','151 Alan após a queda.png',
+ '152 Alan se levantando, envergonhado.png','153 Alan Conferindo o Smartphone.png',
+ '154.png','155 sleeping.png','156 alan dance 1.png','157 alan dance 2.png',
+ '158 humberto falling.png','159 humberto down.png','160.png',
+ '161 smartphone.png','162 looking.png','163 sleeping.png',
+ '164 laughing.png','165 sarcs.png'
+];
+check('Todos os 16 sprites novos de Alan e Humberto estão publicados',
+ canoNewSprites.every(file=>fs.existsSync(path.join(root,file))&&
+ fs.statSync(path.join(root,file)).size>1000));
+check('Sprites das atividades associam pose e arquivo corretos',
+ mario.includes("slip:'150 alan falling.png',fall:'151 Alan após a queda.png'")&&
+ mario.includes("phoneLook:'153 Alan Conferindo o Smartphone.png',phoneType:'154.png'")&&
+ mario.includes("sleep:'155 sleeping.png',dance1:'156 alan dance 1.png',dance2:'157 alan dance 2.png'")&&
+ mario.includes("slip:'158 humberto falling.png',fall:'159 humberto down.png'")&&
+ mario.includes("sleep:'163 sleeping.png',laugh:'164 laughing.png',sarcasm:'165 sarcs.png'"));
+check('Cena especial inicia por Alan dançando com resposta de Humberto',
+ mario.includes("const index=shopDancePending?10:shopConversationDeck.shift()")&&
+ mario.includes('PARA DE VIADAGEM MLK! ISSO AQUI É UMA HAMBURGUERIA!')&&
+ mario.includes("kind:index===10?'dance':'banter'")&&
+ mario.includes("shopDancePending=false;"));
+check('A cena não se repete imediatamente no baralho',
+ mario.includes("shopConversationDeck=shopConversationDeck.filter(n=>n!==10)")&&
+ mario.includes("if(deck[0]===shopLastConversation&&deck.length>1)")&&
+ mario.includes('shopDancePending=true;'));
+check('Banter aguarda ação autônoma e diálogos seguem sem corte',
+ mario.includes('if(shopActors.some(n=>n.activity))return false')&&
+ mario.includes('npc.pose=canoConversationPose(npc)')&&
+ mario.includes("shopConversation.lines.push(['ALAN'")&&
+ mario.includes("shopConversation.lines.push(['HUMBERTO'"));
+check('Celular, cochilo, dança, risadas e quedas têm rotina própria',
+ mario.includes("const pool=npc.name==='alan'?")&&
+ mario.includes("['phone','phone','sleep','dance','trip','phone']")&&
+ mario.includes("['phone','phone','sleep','laugh','sarcasm','trip']")&&
+ mario.includes("if(action.kind==='trip')")&&
+ mario.includes("if(action.kind==='phone')"));
+check('Vendedores só escolhem nova atividade ao chegar a destino',
+ mario.includes("if(Math.abs(npc.target-npc.x)<8){")&&
+ mario.includes("shopClock<shopNextConversation&&Math.random()<.40"));
+check('Queda não é exibida com altura de sprite em pé',
+ mario.includes("npc.pose==='fall'?38:")&&
+ mario.includes("npc.pose==='slip'?55:npc.pose==='getup'?54:66"));
+check('Gabriel aguarda conclusão da queda antes de conversar com o NPC',
+ mario.includes("if(npc.activity?.kind==='trip')")&&
+ mario.includes('ESPERA ELE SE LEVANTAR PRIMEIRO!'));
+const activitySource=mario.match(/        function canoUpdateActivity\(npc\)\{[\s\S]*?\n        \}/)?.[0];
+check('Rotina de animação de NPC extraível para regressão',!!activitySource);
+function activityPose(kind,second){
+ const npc={pose:'idle',rest:0,activity:{kind,start:0,duration:kind==='trip'?3:
+  kind==='phone'?5.2:kind==='dance'?3.7:5.8}};
+ const fn=new Function('shopClock',activitySource+'\nreturn canoUpdateActivity;')(second);
+ const ongoing=fn(npc);
+ return {ongoing,pose:npc.pose};
+}
+check('Sequência de escorregão termina em levantar antes de voltar a Idle',
+ activityPose('trip',.2).pose==='slip'&&
+ activityPose('trip',1).pose==='fall'&&
+ activityPose('trip',2.4).pose==='getup'&&
+ activityPose('trip',3.2).pose==='idle');
+check('Celular alterna quadros sem deslocamento',
+ activityPose('phone',.2).pose==='phoneLook'&&
+ activityPose('phone',.8).pose==='phoneType');
+check('Dança alterna quadros 156 e 157',
+ activityPose('dance',.2).pose==='dance2'&&
+ activityPose('dance',.5).pose==='dance1');
