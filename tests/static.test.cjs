@@ -571,3 +571,21 @@ check('Layout minimalista se adapta a mobile e tela horizontal',
  mario.includes('.cano-shop-body{display:grid;grid-template-columns:')&&
  mario.includes('@media(max-width:530px)')&&
  mario.includes('@media(max-height:500px) and (min-width:580px)'));
+
+// Teste de cenário clean: imagens 120 e 124 desativadas (não excluídas do repositório).
+const shopDrawer=mario.split('function drawCanoShop(){')[1]?.split('\n        function ')[0]||'';
+check('CANO BURGER não carrega foreground 120 nem decorações 124',
+ !mario.includes("canoForeground:'120.png'")&&
+ !mario.includes("canoDecor:'124.png'"));
+check('CANO BURGER não desenha imagens 120 ou 124 na cena',
+ !shopDrawer.includes('extras.canoForeground')&&
+ !shopDrawer.includes('extras.canoDecor'));
+check('CANO BURGER mantém cenário, balcão e ambas as portas',
+ mario.includes("canoBackground:'119.png'")&&
+ mario.includes("canoCounter:'121.png'")&&
+ mario.includes("canoFront:'122.png'")&&
+ mario.includes("canoBack:'123.png'")&&
+ shopDrawer.includes('extras.canoBackground')&&
+ shopDrawer.includes('extras.canoCounter')&&
+ shopDrawer.includes('extras.canoFront')&&
+ shopDrawer.includes('extras.canoBack'));
