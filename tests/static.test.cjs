@@ -175,6 +175,7 @@ const powerDemo=new Function(`
  function renderInventory(){}
  function updateDashButton(){}
  function showItemToast(){}
+ function cancelGabrielAfk(){} // AFK é cosmético no simulador isolado do poder.
  ${powerSource}
  return {trigger:activateSuperFromBurger,get:()=>({burger:inventory.consumables.burger,until:superPower.until,writes})};
 `)();
