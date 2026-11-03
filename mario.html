@@ -3399,13 +3399,14 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
                 (Math.sin(shopClock*.8+npc.x)>.6?'lookDown':'idle');
               continue;
             }
-            // Atividades com descanso adequado; nenhuma começa com uma cena pendente.
-            if(!npc.activity&&shopClock<shopNextConversation&&Math.random()<.32){
-              canoStartActivity(npc);
-              canoUpdateActivity(npc);
-              continue;
-            }
+            // Sorteia atividades apenas quando chega a um destino.
+            // Nunca a cada frame: os vendedores continuam circulando pela loja.
             if(Math.abs(npc.target-npc.x)<8){
+              if(shopClock<shopNextConversation&&Math.random()<.40){
+                canoStartActivity(npc);
+                canoUpdateActivity(npc);
+                continue;
+              }
               npc.pose=npc.name==='alan'?'thinking':'crossed';
               npc.rest=1.2+Math.random()*2.7;
               npc.target=340+Math.random()*1540;
