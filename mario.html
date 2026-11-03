@@ -1177,6 +1177,30 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           }
         }
 
+        // Vitoria 166–180: nomes de arquivo exatamente como publicados no repositório.
+        // Os dois 176 têm nomes diferentes e representam etapas do mesmo salto.
+        const vitoriaSpritePaths={
+          idle:'166 vitoria idle.png',
+          walk1:'167 vitoria walk.png',walk2:'168 walk 2.png',
+          lookUp:'169 vitoria up.png',lookDown:'170 vitoria down.png',
+          talkOpen:'171 vitoria opened.png',talkClosed:'172 closed.png',
+          surprised:'173 vitoria surprised.png',happy:'174 viroria happy.png',
+          thinking:'175 hmm.png',
+          jumpRise:'176 vitoria jumping.png',jumpApex:'176 high.png',
+          landing:'177 landing.png',
+          worried:'178 worried.png',celebrating:'179 celebrating.png',ok:'180 ok.png'
+        };
+        processedAssets.vitoria={};
+        for(const [pose,path] of Object.entries(vitoriaSpritePaths)){
+          const image=new Image();
+          image.onload=()=>{
+            try{processedAssets.vitoria[pose]=cropSprite(image);}
+            catch(error){console.warn('Falha ao processar pose da Vitoria:',path,error);}
+          };
+          image.onerror=()=>console.warn('Imagem da Vitoria indisponível:',path);
+          image.src=encodeURI(path);
+        }
+
         // Os PNGs 84–93 são opcionais até serem enviados ao GitHub.
         // Nomes correspondem exatamente aos arquivos gerados pelo Gabriel.
         const mobSpritePaths={
@@ -1305,7 +1329,9 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
         });
 
         const player={x:50,y:100,w:24,h:40,vx:0,vy:0,speed:5.5,jumpPower:-13,gravity:0.6,grounded:false,direction:1,animFrame:0,animTimer:0};
-        const princess={x:3400,y:332,w:32,h:48};
+        // Vitoria com escala de jovem adulta (Gabriel normal = 64px; Vitoria = 68px).
+        // Pé permanece em y=380; a caixa de interação acompanha a nova altura.
+        const princess={x:3400,y:312,w:32,h:68};
         const castle={x:3450,y:180,w:200,h:200};
         const clouds=[
           {x:100,y:50,w:60,h:20},{x:400,y:80,w:80,h:25},{x:800,y:40,w:70,h:20},
@@ -2558,7 +2584,9 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           }
           drawObject(processedAssets.castle,castle.x,castle.y,castle.w,castle.h);
           if(state==='cutscene')drawCinematicCharacters(cinematicSeconds);
-          else drawSpriteOnFeet(processedAssets.princess,princess.x+princess.w/2,princess.y+princess.h,princess.h);
+          else drawVitoriaNew(princess.x+princess.w/2,princess.y+princess.h,{
+            pose:Math.floor(gameNow/6500)%3===0?'ok':'idle',speaking:false
+          });
           drawEnemies();
           drawHero();
           ctx.restore();
@@ -2634,6 +2662,27 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           drawSpriteOnFeet(visual.sprite,centerX,footY-lift,visual.height,player.direction);
         }
 
+        // A nova Vitoria usa expressões prontas, sem desenhar a boca sobre o rosto.
+        // Altura fixa e âncora dos pés evitam tremulação e diferenças entre PNGs.
+        const VITORIA_VISUAL_HEIGHT=68;
+        function vitoriaPoseName({speaking=false,voiceOpen=false,moving=false,
+          walkFrame=0,pose='idle'}={}){
+          if(speaking)return voiceOpen?'talkOpen':'talkClosed';
+          if(moving)return walkFrame%2===0?'walk1':'walk2';
+          return pose;
+        }
+        function drawVitoriaNew(centerX,footY,{height=VITORIA_VISUAL_HEIGHT,
+          facing=1,pose='idle',moving=false,speaking=activeDialogueSpeaker()==='VITORIA'}={}){
+          const name=vitoriaPoseName({
+            speaking,voiceOpen:Math.floor(gameNow/165)%2===0,
+            moving,walkFrame:Math.floor(gameNow/165)%2,pose
+          });
+          // 36.png continua como fallback de compatibilidade durante carregamento.
+          const image=processedAssets.vitoria[name]||
+            processedAssets.vitoria.idle||processedAssets.princess;
+          drawSpriteOnFeet(image,centerX,footY,height,facing);
+        }
+
         function drawHero(){
           if(invulnerable>0 && Math.floor(elapsedSeconds*12)%2===0)return;
           drawGabrielNew(player.x+player.w/2,player.y+player.h);
@@ -2700,7 +2749,10 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
             ctx.save();ctx.globalAlpha=captiveAlpha;
             ctx.translate(princessX,princessFoot);
             ctx.scale(captiveScale,captiveScale);
-            drawSpeakingSprite(processedAssets.princess,0,0,princess.h,'VITORIA');
+            drawVitoriaNew(0,0,{
+              pose:t<3.0?'happy':t<4.75?'surprised':'worried',
+              facing:t<5.3?-1:1
+            });
             ctx.restore();
           }
         }
@@ -2786,7 +2838,11 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           ctx.save();ctx.globalAlpha=alpha;
           ctx.translate(princessX,359+floatY-16*slide);
           ctx.scale(shrink,shrink);
-          drawSpeakingSprite(processedAssets.princess,0,0,49,'VITORIA',princessFacing);
+          drawVitoriaNew(0,0,{
+            facing:princessFacing,
+            pose:intro?(t<4?'worried':'surprised'):(t<3?'happy':'worried'),
+            moving:slide>.12&&slide<.96&&activeDialogueSpeaker()!=='VITORIA'
+          });
           ctx.restore();
           ctx.save();ctx.globalAlpha=alpha;
           ctx.translate(villainX,367+floatY-13*slide);
@@ -3077,7 +3133,11 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
             ctx.translate(princessX,358-(intro?18*pose.travel:13*pose.travel)+floatY);
             // Na introdução, Vitoria olha para Gabriel, à esquerda.
             // No desfecho ela se volta ao portal à direita.
-            drawSpeakingSprite(processedAssets.princess,0,0,48,'VITORIA',intro?-1:1);
+            drawVitoriaNew(0,0,{
+              facing:intro?-1:1,
+              pose:intro?'worried':(t>SKY_ESCAPE_START?'surprised':'lookUp'),
+              moving:pose.travel>.12&&pose.travel<.96&&activeDialogueSpeaker()!=='VITORIA'
+            });
             ctx.restore();
             ctx.save();ctx.globalAlpha=Math.max(0,pose.fade);
             ctx.translate(villainX,372-(intro?18*pose.travel:13*pose.travel)+floatY);
