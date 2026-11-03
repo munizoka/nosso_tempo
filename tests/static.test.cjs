@@ -391,7 +391,7 @@ check('Função de compra pode ser isolada para testes',!!canoBuySource);
 function simulateCanoPurchase(balance,stock){
  const f=new Function(
   "let state='shop',shopPanelOpen=true,coins="+balance+
-  ",inventory={consumables:{burger:"+stock+"}},CANO_PRICE=10,activeSlot=0,saveCount=0,shopClock=0,shopActors=[{name:'alan'},{name:'humberto'}];"+
+  ",inventory={consumables:{burger:"+stock+"}},CANO_PRICE=10,activeSlot=0,saveCount=0,shopClock=0,canoSelectedItem='burger',shopActors=[{name:'alan'},{name:'humberto'}];"+
   "function addConsumable(id,n){if(inventory.consumables[id]>=99)return false;inventory.consumables[id]+=n;return true;}"+
   "function unlockInventory(){}function renderInventory(){}function setHUD(){}"+
   "function saveCurrentSlot(){saveCount++;}function canoUpdateCounter(){}function showItemToast(){}"+
@@ -477,23 +477,23 @@ check('Sprites das atividades associam pose e arquivo corretos',
  mario.includes("sleep:'155 sleeping.png',dance1:'156 alan dance 1.png',dance2:'157 alan dance 2.png'")&&
  mario.includes("slip:'158 humberto falling.png',fall:'159 humberto down.png'")&&
  mario.includes("sleep:'163 sleeping.png',laugh:'164 laughing.png',sarcasm:'165 sarcs.png'"));
-check('Cena especial inicia por Alan dançando com resposta de Humberto',
- mario.includes("const index=shopDancePending?10:shopConversationDeck.shift()")&&
+check('Dança permanece no baralho, mas não abre a visita obrigatoriamente',
  mario.includes('PARA DE VIADAGEM MLK! ISSO AQUI É UMA HAMBURGUERIA!')&&
- mario.includes("kind:index===10?'dance':'banter'")&&
- mario.includes("shopDancePending=false;"));
-check('A cena não se repete imediatamente no baralho',
- mario.includes("shopConversationDeck=shopConversationDeck.filter(n=>n!==10)")&&
- mario.includes("if(deck[0]===shopLastConversation&&deck.length>1)")&&
- mario.includes('shopDancePending=true;'));
+ mario.includes('const index=shopConversationDeck.shift();')&&
+ mario.includes('const dancing=index===10||index===canoArguments.length-1;')&&
+ !mario.includes('shopDancePending'));
+check('Primeira cena é embaralhada a cada entrada na loja',
+ mario.includes('shopConversationDeck=shuffledShopDeck(shopFirstEventPrevious)')&&
+ mario.includes('if(shopConversationCount===0)shopFirstEventPrevious=index')&&
+ mario.includes('shopConversationCount++'));
 check('Banter aguarda ação autônoma e diálogos seguem sem corte',
  mario.includes('if(shopActors.some(n=>n.activity))return false')&&
  mario.includes('npc.pose=canoConversationPose(npc)')&&
  mario.includes("shopConversation.lines.push(['ALAN'")&&
  mario.includes("shopConversation.lines.push(['HUMBERTO'"));
 check('Celular, cochilo, dança, risadas e quedas têm rotina própria',
- mario.includes("const pool=npc.name==='alan'?")&&
- mario.includes("['phone','phone','sleep','dance','trip','phone']")&&
+ mario.includes("let pool=npc.name==='alan'?")&&
+ mario.includes("['phone','phone','sleep','dance','dance','trip','phone','sleep']")&&
  mario.includes("['phone','phone','sleep','laugh','sarcasm','trip']")&&
  mario.includes("if(action.kind==='trip')")&&
  mario.includes("if(action.kind==='phone')"));
@@ -526,3 +526,48 @@ check('Celular alterna quadros sem deslocamento',
 check('Dança alterna quadros 156 e 157',
  activityPose('dance',.2).pose==='dance2'&&
  activityPose('dance',.5).pose==='dance1');
+
+
+// Regressão: nova vitrine e animações autônomas.
+const shuffleSource=mario.match(/        function shuffledShopDeck\([\s\S]*?\n        \}/)?.[0];
+check('Função de embaralhamento isolável',!!shuffleSource);
+const shuffleDeck=new Function('canoArguments','shopLastConversation',
+ shuffleSource+'\nreturn shuffledShopDeck;')(Array.from({length:33},(_,i)=>i),4);
+const firstDeck=shuffleDeck(8);
+check('Baralho não repete a abertura nem perde cenas',
+ firstDeck.length===33&&new Set(firstDeck).size===33&&firstDeck[0]!==8&&firstDeck[0]!==4);
+check('A dança fica mais comum, mas tem cooldown de 32 segundos',
+ mario.includes("'dance','dance','trip'")&&
+ mario.includes("shopClock<(npc.nextDanceAt||0)")&&
+ mario.includes("npc.nextDanceAt=shopClock+32")&&
+ mario.includes("if(dancing)shopActors[0].nextDanceAt=shopClock+32"));
+check('Novas provocações ácidas foram incorporadas ao baralho',
+ mario.includes('TU É UM ACIDENTE COM CPF!')&&
+ mario.includes('DE NOVO ESSA VIADAGEM, MLK?!')&&
+ mario.includes('TÔ PREOCUPADO COM O CHÃO, COITADO!'));
+
+const shopHtml=mario.split('<section id="cano-shop-panel"')[1]?.split('<section id="sgb-menu"')[0]||'';
+check('Balcão contém seis slots, sendo um hambúrguer e cinco vazios',
+ (shopHtml.match(/class="cano-stock-slot/g)||[]).length===6&&
+ (shopHtml.match(/data-cano-item="burger"/g)||[]).length===1&&
+ (shopHtml.match(/data-cano-item="empty"/g)||[]).length===5);
+check('Balcão separa saldo, preço, estoque e descrição',
+ ['cano-shop-money','cano-shop-price','cano-shop-stock','cano-shop-item-name',
+  'cano-shop-description'].every(id=>shopHtml.includes('id="'+id+'"')));
+check('Seleção funciona por hover, clique e foco do teclado',
+ (shopHtml.match(/onmouseenter="canoPreviewShopItem/g)||[]).length===6&&
+ (shopHtml.match(/onclick="canoSelectShopItem/g)||[]).length===6&&
+ (shopHtml.match(/onfocus="canoPreviewShopItem/g)||[]).length===6&&
+ (shopHtml.match(/onblur="canoClearShopPreview/g)||[]).length===6);
+check('Preço e saldo são atualizados dinamicamente sem comprar slot vazio',
+ mario.includes("money.textContent='🪙 '+coins+' moedas'")&&
+ mario.includes("price.textContent=burger?'🪙 '+CANO_PRICE+' moedas':'—'")&&
+ mario.includes("buy.disabled=!burger||canoSelectedItem!=='burger'||coins<CANO_PRICE||stock>=99")&&
+ mario.includes("if(state!=='shop'||!shopPanelOpen||canoSelectedItem!=='burger')return false"));
+check('Vitrine informa indisponibilidade de itens futuros',
+ mario.includes("name.textContent=burger?'Hambúrguer da Super Força':'Espaço reservado'")&&
+ mario.includes('Novo item chegando em breve à CANO BURGER.'));
+check('Layout minimalista se adapta a mobile e tela horizontal',
+ mario.includes('.cano-shop-body{display:grid;grid-template-columns:')&&
+ mario.includes('@media(max-width:530px)')&&
+ mario.includes('@media(max-height:500px) and (min-width:580px)'));
