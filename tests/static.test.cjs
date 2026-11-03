@@ -62,7 +62,8 @@ check('Instalação como aplicativo no iOS',mario.includes('apple-mobile-web-app
 check('Controles com margem para safe-area iPhone',mario.includes('env(safe-area-inset-left) + 30px')&&mario.includes('env(safe-area-inset-right) + 30px'));
 check('Direcional com quatro setas visuais idênticas', ['#btn-up::before','#btn-down::before','#btn-left::before','#btn-right::before'].every(x=>mario.includes(x)));
 check('Canvas ocupa viewport horizontal de celular',mario.includes('function shouldFillMobileLandscape()')&&mario.includes("canvas.style.width=Math.floor(maxWidth)+'px'")&&mario.includes("canvas.style.height=Math.floor(maxHeight)+'px'"));
-check('Vitoria e vilão se voltam ao herói na introdução da fase 3',mario.includes("'VITORIA',intro?-1:1")&&mario.includes('if(intro)ctx.scale(-1,1)'));
+check('Vitoria e vilão se voltam ao herói na introdução da fase 3',
+ mario.includes('facing:intro?-1:1,')&&mario.includes('if(intro)ctx.scale(-1,1)'));
 
 check('Menu inicial contém ações principais', ['sgb-menu','NOVO JOGO','CARREGAR JOGO','OPÇÕES','SAIR DO JOGO'].every(x=>mario.includes(x)));
 check('Três saves independentes em localStorage',mario.includes('super-gabriel-bros-save-slots-v1')&&mario.includes('function sanitiseSave(')&&mario.includes('function startNewCampaign(')&&mario.includes('function loadCampaign('));
@@ -287,9 +288,11 @@ check('Diálogos do herói usam boca aberta e fechada sem pintura no rosto',
  mario.includes("if(speaking)return voiceOpen?'talkOpen':'talkClosed'")&&
  mario.includes('drawGabrielNew(player.x+player.w/2,player.y+player.h)')&&
  !mario.includes("isSuperGabriel()&&sprite===powerful)"));
-check('Vitoria mantém animação de fala existente',
- mario.includes('function drawSpeakingSprite(')&&
- mario.includes('drawSpeakingSprite(processedAssets.princess,'));
+check('Vitoria possui animação de boca própria sem remendo no rosto',
+ mario.includes('function drawVitoriaNew(')&&
+ mario.includes("speaking,voiceOpen:Math.floor(gameNow/165)%2===0")&&
+ mario.includes("if(speaking)return voiceOpen?'talkOpen':'talkClosed'")&&
+ !mario.includes('drawSpeakingSprite(processedAssets.princess,'));
 const poseSource=mario.match(/        function gabrielPoseName\(\{[\s\S]*?\n        \}/)?.[0];
 check('Seletor de poses do novo Gabriel está disponível',!!poseSource);
 const selectPose=new Function(poseSource+'\nreturn gabrielPoseName;')();
@@ -589,3 +592,49 @@ check('CANO BURGER mantém cenário, balcão e ambas as portas',
  shopDrawer.includes('extras.canoCounter')&&
  shopDrawer.includes('extras.canoFront')&&
  shopDrawer.includes('extras.canoBack'));
+
+
+// Vitoria adulta: 16 arquivos incluindo dois 176 diferentes e 174 com nome real.
+const vitoriaFiles=[
+ '166 vitoria idle.png','167 vitoria walk.png','168 walk 2.png',
+ '169 vitoria up.png','170 vitoria down.png','171 vitoria opened.png',
+ '172 closed.png','173 vitoria surprised.png','174 viroria happy.png',
+ '175 hmm.png','176 high.png','176 vitoria jumping.png','177 landing.png',
+ '178 worried.png','179 celebrating.png','180 ok.png'
+];
+check('16 arquivos novos da Vitoria publicados com nomes exatos',
+ vitoriaFiles.every(file=>fs.existsSync(path.join(root,file))&&
+ fs.statSync(path.join(root,file)).size>1000));
+check('Nova Vitoria usa carregamento e recorte por alpha',
+ mario.includes('const vitoriaSpritePaths={')&&
+ mario.includes('processedAssets.vitoria[pose]=cropSprite(image)')&&
+ mario.includes("idle:'166 vitoria idle.png'")&&
+ mario.includes("talkOpen:'171 vitoria opened.png'")&&
+ mario.includes("talkClosed:'172 closed.png'")&&
+ mario.includes("happy:'174 viroria happy.png'")&&
+ mario.includes("jumpRise:'176 vitoria jumping.png',jumpApex:'176 high.png'"));
+check('Pose da Vitoria é selecionada de forma isolável',
+ /function vitoriaPoseName\(/.test(mario));
+const vitoriaPoseSource=mario.match(/        function vitoriaPoseName\([\s\S]*?\n        \}/)?.[0];
+const selectVitoria=new Function(vitoriaPoseSource+'\nreturn vitoriaPoseName;')();
+check('Vitoria alterna fala em boca aberta/fechada sem mudar escala',
+ selectVitoria({speaking:true,voiceOpen:true})==='talkOpen'&&
+ selectVitoria({speaking:true,voiceOpen:false})==='talkClosed'&&
+ selectVitoria({speaking:false,pose:'worried'})==='worried');
+check('Vitoria alterna walk 1/walk 2 e preserva Idle',
+ selectVitoria({moving:true,walkFrame:0})==='walk1'&&
+ selectVitoria({moving:true,walkFrame:1})==='walk2'&&
+ selectVitoria({moving:false})==='idle');
+check('Vitoria tem altura visual próxima ao novo Gabriel e pés alinhados',
+ mario.includes('const VITORIA_VISUAL_HEIGHT=68;')&&
+ mario.includes('const princess={x:3400,y:312,w:32,h:68}')&&
+ mario.includes('drawSpriteOnFeet(image,centerX,footY,height,facing)'));
+check('Três fases e cutscene inicial usam novo renderizador',
+ mario.includes('drawVitoriaNew(princess.x+princess.w/2,princess.y+princess.h,')&&
+ (mario.match(/drawVitoriaNew\(0,0,\{/g)||[]).length===3&&
+ !mario.includes('drawSpeakingSprite(processedAssets.princess,'));
+check('Sprite antigo de Vitoria disponível somente como fallback',
+ mario.includes('processedAssets.vitoria.idle||processedAssets.princess'));
+check('Todas as poses adicionais estão nomeadas e prontas para futuras ações',
+ ['lookUp','lookDown','surprised','happy','thinking','jumpRise','jumpApex','landing',
+ 'worried','celebrating','ok'].every(p=>new RegExp('\\b'+p+':').test(mario)));
