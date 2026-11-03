@@ -23,17 +23,43 @@
         #game-hud {top:max(8px,env(safe-area-inset-top));left:max(8px,env(safe-area-inset-left));right:max(8px,env(safe-area-inset-right));}
         body.sgb-shop-mode #ui-time,body.sgb-shop-mode #ui-level{display:none!important}
         body.sgb-shop-mode #btn-up,body.sgb-shop-mode #btn-down{display:none!important}
+        /* CANO BURGER: vitrine 2×3, saldo visível e painel clean responsivo */
         #cano-shop-panel[hidden]{display:none!important}
-        #cano-shop-panel{position:fixed;inset:0;z-index:110;background:rgba(15,9,18,.83);display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box}
-        .cano-shop-card{width:min(480px,94vw);max-height:88dvh;overflow-y:auto;box-sizing:border-box;padding:22px;background:#2b1a24;border:4px solid #f7ab3d;box-shadow:0 0 0 5px #653519,0 15px 32px #000a;color:#fff3d5;text-align:center;font-family:'Press Start 2P',monospace}
-        .cano-shop-card h2{font-size:clamp(13px,2.6vw,18px);color:#ffcb67;line-height:1.65;margin:0 0 14px}
-        .cano-shop-card img{width:67px;height:67px;object-fit:contain;image-rendering:pixelated}
-        .cano-shop-card p{font-size:clamp(9px,1.7vw,12px);line-height:1.9}
-        .cano-shop-actions{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:15px}
-        .cano-shop-actions button{font:700 10px 'Press Start 2P',monospace;padding:13px 12px;color:#fff7d2;border:3px solid #f4c561;background:#8c4727;cursor:pointer}
-        .cano-shop-actions button:disabled{opacity:.45;cursor:default}
-        .cano-shop-actions button:focus-visible{outline:3px solid #fff;outline-offset:3px}
-        @media(max-height:540px){.cano-shop-card{padding:12px}.cano-shop-card img{width:44px;height:44px}.cano-shop-card p{margin:5px 0}.cano-shop-actions button{padding:8px}}
+        #cano-shop-panel{position:fixed;inset:0;z-index:110;display:flex;align-items:center;justify-content:center;box-sizing:border-box;padding:max(9px,env(safe-area-inset-top)) max(9px,env(safe-area-inset-right)) max(9px,env(safe-area-inset-bottom)) max(9px,env(safe-area-inset-left));background:rgba(13,10,13,.8);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
+        .cano-shop-card{width:min(748px,100%);max-height:95dvh;overflow:auto;overscroll-behavior:contain;box-sizing:border-box;padding:clamp(11px,2.4vw,20px);color:#f8eedc;background:#26201e;border:1px solid #725242;border-radius:15px;box-shadow:0 18px 65px #0009;text-align:left}
+        .cano-shop-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding-bottom:13px;border-bottom:1px solid #58443a}
+        .cano-shop-brand{display:flex;align-items:center;gap:10px}
+        .cano-shop-logo{width:36px;height:36px;object-fit:contain;image-rendering:pixelated}
+        .cano-shop-head h2{font:700 clamp(11px,1.8vw,15px)/1.5 "Press Start 2P",monospace;color:#ffd08a;margin:0}
+        .cano-shop-subtitle{font-size:11px;color:#c1aa97;margin:4px 0 0}
+        .cano-shop-wallet{display:flex;flex-direction:column;align-items:flex-end;gap:2px;border-radius:9px;border:1px solid #604833;background:#382c25;padding:7px 11px;white-space:nowrap}
+        .cano-shop-wallet small{font-size:10px;color:#c8b09c}
+        .cano-shop-wallet strong{font-size:15px;color:#ffdb90;font-variant-numeric:tabular-nums}
+        .cano-shop-body{display:grid;grid-template-columns:minmax(190px,.92fr) minmax(226px,1.14fr);gap:clamp(12px,2.6vw,22px);padding:16px 0}
+        .cano-shop-label{display:block;font-weight:700;font-size:11px;letter-spacing:.06em;color:#cbb19b;margin-bottom:9px}
+        .cano-stock-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+        .cano-stock-slot{display:flex;align-items:center;justify-content:center;aspect-ratio:1;max-height:91px;min-width:0;border:1px solid #675247;border-radius:10px;background:#332927;color:#877264;cursor:pointer;transition:background .12s,border-color .12s,transform .12s;touch-action:manipulation}
+        .cano-stock-slot img{height:56px;width:56px;max-width:75%;max-height:75%;object-fit:contain;image-rendering:pixelated}
+        .cano-stock-slot[data-cano-item="empty"]{border-style:dashed}
+        .cano-stock-slot .cano-slot-plus{font-size:24px;font-weight:300;opacity:.5}
+        .cano-stock-slot.is-selected,.cano-stock-slot.is-preview{background:#49372a;border-color:#f4b961;box-shadow:inset 0 0 0 1px #a97843}
+        .cano-stock-slot:hover{border-color:#eeb977;transform:translateY(-1px)}
+        .cano-stock-slot:focus-visible,.cano-shop-actions button:focus-visible{outline:2px solid #ffe4a0;outline-offset:3px}
+        .cano-shop-hint{font-size:11px;color:#ab9583;margin:9px 0 0;line-height:1.5}
+        .cano-shop-detail{display:flex;flex-direction:column;justify-content:space-between;gap:9px;min-width:0;padding:14px 16px;background:#342927;border-radius:10px}
+        .cano-shop-detail h3{font-size:clamp(14px,2vw,18px);line-height:1.38;margin:0;color:#fff1d7}
+        .cano-shop-detail p{font-size:12px;line-height:1.55;margin:7px 0 0;color:#ccb7a4}
+        .cano-shop-meta{display:grid;grid-template-columns:1fr 1fr;gap:8px;border-top:1px solid #59473e;padding-top:11px}
+        .cano-shop-meta small{display:block;color:#bca48f;font-size:10px;margin-bottom:4px}
+        .cano-shop-meta strong{font-size:14px;color:#ffdb8d;font-variant-numeric:tabular-nums}
+        #cano-shop-stock{color:#f3dbc2}
+        .cano-shop-status{color:#e8c48f!important;min-height:18px}
+        .cano-shop-actions{display:flex;justify-content:flex-end;align-items:center;flex-wrap:wrap;gap:9px;border-top:1px solid #58443a;padding-top:13px}
+        .cano-shop-actions button{min-height:40px;padding:9px 16px;border-radius:9px;border:1px solid #846345;background:#49372a;color:#f5dfc1;cursor:pointer;font:700 12px system-ui,-apple-system,"Segoe UI",sans-serif;touch-action:manipulation}
+        .cano-shop-actions #cano-shop-buy{background:#f1b45d;border-color:#f1b45d;color:#302016}
+        .cano-shop-actions button:disabled{opacity:.45;cursor:not-allowed}
+        @media(max-width:530px){.cano-shop-body{grid-template-columns:1fr;gap:12px;padding:11px 0}.cano-stock-slot{max-height:74px}.cano-shop-detail{padding:12px}.cano-shop-head{padding-bottom:10px}}
+        @media(max-height:500px) and (min-width:580px){.cano-shop-card{max-height:96dvh;padding:10px 15px}.cano-shop-head{padding-bottom:8px}.cano-shop-body{padding:9px 0;gap:13px}.cano-stock-slot{max-height:65px}.cano-stock-slot img{height:42px;width:42px}.cano-shop-detail{padding:10px}.cano-shop-detail h3{font-size:13px}.cano-shop-detail p{font-size:11px}.cano-shop-actions{padding-top:8px}.cano-shop-actions button{min-height:33px;padding:6px 13px}}
 
         .sgb-coins-hud{position:absolute;left:56px;top:9px;padding:7px 9px;border:2px solid #f4c458;border-radius:8px;background:rgba(36,24,35,.9);color:#ffed94;white-space:nowrap;font:700 clamp(9px,1.4vw,12px) 'Press Start 2P',monospace;text-shadow:1px 2px #4b311f;pointer-events:none;box-shadow:0 2px 0 #643e24}
         /* Reserva margens para o polegar, bordas curvas e sensor frontal do iPhone. */
@@ -350,16 +376,42 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
     <div id="item-toast" role="status" aria-live="polite"></div>
     <section id="cano-shop-panel" role="dialog" aria-modal="true" aria-labelledby="cano-shop-title" hidden>
       <div class="cano-shop-card">
-        <h2 id="cano-shop-title">🍔 CANO BURGER</h2>
-        <img src="79.png" alt="Hambúrguer da Super Força">
-        <p>HAMBÚRGUER DA SUPER FORÇA</p>
-        <p>PREÇO: 🪙 10 MOEDAS</p>
-        <p id="cano-shop-money" aria-live="polite">SEU SALDO: 0</p>
-        <p id="cano-shop-message" aria-live="polite">TRANSFORMA GABRIEL ATÉ O FIM DA FASE.</p>
-        <div class="cano-shop-actions">
-          <button id="cano-shop-buy" type="button" onclick="canoBuyBurger()">COMPRAR 🪙 10</button>
-          <button id="cano-shop-close" type="button" onclick="canoCloseShop()">SAIR DO BALCÃO</button>
+        <header class="cano-shop-head">
+          <div class="cano-shop-brand">
+            <img class="cano-shop-logo" src="79.png" alt="">
+            <div><h2 id="cano-shop-title">CANO BURGER</h2><p class="cano-shop-subtitle">Escolha seu item</p></div>
+          </div>
+          <div class="cano-shop-wallet"><small>Seu saldo</small><strong id="cano-shop-money" aria-live="polite">🪙 0 moedas</strong></div>
+        </header>
+        <div class="cano-shop-body">
+          <div>
+            <span class="cano-shop-label">VITRINE · 1/6</span>
+            <div class="cano-stock-grid" aria-label="Itens da loja">
+              <button type="button" class="cano-stock-slot is-selected" data-cano-item="burger" aria-label="Hambúrguer da Super Força" aria-pressed="true" onmouseenter="canoPreviewShopItem('burger',this)" onmouseleave="canoClearShopPreview()" onfocus="canoPreviewShopItem('burger',this)" onblur="canoClearShopPreview()" onclick="canoSelectShopItem('burger',this)"><img src="79.png" alt=""></button>
+              <button type="button" class="cano-stock-slot" data-cano-item="empty" aria-label="Espaço vazio 2, em breve" aria-pressed="false" onmouseenter="canoPreviewShopItem('empty',this)" onmouseleave="canoClearShopPreview()" onfocus="canoPreviewShopItem('empty',this)" onblur="canoClearShopPreview()" onclick="canoSelectShopItem('empty',this)"><span class="cano-slot-plus" aria-hidden="true">+</span></button>
+              <button type="button" class="cano-stock-slot" data-cano-item="empty" aria-label="Espaço vazio 3, em breve" aria-pressed="false" onmouseenter="canoPreviewShopItem('empty',this)" onmouseleave="canoClearShopPreview()" onfocus="canoPreviewShopItem('empty',this)" onblur="canoClearShopPreview()" onclick="canoSelectShopItem('empty',this)"><span class="cano-slot-plus" aria-hidden="true">+</span></button>
+              <button type="button" class="cano-stock-slot" data-cano-item="empty" aria-label="Espaço vazio 4, em breve" aria-pressed="false" onmouseenter="canoPreviewShopItem('empty',this)" onmouseleave="canoClearShopPreview()" onfocus="canoPreviewShopItem('empty',this)" onblur="canoClearShopPreview()" onclick="canoSelectShopItem('empty',this)"><span class="cano-slot-plus" aria-hidden="true">+</span></button>
+              <button type="button" class="cano-stock-slot" data-cano-item="empty" aria-label="Espaço vazio 5, em breve" aria-pressed="false" onmouseenter="canoPreviewShopItem('empty',this)" onmouseleave="canoClearShopPreview()" onfocus="canoPreviewShopItem('empty',this)" onblur="canoClearShopPreview()" onclick="canoSelectShopItem('empty',this)"><span class="cano-slot-plus" aria-hidden="true">+</span></button>
+              <button type="button" class="cano-stock-slot" data-cano-item="empty" aria-label="Espaço vazio 6, em breve" aria-pressed="false" onmouseenter="canoPreviewShopItem('empty',this)" onmouseleave="canoClearShopPreview()" onfocus="canoPreviewShopItem('empty',this)" onblur="canoClearShopPreview()" onclick="canoSelectShopItem('empty',this)"><span class="cano-slot-plus" aria-hidden="true">+</span></button>
+            </div>
+            <p class="cano-shop-hint">Passe o mouse ou toque para ver os detalhes.</p>
+          </div>
+          <div class="cano-shop-detail">
+            <div><span class="cano-shop-label">DETALHES DO ITEM</span>
+              <h3 id="cano-shop-item-name">Hambúrguer da Super Força</h3>
+              <p id="cano-shop-description">Ativa a Super Força até o fim da fase.</p>
+            </div>
+            <div class="cano-shop-meta">
+              <div><small>Preço</small><strong id="cano-shop-price">🪙 10 moedas</strong></div>
+              <div><small>No inventário</small><strong id="cano-shop-stock">0</strong></div>
+            </div>
+            <p id="cano-shop-message" class="cano-shop-status" role="status" aria-live="polite">Selecione um item para comprar.</p>
+          </div>
         </div>
+        <footer class="cano-shop-actions">
+          <button id="cano-shop-close" type="button" onclick="canoCloseShop()">Voltar à loja</button>
+          <button id="cano-shop-buy" type="button" onclick="canoBuyBurger()">Comprar · 🪙 10</button>
+        </footer>
       </div>
     </section>
     <section id="sgb-menu" aria-label="Menu de Super Gabriel Bros">
@@ -3164,8 +3216,11 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
         const CANO_WIDTH=2240,CANO_FLOOR=381,CANO_PRICE=10;
         const CANO_FRONT_X=160,CANO_BACK_X=CANO_WIDTH-168,CANO_REGISTER_X=1170;
         let shopPanelOpen=false,shopClock=0,shopNextConversation=7,shopConversation=null;
+        let canoSelectedItem='burger',canoPreviewItem=null,canoCounterMessage='';
+        let canoSelectedSlot=null,canoHoveredSlot=null;
         let shopConversationDeck=[],shopLastConversation=-1,shopHeroDistance=0;
-        let shopDancePending=true; // Uma dança roteirizada por visita à CANO BURGER.
+        let shopFirstEventPrevious=-1,shopConversationCount=0;
+        // A dança é uma das cenas sorteadas, não um evento obrigatório de entrada.
         const shopActors=[
           {name:'alan',x:1000,target:1000,walked:0,dir:1,rest:0,pose:'idle'},
           {name:'humberto',x:1250,target:1250,walked:0,dir:-1,rest:0,pose:'idle'}
@@ -3199,24 +3254,45 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           [['ALAN','EU ORGANIZO ESSA COZINHA E VOCÊ BAGUNÇA TUDO!'],['HUMBERTO','PRA TE MANTER ENTRETIDO.'],['ALAN','EU NÃO SOU SEU HOBBY!'],['HUMBERTO','ÀS VEZES PARECE.']],
           [['ALAN','VOCÊ ESCREVEU PROMOÇÃO ERRADO NO QUADRO!'],['HUMBERTO','É IDENTIDADE VISUAL.'],['ALAN','TÁ ESCRITO PROVOÇÃO!'],['HUMBERTO','MELHOR! JÁ PROVOCA O CLIENTE!']],
           [['ALAN','SE ENTRAR CLIENTE E VOCÊ TIVER NO CELULAR...'],['HUMBERTO','EU FINJO PRODUTIVIDADE RAPIDINHO!'],['ALAN','ESSE É EXATAMENTE O PROBLEMA!'],['HUMBERTO','E AINDA ASSIM SOU O FAVORITO.']],
-          [['HUMBERTO','ALAN, PARA DE ENCARAR ESSE CELULAR E VAI TRABALHAR!'],['ALAN','TÔ CONFERINDO O ESTOQUE DIGITAL!'],['HUMBERTO','TEM FOTO DE GATINHO NA TELA!'],['ALAN','É O GATO DO FORNECEDOR. RESPEITA O FUNCIONÁRIO!']]
+          [['HUMBERTO','ALAN, PARA DE ENCARAR ESSE CELULAR E VAI TRABALHAR!'],['ALAN','TÔ CONFERINDO O ESTOQUE DIGITAL!'],['HUMBERTO','TEM FOTO DE GATINHO NA TELA!'],['ALAN','É O GATO DO FORNECEDOR. RESPEITA O FUNCIONÁRIO!']],
+          [['ALAN','ARRUMEI A COZINHA TODA EM CINCO MINUTOS!'],['HUMBERTO','E EU BAGUNÇO EM DOIS. QUER VER?'],['ALAN','ISSO NÃO É TALENTO, É UM PROBLEMA!'],['HUMBERTO','PROBLEMA É ESSE TEU VÍCIO EM ORGANIZAÇÃO!']],
+          [['HUMBERTO','TU TÁ NO CELULAR DE NOVO, ALAN?'],['ALAN','TÔ VENDO O ESTOQUE.'],['HUMBERTO','ESTOQUE DE MEME, SÓ SE FOR!'],['ALAN','PELO MENOS EU DISFARÇO MELHOR QUE VOCÊ!']],
+          [['ALAN','TU TAVA DORMINDO EM PÉ DE NOVO?'],['HUMBERTO','TAVA REFLETINDO DE OLHO FECHADO!'],['ALAN','REFLETINDO E RONCANDO?'],['HUMBERTO','NÃO ATRAPALHA MEU PROCESSO CRIATIVO, VIADO!']],
+          [['ALAN','SUMIU MAIS UM HAMBÚRGUER DA COZINHA.'],['HUMBERTO','MISTÉRIO DA CANO BURGER!'],['ALAN','MISTÉRIO NADA, FOI TUA FOME!'],['HUMBERTO','CONTROLE DE QUALIDADE TAMBÉM É TRABALHO!']],
+          [['ALAN','SE EU QUISER DANÇAR, EU DANÇO!'],['HUMBERTO','TU PARECE UM GUARDA-ROUPA TENTANDO SAMBAR!'],['ALAN','E TU PARECE UM BOTIJÃO TENTANDO CORRER!'],['HUMBERTO','PELO MENOS EU TENHO PRESENÇA!']],
+          [['HUMBERTO','TEU AVENTAL É TÃO ALINHADINHO QUE DÁ NERVOSO.'],['ALAN','O TEU TÁ TÃO TORTO QUE DÁ VERGONHA!'],['HUMBERTO','VERGONHA É VER TEUS PASSINHOS DE DANÇA!'],['ALAN','ENTÃO NÃO OLHA, UÉ!']],
+          [['ALAN','VOCÊ CAIU BONITO ONTEM, HUMBERTO!'],['HUMBERTO','CAÍ COM ESTILO!'],['ALAN','PARECIA UM DESENHO ANIMADO!'],['HUMBERTO','E LEVANTEI ANTES DE VOCÊ PARAR DE RIR!']],
+          [['ALAN','SE VOCÊ TRABALHASSE METADE DO QUE FALA...'],['HUMBERTO','A LOJA TAVA EM OUTRO NÍVEL!'],['ALAN','NÍVEL DE CAOS, NÉ?'],['HUMBERTO','CAOS CONTROLADO, MEU PARCEIRO!']],
+          [['HUMBERTO','ENDIREITA A POSTURA! VAI QUE ENTRA CLIENTE!'],['ALAN','FALA ISSO TU, QUE TAVA COÇANDO A BARRIGA!'],['HUMBERTO','PAUSA ESTRATÉGICA!'],['ALAN','ESTRATÉGICA PRA ESPANTAR FREGUÊS!']],
+          [['ALAN','UM DIA TU VAI ADMITIR QUE EU SEGURO ESSA LOJA!'],['HUMBERTO','E TU VAI ADMITIR QUE SEM MIM NÃO TEM GRAÇA!'],['ALAN','TU É UM ACIDENTE COM CPF!'],['HUMBERTO','E TU É UM TUTORIAL AMBULANTE!']],
+          [['ALAN','TENTA NÃO ARRUMAR PROBLEMA HOJE.'],['HUMBERTO','EU SOU A PERSONALIDADE DA LOJA!'],['ALAN','TU É A MULTA DA LOJA!'],['HUMBERTO','E TU É O FISCAL DO TÉDIO!']],
+          [['ALAN','APRENDI UM PASSO NOVO! QUER VER?'],['HUMBERTO','DE NOVO ESSA VIADAGEM, MLK?!'],['ALAN','TÁ COM INVEJA DO MEU TALENTO?'],['HUMBERTO','TÔ PREOCUPADO COM O CHÃO, COITADO!']]
         ];
-        function shuffledShopDeck(){
+        function shuffledShopDeck(avoidFirst=shopLastConversation){
           const deck=canoArguments.map((_,i)=>i);
-          for(let i=deck.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[deck[i],deck[j]]=[deck[j],deck[i]];}
-          if(deck[0]===shopLastConversation&&deck.length>1)[deck[0],deck[1]]=[deck[1],deck[0]];
+          for(let i=deck.length-1;i>0;i--){
+            const j=Math.floor(Math.random()*(i+1));[deck[i],deck[j]]=[deck[j],deck[i]];
+          }
+          // Evita a mesma primeira cena em visitas consecutivas.
+          if(deck.length>2&&(deck[0]===avoidFirst||deck[0]===shopLastConversation)){
+            const alternate=deck.findIndex((n,i)=>i>0&&n!==avoidFirst&&n!==shopLastConversation);
+            if(alternate>0)[deck[0],deck[alternate]]=[deck[alternate],deck[0]];
+          }
           return deck;
         }
         function enterCanoShop(){
           state='shop';shopPanelOpen=false;shopClock=0;shopNextConversation=6;shopConversation=null;
-          shopDancePending=true;
-          if(!shopConversationDeck.length)shopConversationDeck=shuffledShopDeck();
+          shopConversationCount=0;
+          shopConversationDeck=shuffledShopDeck(shopFirstEventPrevious);
           document.getElementById('cano-shop-panel').hidden=true;
           player.x=CANO_FRONT_X+42;player.y=CANO_FLOOR-player.h;player.vx=player.vy=0;
           player.direction=1;player.animFrame=0;cameraX=0;shopHeroDistance=0;
           shopActors[0].x=990;shopActors[0].target=990;shopActors[0].rest=1;
           shopActors[1].x=1290;shopActors[1].target=1290;shopActors[1].rest=1;
-          for(const npc of shopActors){npc.activity=null;npc.pose='idle';npc.celebrateUntil=0;}
+          for(const npc of shopActors){
+            npc.activity=null;npc.pose='idle';npc.celebrateUntil=0;
+            npc.nextDanceAt=0;
+          }
           keys.left=keys.right=keys.up=keys.down=false;
           superPower.until=superPower.dashUntil=superPower.cooldownUntil=0;
           setHUD();
@@ -3232,20 +3308,68 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
         window.canoCloseShop=canoCloseShop;
         function canoOpenCounter(){
           shopPanelOpen=true;keys.left=keys.right=keys.up=keys.down=false;
+          canoSelectedItem='burger';canoPreviewItem=null;canoCounterMessage='';
+          canoSelectedSlot=document.querySelector('#cano-shop-panel .cano-stock-slot[data-cano-item="burger"]');
+          canoHoveredSlot=null;
           document.getElementById('cano-shop-panel').hidden=false;
-          canoUpdateCounter();
-          document.getElementById('cano-shop-buy')?.focus();
+          canoRenderCounter();
+          canoSelectedSlot?.focus();
         }
-        function canoUpdateCounter(message){
+        function canoRenderCounter(){
+          const item=canoPreviewItem??canoSelectedItem;
+          const burger=item==='burger',stock=inventory.consumables.burger||0;
           const money=document.getElementById('cano-shop-money');
-          const info=document.getElementById('cano-shop-message');
+          const name=document.getElementById('cano-shop-item-name');
+          const desc=document.getElementById('cano-shop-description');
+          const price=document.getElementById('cano-shop-price');
+          const count=document.getElementById('cano-shop-stock');
+          const msg=document.getElementById('cano-shop-message');
           const buy=document.getElementById('cano-shop-buy');
-          if(money)money.textContent='SEU SALDO: '+coins+' MOEDAS';
-          if(info)info.textContent=message||'ATIVA A SUPER FORÇA ATÉ O FIM DA FASE.';
-          if(buy)buy.disabled=coins<CANO_PRICE||(inventory.consumables.burger||0)>=99;
+          if(money)money.textContent='🪙 '+coins+' moedas';
+          if(name)name.textContent=burger?'Hambúrguer da Super Força':'Espaço reservado';
+          if(desc)desc.textContent=burger?'Ativa a Super Força até o fim da fase.':'Novo item chegando em breve à CANO BURGER.';
+          if(price)price.textContent=burger?'🪙 '+CANO_PRICE+' moedas':'—';
+          if(count)count.textContent=burger?String(stock):'—';
+          if(msg)msg.textContent=!burger?'Este slot ainda não está disponível.':
+            canoCounterMessage||
+              (stock>=99?'Inventário cheio (99).':
+              coins<CANO_PRICE?'Faltam '+(CANO_PRICE-coins)+' moedas para comprar.':
+              canoSelectedItem==='burger'?'Disponível para comprar.':'Clique no hambúrguer para selecioná-lo.');
+          if(buy){
+            buy.textContent='Comprar · 🪙 '+CANO_PRICE;
+            buy.disabled=!burger||canoSelectedItem!=='burger'||coins<CANO_PRICE||stock>=99;
+          }
+          document.querySelectorAll('#cano-shop-panel .cano-stock-slot').forEach(slot=>{
+            slot.classList.toggle('is-selected',slot===canoSelectedSlot);
+            slot.classList.toggle('is-preview',slot===canoHoveredSlot&&slot!==canoSelectedSlot);
+            slot.setAttribute('aria-pressed',String(slot===canoSelectedSlot));
+          });
+        }
+        function canoPreviewShopItem(item,slot){
+          if(!shopPanelOpen)return;
+          canoPreviewItem=item;canoHoveredSlot=slot;
+          canoRenderCounter();
+        }
+        function canoClearShopPreview(){
+          if(!shopPanelOpen)return;
+          canoPreviewItem=null;canoHoveredSlot=null;
+          canoRenderCounter();
+        }
+        function canoSelectShopItem(item,slot){
+          if(!shopPanelOpen)return;
+          canoSelectedItem=item;canoSelectedSlot=slot;
+          canoPreviewItem=null;canoHoveredSlot=null;canoCounterMessage='';
+          canoRenderCounter();
+        }
+        window.canoPreviewShopItem=canoPreviewShopItem;
+        window.canoClearShopPreview=canoClearShopPreview;
+        window.canoSelectShopItem=canoSelectShopItem;
+        function canoUpdateCounter(message){
+          if(typeof message==='string')canoCounterMessage=message;
+          canoRenderCounter();
         }
         function canoBuyBurger(){
-          if(state!=='shop'||!shopPanelOpen)return false;
+          if(state!=='shop'||!shopPanelOpen||canoSelectedItem!=='burger')return false;
           const stock=inventory.consumables.burger||0;
           if(coins<CANO_PRICE){canoUpdateCounter('MOEDAS INSUFICIENTES!');return false;}
           if(stock>=99){canoUpdateCounter('INVENTÁRIO CHEIO! LIMITE DE 99.');return false;}
@@ -3290,19 +3414,18 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           showItemToast('APROXIME-SE DO BALCÃO OU DE UMA PORTA!');
         }
         function canoStartArgument(){
-          // Uma dança do Alan abre a sessão; depois o baralho mistura todas as cenas.
           if(shopActors.some(n=>n.activity))return false;
           if(!shopConversationDeck.length)shopConversationDeck=shuffledShopDeck();
-          const index=shopDancePending?10:shopConversationDeck.shift();
-          if(index===10){
-            shopDancePending=false;
-            shopConversationDeck=shopConversationDeck.filter(n=>n!==10);
-          }
+          const index=shopConversationDeck.shift();
+          if(shopConversationCount===0)shopFirstEventPrevious=index;
+          shopConversationCount++;
           shopLastConversation=index;
+          const dancing=index===10||index===canoArguments.length-1;
+          if(dancing)shopActors[0].nextDanceAt=shopClock+32;
           shopConversation={
             lines:canoArguments[index].map(pair=>pair.slice()),index:0,
-            until:shopClock+(index===10?2.65:3.05),
-            noticed:false,recognized:false,kind:index===10?'dance':'banter'
+            until:shopClock+(dancing?2.65:3.05),
+            noticed:false,recognized:false,kind:dancing?'dance':'banter'
           };
           for(const npc of shopActors){npc.activity=null;npc.rest=0;npc.pose='talkClosed';}
           return true;
@@ -3311,10 +3434,14 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
         // Pequenos hábitos, independente da presença do jogador.
         // Uma atividade acaba antes da próxima: sem teleportes entre escorregão e queda.
         function canoStartActivity(npc){
-          const pool=npc.name==='alan'?
-            ['phone','phone','sleep','dance','trip','phone']:
+          let pool=npc.name==='alan'?
+            ['phone','phone','sleep','dance','dance','trip','phone','sleep']:
             ['phone','phone','sleep','laugh','sarcasm','trip'];
+          // Dança mais comum que antes (2/8), mas só a cada 32 segundos.
+          if(npc.name==='alan'&&shopClock<(npc.nextDanceAt||0))
+            pool=pool.filter(action=>action!=='dance');
           const kind=pool[Math.floor(Math.random()*pool.length)];
+          if(kind==='dance')npc.nextDanceAt=shopClock+32;
           const duration=kind==='trip'?3.0:kind==='sleep'?5.8:
             kind==='phone'?5.2:kind==='dance'?3.7:2.4;
           npc.activity={kind,start:shopClock,duration};
@@ -3348,7 +3475,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           const speaker=conversation.lines[conversation.index]?.[0]?.toLowerCase();
           if(conversation.kind==='dance'){
             if(npc.name==='alan'){
-              if([0,1,2,4,6].includes(conversation.index))
+              if(conversation.lines.length===4||[0,1,2,4,6].includes(conversation.index))
                 return Math.floor(shopClock/.30)%2?'dance1':'dance2';
               return speaker==='alan'?
                 (Math.floor(shopClock*3.4)%2?'talkOpen':'talkClosed'):'crossed';
