@@ -1169,7 +1169,11 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
             lookUp:'98 alan up.png',lookDown:'99 alan down.png',
             talkOpen:'100 alan open.png',talkClosed:'101 alan close.png',
             wave:'102 alan greet.png',happy:'103 alan happy.png',thinking:'104 thinking.png',
-            surprised:'105 alan surprised.png',crossed:'106 alan cruzado.png'
+            surprised:'105 alan surprised.png',crossed:'106 alan cruzado.png',
+            slip:'150 alan falling.png',fall:'151 Alan após a queda.png',
+            getup:'152 Alan se levantando, envergonhado.png',
+            phoneLook:'153 Alan Conferindo o Smartphone.png',phoneType:'154.png',
+            sleep:'155 sleeping.png',dance1:'156 alan dance 1.png',dance2:'157 alan dance 2.png'
           },
           humberto:{
             idle:'107 humberto idle.png',idleAlt:'94 humberto.png',
@@ -1178,7 +1182,10 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
             talkOpen:'112 humbeto open.png',talkClosed:'113 humberto close.png',
             happy:'114 humberto happy.png',wave:'115 humberto tchau.png',
             thinking:'116 humberto braços cruzados.png',surprised:'117 humberto surprised.png',
-            crossed:'118 braços cruzados.png'
+            crossed:'118 braços cruzados.png',
+            slip:'158 humberto falling.png',fall:'159 humberto down.png',
+            getup:'160.png',phoneLook:'161 smartphone.png',phoneType:'162 looking.png',
+            sleep:'163 sleeping.png',laugh:'164 laughing.png',sarcasm:'165 sarcs.png'
           }
         };
         processedAssets.canoNpc={alan:{},humberto:{}};
@@ -3158,6 +3165,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
         const CANO_FRONT_X=160,CANO_BACK_X=CANO_WIDTH-168,CANO_REGISTER_X=1170;
         let shopPanelOpen=false,shopClock=0,shopNextConversation=7,shopConversation=null;
         let shopConversationDeck=[],shopLastConversation=-1,shopHeroDistance=0;
+        let shopDancePending=true; // Uma dança roteirizada por visita à CANO BURGER.
         const shopActors=[
           {name:'alan',x:1000,target:1000,walked:0,dir:1,rest:0,pose:'idle'},
           {name:'humberto',x:1250,target:1250,walked:0,dir:-1,rest:0,pose:'idle'}
@@ -3172,7 +3180,26 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           [['ALAN','SUMIRAM DEZ HAMBÚRGUERES DO ESTOQUE!'],['HUMBERTO','MISTÉRIO TERRÍVEL.'],['ALAN','POR QUE VOCÊ TÁ COM MOLHO NA BARBA?!'],['HUMBERTO','TÔ INVESTIGANDO AS PISTAS!']],
           [['ALAN','VOCÊ PRECISA LAVAR ESSE AVENTAL!'],['HUMBERTO','ESSE AVENTAL TEM HISTÓRIA!'],['ALAN','TEM É UM ECOSSISTEMA INTEIRO!'],['HUMBERTO','ENTÃO RESPEITA OS MORADORES!']],
           [['ALAN','QUEM PINTOU CANO BUGUER NA PLACA?!'],['HUMBERTO','EU. ECONOMIZEI UMA LETRA!'],['ALAN','VOCÊ ESCREVEU O NOME ERRADO!'],['HUMBERTO','MARKETING, ALAN! AGORA TODO MUNDO COMENTA!']],
-          [['ALAN','ÀS VEZES EU NÃO SEI COMO AINDA TRABALHO COM VOCÊ.'],['HUMBERTO','PORQUE NINGUÉM FAZ HAMBÚRGUER MELHOR QUE EU.'],['ALAN','...É, INFELIZMENTE VOCÊ COZINHA BEM.'],['HUMBERTO','E TU CUIDA BEM DA LOJA. MAS NÃO ESPALHA!']]
+          [['ALAN','ÀS VEZES EU NÃO SEI COMO AINDA TRABALHO COM VOCÊ.'],['HUMBERTO','PORQUE NINGUÉM FAZ HAMBÚRGUER MELHOR QUE EU.'],['ALAN','...É, INFELIZMENTE VOCÊ COZINHA BEM.'],['HUMBERTO','E TU CUIDA BEM DA LOJA. MAS NÃO ESPALHA!']],
+          // Evento 10: Alan dança, Humberto responde e os dois se provocam sem parar.
+          [['ALAN','OLHA AQUI, HUMBERTO! APRENDI UNS PASSOS!'],
+           ['HUMBERTO','PARA DE VIADAGEM MLK! ISSO AQUI É UMA HAMBURGUERIA!'],
+           ['ALAN','FALOU O CARA QUE DANÇOU COM UMA ESPÁTULA ONTEM!'],
+           ['HUMBERTO','EU TAVA TESTANDO A ADERÊNCIA DO PISO, SEU ANIMAL!'],
+           ['ALAN','COM REBOLADO E TUDO? QUE TESTE CIENTÍFICO!'],
+           ['HUMBERTO','ERA PRA NÃO ESCORREGAR! TU NÃO ENTENDE NADA!'],
+           ['ALAN','PELO MENOS MINHA DANÇA NÃO TERMINOU NO CHÃO!'],
+           ['HUMBERTO','CONTINUA E EU TRANSFORMO ESSA LOJA NUMA ACADEMIA DE TOMBO!']],
+          [['ALAN','VOCÊ DEIXOU GORDURA ATÉ NO CARDÁPIO!'],['HUMBERTO','TEMPERINHO ATMOSFÉRICO.'],['ALAN','ISSO É SUJEIRA, HUMBERTO!'],['HUMBERTO','PRA VOCÊ, TUDO QUE NÃO BRILHA É CRIME!']],
+          [['ALAN','TÁ NO CELULAR DE NOVO EM HORÁRIO DE TRABALHO?'],['HUMBERTO','TÔ DIVULGANDO A LOJA!'],['ALAN','VOCÊ TÁ VENDO MEME!'],['HUMBERTO','MARKETING MODERNO, MEU PARCEIRO!']],
+          [['ALAN','POR QUE TEM PÃO DENTRO DA GAVETA DO CAIXA?'],['HUMBERTO','PORQUE LÁ NINGUÉM MEXE.'],['ALAN','ISSO NÃO É ESTOQUE!'],['HUMBERTO','AGORA É.']],
+          [['ALAN','VOCÊ DORMIU EM PÉ DE NOVO?'],['HUMBERTO','TAVA PISCANDO DEVAGAR.'],['ALAN','VOCÊ RONCOU!'],['HUMBERTO','RONCO ESTRATÉGICO PRA ESPANTAR CLIENTE CHATO.']],
+          [['ALAN','QUEM ESCORREGOU NO PRÓPRIO MOLHO ONTEM?'],['HUMBERTO','FOI UM TESTE DE ATRITO DO PISO!'],['ALAN','VOCÊ CAIU DE BUNDA NO CHÃO!'],['HUMBERTO','E LEVANTEI COM ESTILO, DIFERENTE DE VOCÊ!']],
+          [['ALAN','VOCÊ COMEU UM HAMBÚRGUER SEM PAGAR DE NOVO?'],['HUMBERTO','SOU FUNCIONÁRIO!'],['ALAN','ISSO NÃO É DEGUSTAÇÃO INFINITA!'],['HUMBERTO','É CONFIANÇA DA EMPRESA NO MEU PALADAR!']],
+          [['ALAN','EU ORGANIZO ESSA COZINHA E VOCÊ BAGUNÇA TUDO!'],['HUMBERTO','PRA TE MANTER ENTRETIDO.'],['ALAN','EU NÃO SOU SEU HOBBY!'],['HUMBERTO','ÀS VEZES PARECE.']],
+          [['ALAN','VOCÊ ESCREVEU PROMOÇÃO ERRADO NO QUADRO!'],['HUMBERTO','É IDENTIDADE VISUAL.'],['ALAN','TÁ ESCRITO PROVOÇÃO!'],['HUMBERTO','MELHOR! JÁ PROVOCA O CLIENTE!']],
+          [['ALAN','SE ENTRAR CLIENTE E VOCÊ TIVER NO CELULAR...'],['HUMBERTO','EU FINJO PRODUTIVIDADE RAPIDINHO!'],['ALAN','ESSE É EXATAMENTE O PROBLEMA!'],['HUMBERTO','E AINDA ASSIM SOU O FAVORITO.']],
+          [['HUMBERTO','ALAN, PARA DE ENCARAR ESSE CELULAR E VAI TRABALHAR!'],['ALAN','TÔ CONFERINDO O ESTOQUE DIGITAL!'],['HUMBERTO','TEM FOTO DE GATINHO NA TELA!'],['ALAN','É O GATO DO FORNECEDOR. RESPEITA O FUNCIONÁRIO!']]
         ];
         function shuffledShopDeck(){
           const deck=canoArguments.map((_,i)=>i);
@@ -3182,12 +3209,14 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
         }
         function enterCanoShop(){
           state='shop';shopPanelOpen=false;shopClock=0;shopNextConversation=6;shopConversation=null;
+          shopDancePending=true;
           if(!shopConversationDeck.length)shopConversationDeck=shuffledShopDeck();
           document.getElementById('cano-shop-panel').hidden=true;
           player.x=CANO_FRONT_X+42;player.y=CANO_FLOOR-player.h;player.vx=player.vy=0;
           player.direction=1;player.animFrame=0;cameraX=0;shopHeroDistance=0;
           shopActors[0].x=990;shopActors[0].target=990;shopActors[0].rest=1;
           shopActors[1].x=1290;shopActors[1].target=1290;shopActors[1].rest=1;
+          for(const npc of shopActors){npc.activity=null;npc.pose='idle';npc.celebrateUntil=0;}
           keys.left=keys.right=keys.up=keys.down=false;
           superPower.until=superPower.dashUntil=superPower.cooldownUntil=0;
           setHUD();
@@ -3246,6 +3275,11 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           if(Math.abs(x-CANO_REGISTER_X)<155){canoOpenCounter();return;}
           const npc=shopActors.find(n=>Math.abs(n.x-x)<75);
           if(npc){
+            if(npc.activity?.kind==='trip'){
+              showItemToast('ESPERA ELE SE LEVANTAR PRIMEIRO!');
+              return;
+            }
+            npc.activity=null; // Celular ou cochilo param quando Gabriel chama.
             npc.dir=x>npc.x?1:-1;
             shopConversation={lines:[
               [npc.name.toUpperCase(),npc.name==='alan'?'BEM-VINDO! DEIXAMOS TUDO LIMPO PRA VOCÊ.':'VEIO COMER OU SÓ FISCALIZAR, CAMPEÃO?'],
@@ -3256,10 +3290,83 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           showItemToast('APROXIME-SE DO BALCÃO OU DE UMA PORTA!');
         }
         function canoStartArgument(){
+          // Uma dança do Alan abre a sessão; depois o baralho mistura todas as cenas.
+          if(shopActors.some(n=>n.activity))return false;
           if(!shopConversationDeck.length)shopConversationDeck=shuffledShopDeck();
-          const index=shopConversationDeck.shift();shopLastConversation=index;
-          shopConversation={lines:canoArguments[index].map(pair=>pair.slice()),index:0,until:shopClock+3.05,noticed:false,recognized:false};
-          for(const npc of shopActors){npc.rest=0;npc.pose='talkClosed';}
+          const index=shopDancePending?10:shopConversationDeck.shift();
+          if(index===10){
+            shopDancePending=false;
+            shopConversationDeck=shopConversationDeck.filter(n=>n!==10);
+          }
+          shopLastConversation=index;
+          shopConversation={
+            lines:canoArguments[index].map(pair=>pair.slice()),index:0,
+            until:shopClock+(index===10?2.65:3.05),
+            noticed:false,recognized:false,kind:index===10?'dance':'banter'
+          };
+          for(const npc of shopActors){npc.activity=null;npc.rest=0;npc.pose='talkClosed';}
+          return true;
+        }
+
+        // Pequenos hábitos, independente da presença do jogador.
+        // Uma atividade acaba antes da próxima: sem teleportes entre escorregão e queda.
+        function canoStartActivity(npc){
+          const pool=npc.name==='alan'?
+            ['phone','phone','sleep','dance','trip','phone']:
+            ['phone','phone','sleep','laugh','sarcasm','trip'];
+          const kind=pool[Math.floor(Math.random()*pool.length)];
+          const duration=kind==='trip'?3.0:kind==='sleep'?5.8:
+            kind==='phone'?5.2:kind==='dance'?3.7:2.4;
+          npc.activity={kind,start:shopClock,duration};
+        }
+        function canoUpdateActivity(npc){
+          const action=npc.activity;
+          if(!action)return false;
+          const elapsed=shopClock-action.start;
+          if(elapsed>=action.duration){
+            npc.activity=null;npc.rest=1.2+Math.random()*1.5;
+            npc.pose='idle';
+            return false;
+          }
+          if(action.kind==='trip'){
+            npc.pose=elapsed<.5?'slip':elapsed<1.95?'fall':'getup';
+          }else if(action.kind==='phone'){
+            npc.pose=Math.floor(elapsed/.66)%2?'phoneType':'phoneLook';
+          }else if(action.kind==='sleep'){
+            npc.pose='sleep';
+          }else if(action.kind==='dance'){
+            npc.pose=Math.floor(elapsed/.34)%2?'dance1':'dance2';
+          }else if(action.kind==='laugh'){
+            npc.pose='laugh';
+          }else{
+            npc.pose='sarcasm';
+          }
+          return true;
+        }
+        function canoConversationPose(npc){
+          const conversation=shopConversation;
+          const speaker=conversation.lines[conversation.index]?.[0]?.toLowerCase();
+          if(conversation.kind==='dance'){
+            if(npc.name==='alan'){
+              if([0,1,2,4,6].includes(conversation.index))
+                return Math.floor(shopClock/.30)%2?'dance1':'dance2';
+              return speaker==='alan'?
+                (Math.floor(shopClock*3.4)%2?'talkOpen':'talkClosed'):'crossed';
+            }
+            if(conversation.index===1||conversation.index===7)
+              return Math.floor(shopClock*3.4)%2?'talkOpen':'sarcasm';
+            if(conversation.index===3)return 'sarcasm';
+            if(conversation.index===6)return 'surprised';
+            return speaker==='humberto'?
+              (Math.floor(shopClock*3.4)%2?'talkOpen':'talkClosed'):'crossed';
+          }
+          if(conversation.index===1&&conversation.lines[0]?.[1]?.includes('CELULAR')&&npc.name==='humberto')
+            return 'phoneLook';
+          if(conversation.index===1&&conversation.lines[0]?.[1]?.includes('DORMIU')&&npc.name==='humberto')
+            return 'sleep';
+          return speaker===npc.name?
+            (Math.floor(shopClock*3.4)%2?'talkOpen':'talkClosed'):
+            (conversation.index%3===1?'surprised':(npc.name==='alan'?'crossed':'thinking'));
         }
         function updateCanoShop(dt){
           if(shopPanelOpen)return;
@@ -3273,19 +3380,31 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           if(!shopConversation&&shopClock>=shopNextConversation){
             const gap=Math.abs(shopActors[0].x-shopActors[1].x);
             if(gap<245)canoStartArgument();
-            else{shopActors[0].target=1120;shopActors[1].target=1255;}
+            else if(!shopActors.some(n=>n.activity)){
+              shopActors[0].target=1120;shopActors[1].target=1255;
+            }
           }
           for(const npc of shopActors){
             if(shopConversation){
-              const speaker=shopConversation.lines[shopConversation.index]?.[0]?.toLowerCase();
-              npc.pose=speaker===npc.name?(Math.floor(shopClock*3.4)%2?'talkOpen':'talkClosed'):
-                (shopConversation.index%3===1?'surprised':(npc.name==='alan'?'crossed':'thinking'));
+              npc.pose=canoConversationPose(npc);
               const other=shopActors.find(actor=>actor!==npc);
               npc.dir=other.x>=npc.x?1:-1; // Sempre se encaram, mesmo quando trocam de lado.
               continue;
             }
+            if(canoUpdateActivity(npc))continue;
             if((npc.celebrateUntil||0)>shopClock){npc.pose='happy';continue;}
-            if(npc.rest>0){npc.rest-=dt;npc.pose=Math.sin(shopClock+npc.x)*.5>.3?'lookUp':(Math.sin(shopClock*.8+npc.x)>.6?'lookDown':'idle');continue;}
+            if(npc.rest>0){
+              npc.rest-=dt;
+              npc.pose=Math.sin(shopClock+npc.x)*.5>.3?'lookUp':
+                (Math.sin(shopClock*.8+npc.x)>.6?'lookDown':'idle');
+              continue;
+            }
+            // Atividades com descanso adequado; nenhuma começa com uma cena pendente.
+            if(!npc.activity&&shopClock<shopNextConversation&&Math.random()<.32){
+              canoStartActivity(npc);
+              canoUpdateActivity(npc);
+              continue;
+            }
             if(Math.abs(npc.target-npc.x)<8){
               npc.pose=npc.name==='alan'?'thinking':'crossed';
               npc.rest=1.2+Math.random()*2.7;
@@ -3312,14 +3431,18 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
                   shopNextConversation=shopClock+19+Math.random()*14;
                 }
               }
-              if(shopConversation)shopConversation.until=shopClock+3.05;
+              if(shopConversation)
+                shopConversation.until=shopClock+(shopConversation.kind==='dance'?2.65:3.05);
             }
           }
         }
         function drawCanoNpc(npc){
           const frames=processedAssets.canoNpc[npc.name];
           const img=frames?.[npc.pose]||frames?.idle||frames?.idleAlt;
-          const height=66,center=npc.x,foot=npc.x>905&&npc.x<1405?CANO_FLOOR-10:CANO_FLOOR;
+          // Queda ou personagem sentado NÃO devem ser esticados à altura de alguém em pé.
+          const height=npc.pose==='fall'?38:
+            npc.pose==='slip'?55:npc.pose==='getup'?54:66;
+          const center=npc.x,foot=npc.x>905&&npc.x<1405?CANO_FLOOR-10:CANO_FLOOR;
           if(!img?.width||!img?.height){
             ctx.fillStyle=npc.name==='alan'?'#ad3932':'#383f57';ctx.fillRect(center-16,foot-65,32,65);
             return;
@@ -3327,12 +3450,18 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           // Todos os frames são aparados pelo alfa e escalados para a MESMA ALTURA VISUAL.
           // Evita o personagem "encolher" ao alternar PNGs do ChatGPT e do Gemini.
           const scale=height/img.height;
-          const width=Math.min(76,Math.round(img.width*scale));
+          const width=Math.min(npc.pose==='fall'||npc.pose==='slip'?112:84,
+            Math.max(1,Math.round(img.width*scale)));
           ctx.save();
-          if(npc.dir<0){ctx.translate(Math.round(center),0);ctx.scale(-1,1);ctx.drawImage(img,-Math.round(width/2),foot-height,width,height);}
-          else ctx.drawImage(img,Math.round(center-width/2),foot-height,width,height);
+          const danceBob=(npc.pose==='dance1'||npc.pose==='dance2')?
+            Math.round(Math.sin(shopClock*10)*1):0;
+          if(npc.dir<0){
+            ctx.translate(Math.round(center),0);ctx.scale(-1,1);
+            ctx.drawImage(img,-Math.round(width/2),foot-height-danceBob,width,height);
+          }else ctx.drawImage(img,Math.round(center-width/2),foot-height-danceBob,width,height);
           ctx.restore();
-          ctx.fillStyle='rgba(29,17,17,.33)';ctx.fillRect(Math.round(center-14),CANO_FLOOR+1,28,3);
+          ctx.fillStyle='rgba(29,17,17,.33)';
+          ctx.fillRect(Math.round(center-14),CANO_FLOOR+1,28,3);
         }
         function drawCanoLine(){
           if(!shopConversation)return;
