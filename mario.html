@@ -3217,7 +3217,8 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
         const CANO_FRONT_X=160,CANO_BACK_X=CANO_WIDTH-168,CANO_REGISTER_X=1170;
         let shopPanelOpen=false,shopClock=0,shopNextConversation=7,shopConversation=null;
         let shopConversationDeck=[],shopLastConversation=-1,shopHeroDistance=0;
-        let shopDancePending=true; // Uma dança roteirizada por visita à CANO BURGER.
+        let shopFirstEventPrevious=-1,shopConversationCount=0;
+        // A dança é uma das cenas sorteadas, não um evento obrigatório de entrada.
         const shopActors=[
           {name:'alan',x:1000,target:1000,walked:0,dir:1,rest:0,pose:'idle'},
           {name:'humberto',x:1250,target:1250,walked:0,dir:-1,rest:0,pose:'idle'}
@@ -3251,24 +3252,45 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           [['ALAN','EU ORGANIZO ESSA COZINHA E VOCÊ BAGUNÇA TUDO!'],['HUMBERTO','PRA TE MANTER ENTRETIDO.'],['ALAN','EU NÃO SOU SEU HOBBY!'],['HUMBERTO','ÀS VEZES PARECE.']],
           [['ALAN','VOCÊ ESCREVEU PROMOÇÃO ERRADO NO QUADRO!'],['HUMBERTO','É IDENTIDADE VISUAL.'],['ALAN','TÁ ESCRITO PROVOÇÃO!'],['HUMBERTO','MELHOR! JÁ PROVOCA O CLIENTE!']],
           [['ALAN','SE ENTRAR CLIENTE E VOCÊ TIVER NO CELULAR...'],['HUMBERTO','EU FINJO PRODUTIVIDADE RAPIDINHO!'],['ALAN','ESSE É EXATAMENTE O PROBLEMA!'],['HUMBERTO','E AINDA ASSIM SOU O FAVORITO.']],
-          [['HUMBERTO','ALAN, PARA DE ENCARAR ESSE CELULAR E VAI TRABALHAR!'],['ALAN','TÔ CONFERINDO O ESTOQUE DIGITAL!'],['HUMBERTO','TEM FOTO DE GATINHO NA TELA!'],['ALAN','É O GATO DO FORNECEDOR. RESPEITA O FUNCIONÁRIO!']]
+          [['HUMBERTO','ALAN, PARA DE ENCARAR ESSE CELULAR E VAI TRABALHAR!'],['ALAN','TÔ CONFERINDO O ESTOQUE DIGITAL!'],['HUMBERTO','TEM FOTO DE GATINHO NA TELA!'],['ALAN','É O GATO DO FORNECEDOR. RESPEITA O FUNCIONÁRIO!']],
+          [['ALAN','ARRUMEI A COZINHA TODA EM CINCO MINUTOS!'],['HUMBERTO','E EU BAGUNÇO EM DOIS. QUER VER?'],['ALAN','ISSO NÃO É TALENTO, É UM PROBLEMA!'],['HUMBERTO','PROBLEMA É ESSE TEU VÍCIO EM ORGANIZAÇÃO!']],
+          [['HUMBERTO','TU TÁ NO CELULAR DE NOVO, ALAN?'],['ALAN','TÔ VENDO O ESTOQUE.'],['HUMBERTO','ESTOQUE DE MEME, SÓ SE FOR!'],['ALAN','PELO MENOS EU DISFARÇO MELHOR QUE VOCÊ!']],
+          [['ALAN','TU TAVA DORMINDO EM PÉ DE NOVO?'],['HUMBERTO','TAVA REFLETINDO DE OLHO FECHADO!'],['ALAN','REFLETINDO E RONCANDO?'],['HUMBERTO','NÃO ATRAPALHA MEU PROCESSO CRIATIVO, VIADO!']],
+          [['ALAN','SUMIU MAIS UM HAMBÚRGUER DA COZINHA.'],['HUMBERTO','MISTÉRIO DA CANO BURGER!'],['ALAN','MISTÉRIO NADA, FOI TUA FOME!'],['HUMBERTO','CONTROLE DE QUALIDADE TAMBÉM É TRABALHO!']],
+          [['ALAN','SE EU QUISER DANÇAR, EU DANÇO!'],['HUMBERTO','TU PARECE UM GUARDA-ROUPA TENTANDO SAMBAR!'],['ALAN','E TU PARECE UM BOTIJÃO TENTANDO CORRER!'],['HUMBERTO','PELO MENOS EU TENHO PRESENÇA!']],
+          [['HUMBERTO','TEU AVENTAL É TÃO ALINHADINHO QUE DÁ NERVOSO.'],['ALAN','O TEU TÁ TÃO TORTO QUE DÁ VERGONHA!'],['HUMBERTO','VERGONHA É VER TEUS PASSINHOS DE DANÇA!'],['ALAN','ENTÃO NÃO OLHA, UÉ!']],
+          [['ALAN','VOCÊ CAIU BONITO ONTEM, HUMBERTO!'],['HUMBERTO','CAÍ COM ESTILO!'],['ALAN','PARECIA UM DESENHO ANIMADO!'],['HUMBERTO','E LEVANTEI ANTES DE VOCÊ PARAR DE RIR!']],
+          [['ALAN','SE VOCÊ TRABALHASSE METADE DO QUE FALA...'],['HUMBERTO','A LOJA TAVA EM OUTRO NÍVEL!'],['ALAN','NÍVEL DE CAOS, NÉ?'],['HUMBERTO','CAOS CONTROLADO, MEU PARCEIRO!']],
+          [['HUMBERTO','ENDIREITA A POSTURA! VAI QUE ENTRA CLIENTE!'],['ALAN','FALA ISSO TU, QUE TAVA COÇANDO A BARRIGA!'],['HUMBERTO','PAUSA ESTRATÉGICA!'],['ALAN','ESTRATÉGICA PRA ESPANTAR FREGUÊS!']],
+          [['ALAN','UM DIA TU VAI ADMITIR QUE EU SEGURO ESSA LOJA!'],['HUMBERTO','E TU VAI ADMITIR QUE SEM MIM NÃO TEM GRAÇA!'],['ALAN','TU É UM ACIDENTE COM CPF!'],['HUMBERTO','E TU É UM TUTORIAL AMBULANTE!']],
+          [['ALAN','TENTA NÃO ARRUMAR PROBLEMA HOJE.'],['HUMBERTO','EU SOU A PERSONALIDADE DA LOJA!'],['ALAN','TU É A MULTA DA LOJA!'],['HUMBERTO','E TU É O FISCAL DO TÉDIO!']],
+          [['ALAN','APRENDI UM PASSO NOVO! QUER VER?'],['HUMBERTO','DE NOVO ESSA VIADAGEM, MLK?!'],['ALAN','TÁ COM INVEJA DO MEU TALENTO?'],['HUMBERTO','TÔ PREOCUPADO COM O CHÃO, COITADO!']]
         ];
-        function shuffledShopDeck(){
+        function shuffledShopDeck(avoidFirst=shopLastConversation){
           const deck=canoArguments.map((_,i)=>i);
-          for(let i=deck.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[deck[i],deck[j]]=[deck[j],deck[i]];}
-          if(deck[0]===shopLastConversation&&deck.length>1)[deck[0],deck[1]]=[deck[1],deck[0]];
+          for(let i=deck.length-1;i>0;i--){
+            const j=Math.floor(Math.random()*(i+1));[deck[i],deck[j]]=[deck[j],deck[i]];
+          }
+          // Evita a mesma primeira cena em visitas consecutivas.
+          if(deck.length>2&&(deck[0]===avoidFirst||deck[0]===shopLastConversation)){
+            const alternate=deck.findIndex((n,i)=>i>0&&n!==avoidFirst&&n!==shopLastConversation);
+            if(alternate>0)[deck[0],deck[alternate]]=[deck[alternate],deck[0]];
+          }
           return deck;
         }
         function enterCanoShop(){
           state='shop';shopPanelOpen=false;shopClock=0;shopNextConversation=6;shopConversation=null;
-          shopDancePending=true;
-          if(!shopConversationDeck.length)shopConversationDeck=shuffledShopDeck();
+          shopConversationCount=0;
+          shopConversationDeck=shuffledShopDeck(shopFirstEventPrevious);
           document.getElementById('cano-shop-panel').hidden=true;
           player.x=CANO_FRONT_X+42;player.y=CANO_FLOOR-player.h;player.vx=player.vy=0;
           player.direction=1;player.animFrame=0;cameraX=0;shopHeroDistance=0;
           shopActors[0].x=990;shopActors[0].target=990;shopActors[0].rest=1;
           shopActors[1].x=1290;shopActors[1].target=1290;shopActors[1].rest=1;
-          for(const npc of shopActors){npc.activity=null;npc.pose='idle';npc.celebrateUntil=0;}
+          for(const npc of shopActors){
+            npc.activity=null;npc.pose='idle';npc.celebrateUntil=0;
+            npc.nextDanceAt=0;
+          }
           keys.left=keys.right=keys.up=keys.down=false;
           superPower.until=superPower.dashUntil=superPower.cooldownUntil=0;
           setHUD();
@@ -3342,19 +3364,18 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           showItemToast('APROXIME-SE DO BALCÃO OU DE UMA PORTA!');
         }
         function canoStartArgument(){
-          // Uma dança do Alan abre a sessão; depois o baralho mistura todas as cenas.
           if(shopActors.some(n=>n.activity))return false;
           if(!shopConversationDeck.length)shopConversationDeck=shuffledShopDeck();
-          const index=shopDancePending?10:shopConversationDeck.shift();
-          if(index===10){
-            shopDancePending=false;
-            shopConversationDeck=shopConversationDeck.filter(n=>n!==10);
-          }
+          const index=shopConversationDeck.shift();
+          if(shopConversationCount===0)shopFirstEventPrevious=index;
+          shopConversationCount++;
           shopLastConversation=index;
+          const dancing=index===10||index===canoArguments.length-1;
+          if(dancing)shopActors[0].nextDanceAt=shopClock+32;
           shopConversation={
             lines:canoArguments[index].map(pair=>pair.slice()),index:0,
-            until:shopClock+(index===10?2.65:3.05),
-            noticed:false,recognized:false,kind:index===10?'dance':'banter'
+            until:shopClock+(dancing?2.65:3.05),
+            noticed:false,recognized:false,kind:dancing?'dance':'banter'
           };
           for(const npc of shopActors){npc.activity=null;npc.rest=0;npc.pose='talkClosed';}
           return true;
@@ -3363,10 +3384,14 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
         // Pequenos hábitos, independente da presença do jogador.
         // Uma atividade acaba antes da próxima: sem teleportes entre escorregão e queda.
         function canoStartActivity(npc){
-          const pool=npc.name==='alan'?
-            ['phone','phone','sleep','dance','trip','phone']:
+          let pool=npc.name==='alan'?
+            ['phone','phone','sleep','dance','dance','trip','phone','sleep']:
             ['phone','phone','sleep','laugh','sarcasm','trip'];
+          // Dança mais comum que antes (2/8), mas só a cada 32 segundos.
+          if(npc.name==='alan'&&shopClock<(npc.nextDanceAt||0))
+            pool=pool.filter(action=>action!=='dance');
           const kind=pool[Math.floor(Math.random()*pool.length)];
+          if(kind==='dance')npc.nextDanceAt=shopClock+32;
           const duration=kind==='trip'?3.0:kind==='sleep'?5.8:
             kind==='phone'?5.2:kind==='dance'?3.7:2.4;
           npc.activity={kind,start:shopClock,duration};
@@ -3400,7 +3425,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           const speaker=conversation.lines[conversation.index]?.[0]?.toLowerCase();
           if(conversation.kind==='dance'){
             if(npc.name==='alan'){
-              if([0,1,2,4,6].includes(conversation.index))
+              if(conversation.lines.length===4||[0,1,2,4,6].includes(conversation.index))
                 return Math.floor(shopClock/.30)%2?'dance1':'dance2';
               return speaker==='alan'?
                 (Math.floor(shopClock*3.4)%2?'talkOpen':'talkClosed'):'crossed';
