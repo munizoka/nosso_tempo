@@ -717,7 +717,7 @@ const afkPose=afk.at;
 check('Portatil: pegar, jogar dois quadros, guardar',
  afkPose('console',.1)==='afkTakeout'&&
  afkPose('console',.9)==='afkPlay1'&&
- afkPose('console',1.3)==='afkPlay2'&&
+ afkPose('console',1.05)==='afkPlay2'&&
  afkPose('console',4.8)==='afkPutaway');
 check('Relogio e cochilo utilizam todos os seus quadros',
  afkPose('watch',.5)==='afkWatch1'&&
