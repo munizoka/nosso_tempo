@@ -1079,8 +1079,10 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           checkpointOff: '51.png', checkpointOn: '52.png', villain: '53.png', portal: '54.png', mapHead: '55.jpg',
           totemOn: '56.png', totemOff: '57.png', skyTemple: '58.png', skyGround: '59.png', skyPlatform: '60.png', skyCrow: '61.png', skyAltarOff: '62.png', skyAltarOn: '63.png', windShort: '64.png', windLong: '65.png', windUp: '66.png', villainDrink: '67.png',
           superHero:'78.png', burger:'79.png', heart:'80.png', dashHero:'81.png', dashSuper:'82.png', heartHit:'83.png',
-          canoBackground:'119.png',canoForeground:'120.png',canoCounter:'121.png',
-          canoFront:'122.png',canoBack:'123.png',canoDecor:'124.png'
+          // Teste visual: sem o foreground 120 e sem a folha decorativa 124.
+          // Arquivos permanecem no repositório; basta reativar aqui se necessário.
+          canoBackground:'119.png',canoCounter:'121.png',
+          canoFront:'122.png',canoBack:'123.png'
         };
 
         function cropSprite(img) {
@@ -3621,13 +3623,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           // As portas são sprites diferentes, com a entrada à esquerda e o estoque à direita.
           if(extras.canoFront)drawObject(extras.canoFront,CANO_FRONT_X-77,185,154,196);
           if(extras.canoBack)drawObject(extras.canoBack,CANO_BACK_X-77,185,154,196);
-          // Decoração adicional da arte 124 sem colisões; atrás dos personagens.
-          if(extras.canoDecor){
-            ctx.save();ctx.globalAlpha=.83;
-            drawObject(extras.canoDecor,450,168,245,172);
-            drawObject(extras.canoDecor,1558,168,245,172);
-            ctx.restore();
-          }
+          // Cenário simplificado: sem a decoração 124 atrás dos vendedores.
           const counter=extras.canoCounter;
           // Caixa registradora e vitrine ficam ATRÁS dos NPCs.
           if(counter)drawObject(counter,905,283,500,111);
@@ -3641,8 +3637,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           }else{ctx.fillStyle='#783f25';ctx.fillRect(905,348,500,46);}
           // Mesmo visual da campanha: Gabriel adulto com 64px, NPCs com 66px.
           drawGabrielNew(player.x+player.w/2,CANO_FLOOR,{inShop:true});
-          // Primeiro plano 120 separado da arte principal e sem obstáculos invisíveis.
-          if(extras.canoForeground){ctx.save();ctx.globalAlpha=.47;drawObject(extras.canoForeground,660,315,965,88);ctx.restore();}
+          // Cenário simplificado: sem o foreground 120 na frente do salão.
           ctx.fillStyle='#e19a43';ctx.fillRect(0,CANO_FLOOR+6,CANO_WIDTH,5);
           for(const [x,label] of [[CANO_FRONT_X,'SAÍDA'],[CANO_BACK_X,'FUNDOS'],[CANO_REGISTER_X,'🍔 10 MOEDAS']]){
             ctx.font='9px "Press Start 2P",monospace';ctx.textAlign='center';
