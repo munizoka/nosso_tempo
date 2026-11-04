@@ -2944,26 +2944,40 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
         const forestPlatformVisualCache=new Map();
         function drawForestPlatform(b){
           const img=extras[b.type];
-          if(!img?.naturalWidth)return;
-          // Os PNGs 49/50 têm MUITA margem transparente, especialmente
-          // acima dos cristais da plataforma mágica. Recortar só o alfa
-          // externo e desenhar a superfície na MESMA altura da colisão.
+          // O carregador processa 49.png e 50.png com cropSprite(), que
+          // devolve um CANVAS. Canvas tem width/height, mas NÃO naturalWidth!
+          // Aceitar ambas as fontes impede que todas as plataformas sumam.
+          const sourceWidth=img?.naturalWidth||img?.width||0;
+          const sourceHeight=img?.naturalHeight||img?.height||0;
+          if(sourceWidth<=0||sourceHeight<=0){
+            // Fallback temporário enquanto o asset não carregou ou falhou:
+            // a superfície continua visível e coincide com a colisão.
+            ctx.fillStyle=b.type==='magic'?'#66528d':'#76513b';
+            ctx.fillRect(Math.round(b.x),Math.round(b.y),Math.round(b.w),10);
+            ctx.fillStyle=b.type==='magic'?'#80d4d9':'#5d9c75';
+            ctx.fillRect(Math.round(b.x),Math.round(b.y),Math.round(b.w),3);
+            return;
+          }
           let entry=forestPlatformVisualCache.get(b.type);
           if(!entry||entry.image!==img){
-            let rect;
-            try{rect=forestDetectAlphaBounds(img);}
-            catch(e){
-              console.warn('Falha ao ajustar margem da plataforma:',e);
-              rect={x:0,y:0,w:img.naturalWidth,h:img.naturalHeight};
+            // O canvas criado por cropSprite() JÁ teve as margens
+            // transparentes removidas: jamais passar novamente por
+            // forestDetectAlphaBounds(), que espera um HTMLImageElement.
+            let rect={x:0,y:0,w:sourceWidth,h:sourceHeight};
+            if(img.naturalWidth&&img.naturalHeight){
+              try{rect=forestDetectAlphaBounds(img);}
+              catch(error){
+                console.warn('Falha no recorte da plataforma:',error);
+              }
             }
             entry={image:img,rect};
             forestPlatformVisualCache.set(b.type,entry);
           }
           const r=entry.rect;
-          if(r.w<1||r.h<1)return;
-          const w=b.w,h=Math.max(1,Math.round(w*r.h/r.w));
-          // 49: folhagens acima das tábuas; 50: cristais acima do piso.
-          // O ponto de apoio é o DECK, não o topo do PNG transparente.
+          if(!r||r.w<1||r.h<1)return;
+          const w=Math.round(b.w);
+          const h=Math.max(1,Math.round(w*r.h/r.w));
+          // Topo jogável alinhado ao deck visível, inclusive nas mágicas.
           const deckInset=Math.round(h*(b.type==='magic'?.32:.16));
           const x=Math.round(b.x),y=Math.round(b.y-deckInset);
           ctx.drawImage(img,r.x,r.y,r.w,r.h,x,y,w,h);
