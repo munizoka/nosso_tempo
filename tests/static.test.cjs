@@ -76,23 +76,85 @@ check('Chão sombrio tem terra contínua e topo com repetição espelhada',
  mario.includes("ctx.fillStyle='#251a2e'")&&
  mario.includes('ctx.translate(destX+w,0);ctx.scale(-1,1)'));
 check('Casa da bruxa é cenário íntegro ancorado em y380 e não permite entrada ainda',
- mario.includes('const FOREST_WITCH_HOUSE_X=1630;')&&
+ mario.includes('const FOREST_WITCH_HOUSE_X=3790;')&&
  mario.includes('const FOREST_WITCH_HOUSE_HEIGHT=235;')&&
  mario.includes("forestDrawWholeAtGround('witchHouse',")&&
  mario.includes('FOREST_WITCH_HOUSE_X,380,FOREST_WITCH_HOUSE_HEIGHT,.99)')&&
  !mario.includes('function enterWitchHouse(')&&
  !mario.includes('witchHouseAudio.play('));
-check('Checkpoint fica antes da clareira e fora do corpo da casa',
- mario.includes('const FOREST_CHECKPOINT_X=1540;')&&
- mario.includes('checkpointReached=true;checkpointX=FOREST_CHECKPOINT_X-20;')&&
- mario.includes('drawObject(flag,FOREST_CHECKPOINT_X,312,42,68)')&&
- mario.includes('forestDrawWholeAtGround(\'witchHouse\''));
-check('Fase 2 preserva largura, cutscenes, totens e outras fases',
- mario.includes('const FOREST_END = 3400;')&&
+check('Dois checkpoints progressivos no chão antes e depois da clareira',
+ mario.includes('const FOREST_CHECKPOINTS=[3000,5520];')&&
+ mario.includes('for(const x of FOREST_CHECKPOINTS){')&&
+ mario.includes('checkpointReached=true;checkpointX=x;score+=250;setHUD();')&&
+ mario.includes('if(x<=checkpointX||player.x+player.w<=x-6||')&&
+ mario.includes('if(flag)drawObject(flag,x,312,42,68)'));
+check('Fase 2 tem 7800px sem alterar cutscenes e outras fases',
+ mario.includes('const FOREST_END = 7800;')&&
  mario.includes('function drawForestTotem()')&&
  mario.includes("if(state==='forestIntro'||state==='forestOutro')drawForestStoryActors()")&&
  mario.includes('function drawLevelOne()')&&
  mario.includes('function drawLevelThree()'));
+
+// Testes geométricos independentes do navegador: nenhuma árvore ou inimigo
+// pode nascer dentro de um buraco. A casa precisa repousar em chão contínuo.
+const forestStageSource=mario.match(/        const level2Blocks=\[[\s\S]*?(?=        \/\/ FASE 3:)/)?.[0];
+check('Layout ampliado da Fase 2 pode ser inspecionado isoladamente',!!forestStageSource);
+const forestWorld=new Function(forestStageSource+
+ '\nreturn {level2Blocks,level2EnemyTemplate,forestGroundSegments,forestGaps,forestTreeSpots,forestRootsHaveGround};')();
+check('Fase 2 possui nove trechos de chão até 7800 pixels e oito abismos',
+ forestWorld.forestGroundSegments.length===9&&
+ forestWorld.forestGroundSegments[0].x===0&&
+ forestWorld.forestGroundSegments.at(-1).x+
+  forestWorld.forestGroundSegments.at(-1).w===7800&&
+ forestWorld.forestGaps.length===8&&
+ forestWorld.forestGaps.every(g=>g.w>=120&&g.w<=150));
+check('Árvores ancestrais só aparecem em solo firme, com 80px de margem',
+ forestWorld.forestTreeSpots.length===8&&
+ forestWorld.forestTreeSpots.every(t=>forestWorld.forestRootsHaveGround(t.x,80))&&
+ forestWorld.forestTreeSpots.every(t=>!(t.x>=3530&&t.x<=4290))&&
+ !forestWorld.forestTreeSpots.some(t=>t.x===575)&&
+ mario.includes('if(!forestRootsHaveGround(tree.x))continue;')&&
+ mario.includes('tree.x-imageWidth/2,380,tree.h,.96)'));
+check('Casa da bruxa fica no meio da fase e tem espaço firme para a base',
+ mario.includes('const FOREST_WITCH_HOUSE_X=3790;')&&
+ forestWorld.forestGroundSegments.some(g=>3790>=g.x+150&&3790+360<=g.x+g.w)&&
+ mario.includes('FOREST_WITCH_HOUSE_X,380,FOREST_WITCH_HOUSE_HEIGHT,.99)')&&
+ !mario.includes('function enterWitchHouse('));
+check('Inimigos da fase ampliada não nascem sobre buracos nem no totem',
+ forestWorld.level2EnemyTemplate.length===13&&
+ forestWorld.level2EnemyTemplate.every(e=>
+  e.w===32&&e.h===32&&e.y===348&&
+  forestWorld.forestGroundSegments.some(g=>e.x>=g.x&&e.x+e.w<=g.x+g.w)&&
+  e.x<7400));
+check('Plataformas e caminhos estendidos sem bloquear a clareira',
+ forestWorld.level2Blocks.filter(b=>b.type==='wood').length>=15&&
+ forestWorld.level2Blocks.filter(b=>b.type==='magic'&&b.moving).length>=5&&
+ forestWorld.level2Blocks.filter(b=>b.type==='wood'||b.type==='magic')
+   .every(b=>b.x<3530||b.x>=4290));
+check('Segundo ato tem moedas espalhadas apenas sobre trechos seguros',
+ [...mario.matchAll(/\{level:2,x:(\d+),y:(\d+)\}/g)].length===20&&
+ [...mario.matchAll(/\{level:2,x:(\d+),y:(\d+)\}/g)].every(m=>
+  forestWorld.forestGroundSegments.some(g=>Number(m[1])>=g.x&&Number(m[1])+28<=g.x+g.w)));
+check('Dois checkpoints ficam sobre solo e separados da cena final',
+ [3000,5520].every(x=>forestWorld.forestGroundSegments.some(g=>x-40>=g.x&&x+60<=g.x+g.w))&&
+ 5520<7800-430&&3000<3790);
+check('Fundo dos oito buracos não cria chão nem recebe árvores',
+ mario.includes('function drawForestPitDepths()')&&
+ mario.includes('for(const gap of forestGaps)')&&
+ mario.includes('drawForestPitDepths();')&&
+ forestWorld.forestGaps.every(g=>!forestWorld.forestTreeSpots.some(t=>
+  t.x>=g.x&&t.x<=g.x+g.w)));
+check('Salvamento da Fase 2 aceita posições até 7760 sem afetar Fase 3',
+ mario.includes('lv===1?VALLEY_END-40:lv===2?FOREST_END-40:3900')&&
+ mario.includes('lv===1?VALLEY_END:lv===2?FOREST_END:3900')&&
+ rules.includes('data.payload.player.x is number')&&
+ rules.includes('data.payload.checkpoint.x is number'));
+check('Final da Fase 2 acompanha a largura nova, preservando medalhão e totem',
+ mario.includes('const FOREST_GOAL_X=FOREST_END-430;')&&
+ mario.includes('const FOREST_TOTEM_X=FOREST_GOAL_X+40;')&&
+ mario.includes('const FOREST_CLUE_X=FOREST_END-170;')&&
+ mario.includes("giveStoryItem('medallion')")&&
+ mario.includes('forestTotemActivated=true;'));
 check('Inventário com dezoito espaços',mario.includes('inv-story-grid')&&mario.includes('inv-consumable-grid')&&mario.includes('for(let n=0;n<9;n++)'));
 check('Sprite 68 e categorias RPG',mario.includes('68.png')&&mario.includes('ITENS DE HISTÓRIA')&&mario.includes('CONSUMÍVEIS'));
 check('Relógio virtual congela na pausa',mario.includes('if(!inventoryOpen&&!menuOpen){')&&mario.includes('gameNow+=dt*1000')&&mario.includes("if(!sceneReady||inventoryOpen||menuOpen||state==='menu')return"));
