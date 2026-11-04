@@ -130,7 +130,7 @@ check('Plataformas e caminhos estendidos sem bloquear a clareira',
  forestWorld.level2Blocks.filter(b=>b.type==='wood').length>=15&&
  forestWorld.level2Blocks.filter(b=>b.type==='magic'&&b.moving).length>=5&&
  forestWorld.level2Blocks.filter(b=>b.type==='wood'||b.type==='magic')
-   .every(b=>b.x<3530||b.x>=4290));
+   .every(b=>b.x+b.w<=3790||b.x>=4200));
 check('Segundo ato tem moedas espalhadas apenas sobre trechos seguros',
  [...mario.matchAll(/\{level:2,x:(\d+),y:(\d+)\}/g)].length===20&&
  [...mario.matchAll(/\{level:2,x:(\d+),y:(\d+)\}/g)].every(m=>
