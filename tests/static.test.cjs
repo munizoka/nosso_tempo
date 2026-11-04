@@ -47,6 +47,52 @@ const mario=fs.readFileSync(path.join(root,'mario.html'),'utf8');
 const gameScript=mario.match(/<script>([\s\S]*?)<\/script>/)?.[1];
 check('Super Gabriel Bros contém JavaScript',!!gameScript);
 new Function(gameScript); // sintaxe do motor da plataforma
+// Primeira etapa do remake da Floresta Sombria — PNGs 250–256 isolados.
+const forestRemakeSource=mario.match(/        const forestRemakePaths=\{[\s\S]*?\n        \};/)?.[0];
+check('Catálogo visual da nova Floresta Sombria está disponível',!!forestRemakeSource);
+const forestRemakeFiles=new Function(forestRemakeSource+'\nreturn forestRemakePaths;')();
+check('Sete imagens 250–256 existem com nomes exatos na raiz do repositório',
+ Object.keys(forestRemakeFiles).length===7&&
+ forestRemakeFiles.sky==='250 dark.png'&&
+ forestRemakeFiles.mountains==='251.png'&&
+ forestRemakeFiles.distantForest==='252.png'&&
+ forestRemakeFiles.groundTop==='253.png'&&
+ forestRemakeFiles.groundSoil==='254.png'&&
+ forestRemakeFiles.ancestorTree==='255.png'&&
+ forestRemakeFiles.witchHouse==='256 witchs house.png'&&
+ Object.values(forestRemakeFiles).every(file=>
+  fs.existsSync(path.join(root,file))&&fs.statSync(path.join(root,file)).size>1000));
+check('Fase 2 carrega sprites completos sem inferir spritesheets',
+ mario.includes('function forestDetectAlphaBounds(img)')&&
+ mario.includes('function forestDrawParallax(key,speed,width,bottomY,alpha=1)')&&
+ mario.includes('ctx.drawImage(img,r.x,r.y,r.w,r.h,destX,y,width,height)')&&
+ mario.includes('function forestDrawWholeAtGround(key,x,groundY,height,alpha=1)')&&
+ mario.includes('function drawForestScenery()')&&
+ !mario.includes("valleyAtlas('ancestorTree'"));
+check('Chão sombrio tem terra contínua e topo com repetição espelhada',
+ mario.includes('function drawForestGround(b)')&&
+ mario.includes("const dirt=forestRemakeArt.groundSoil")&&
+ mario.includes("const top=forestRemakeArt.groundTop")&&
+ mario.includes("ctx.fillStyle='#251a2e'")&&
+ mario.includes('ctx.translate(destX+w,0);ctx.scale(-1,1)'));
+check('Casa da bruxa é cenário íntegro ancorado em y380 e não permite entrada ainda',
+ mario.includes('const FOREST_WITCH_HOUSE_X=1630;')&&
+ mario.includes('const FOREST_WITCH_HOUSE_HEIGHT=235;')&&
+ mario.includes("forestDrawWholeAtGround('witchHouse',")&&
+ mario.includes('FOREST_WITCH_HOUSE_X,380,FOREST_WITCH_HOUSE_HEIGHT,.99)')&&
+ !mario.includes('function enterWitchHouse(')&&
+ !mario.includes('witchHouseAudio.play('));
+check('Checkpoint fica antes da clareira e fora do corpo da casa',
+ mario.includes('const FOREST_CHECKPOINT_X=1540;')&&
+ mario.includes('checkpointReached=true;checkpointX=FOREST_CHECKPOINT_X-20;')&&
+ mario.includes('drawObject(flag,FOREST_CHECKPOINT_X,312,42,68)')&&
+ mario.includes('forestDrawWholeAtGround(\'witchHouse\''));
+check('Fase 2 preserva largura, cutscenes, totens e outras fases',
+ mario.includes('const FOREST_END = 3400;')&&
+ mario.includes('function drawForestTotem()')&&
+ mario.includes("if(state==='forestIntro'||state==='forestOutro')drawForestStoryActors()")&&
+ mario.includes('function drawLevelOne()')&&
+ mario.includes('function drawLevelThree()'));
 check('Inventário com dezoito espaços',mario.includes('inv-story-grid')&&mario.includes('inv-consumable-grid')&&mario.includes('for(let n=0;n<9;n++)'));
 check('Sprite 68 e categorias RPG',mario.includes('68.png')&&mario.includes('ITENS DE HISTÓRIA')&&mario.includes('CONSUMÍVEIS'));
 check('Relógio virtual congela na pausa',mario.includes('if(!inventoryOpen&&!menuOpen){')&&mario.includes('gameNow+=dt*1000')&&mario.includes("if(!sceneReady||inventoryOpen||menuOpen||state==='menu')return"));
