@@ -2669,7 +2669,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
             // Nunca usa o sprite antigo da tartaruga, inclusive no carregamento.
             const original=e.type==='mushroom'?processedAssets.enemyFrames?.[0]:null;
             const frame=poses[frameName]||poses.idle||original;
-            const height=e.type==='leek'?49:e.h;
+            const height=e.type==='leek'?49:e.type==='mushroom'?42:e.h;
             const facing=e.facing||(e.vx<0?-1:1);
             const bob=showingOff?Math.round(Math.sin(elapsedSeconds*13)*1.5):0;
             const sway=showingOff?Math.round(Math.sin(elapsedSeconds*8)):0;
