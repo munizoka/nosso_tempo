@@ -2421,6 +2421,12 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           e.preventDefault();cancelGabrielAfk();trySuperDash();
         });
 
+        function isOneWayPlatform(b){
+          // Preserva as plataformas das Fases 1 e 3 e inclui somente
+          // as plataformas 'wood' e 'magic' da Floresta Sombria (Fase 2).
+          return b.type==='skyPlatform'||b.type==='valleyPlatform'||b.type==='valleyBridge'||
+            (level===2&&(b.type==='wood'||b.type==='magic'));
+        }
         function updateMovingPlatforms(t){
           // Movimento senoidal previsível. Um jogador em cima é transportado junto.
           for(const b of level===2?level2Blocks:level3Blocks){
@@ -2672,7 +2678,10 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           player.x+=player.vx;
           if(player.x<0)player.x=0;
           for(const b of terrain){
-            if(b.type==='skyPlatform'||b.type==='valleyPlatform'||b.type==='valleyBridge')continue;
+            // Na Fase 2, madeira e magia são plataformas unidirecionais:
+            // atravessáveis por baixo/lados, sem bater a cabeça nem empurrar
+            // Gabriel ao tentar alcançar uma moeda sob elas.
+            if(isOneWayPlatform(b))continue;
             if(isColliding(player,b)){
               if(player.vx>0)player.x=b.x-player.w;
               else if(player.vx<0)player.x=b.x+b.w;
@@ -2684,8 +2693,9 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           player.y+=player.vy;
           if(level===3&&player.y<32){player.y=32;player.vy=Math.max(player.vy,0);}
           for(const b of terrain){
-            // Plataformas celestiais permitem passar por baixo e pousar por cima.
-            if((b.type==='skyPlatform'||b.type==='valleyPlatform'||b.type==='valleyBridge') && !(player.vy>=0&&oldFootY<=b.y+7))continue;
+            // Só há pouso quando os pés CRUZAM o topo vindo de cima.
+            // Ao subir, ou ao saltar debaixo da plataforma, nenhuma colisão.
+            if(isOneWayPlatform(b) && !(player.vy>=0&&oldFootY<=b.y+4))continue;
             if(isColliding(player,b)){
               if(player.vy>0){player.y=b.y-player.h;player.vy=0;player.grounded=true;}
               else if(player.vy<0){player.y=b.y+b.h;player.vy=0;}
@@ -2931,6 +2941,33 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
             Math.round(x),Math.round(groundY-height),width,height);
           ctx.restore();
         }
+        const forestPlatformVisualCache=new Map();
+        function drawForestPlatform(b){
+          const img=extras[b.type];
+          if(!img?.naturalWidth)return;
+          // Os PNGs 49/50 têm MUITA margem transparente, especialmente
+          // acima dos cristais da plataforma mágica. Recortar só o alfa
+          // externo e desenhar a superfície na MESMA altura da colisão.
+          let entry=forestPlatformVisualCache.get(b.type);
+          if(!entry||entry.image!==img){
+            let rect;
+            try{rect=forestDetectAlphaBounds(img);}
+            catch(e){
+              console.warn('Falha ao ajustar margem da plataforma:',e);
+              rect={x:0,y:0,w:img.naturalWidth,h:img.naturalHeight};
+            }
+            entry={image:img,rect};
+            forestPlatformVisualCache.set(b.type,entry);
+          }
+          const r=entry.rect;
+          if(r.w<1||r.h<1)return;
+          const w=b.w,h=Math.max(1,Math.round(w*r.h/r.w));
+          // 49: folhagens acima das tábuas; 50: cristais acima do piso.
+          // O ponto de apoio é o DECK, não o topo do PNG transparente.
+          const deckInset=Math.round(h*(b.type==='magic'?.32:.16));
+          const x=Math.round(b.x),y=Math.round(b.y-deckInset);
+          ctx.drawImage(img,r.x,r.y,r.w,r.h,x,y,w,h);
+        }
         function drawForestScenery(){
           // Para não repetir o erro das árvores plantadas SOBRE buracos:
           // calculamos a base a partir do CENTRO das raízes e só renderizamos
@@ -2978,27 +3015,36 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
               ctx.drawImage(dirt,soil.x,soil.y,soil.w,soil.h,x,y,unit,unit);
           }
           ctx.restore();
-          // Superfície 253: PNG INTEIRO, somente margens alfa removidas;
-          // repetição espelhada para evitar copas/raízes cortadas na emenda.
+          // Topo contínuo: a repetição usa o X GLOBAL do mundo, não
+          // recomeça a cada ilha de chão. Evita deslocamentos de 1px.
+          // O preenchimento sólido por baixo cobre transparências nas bordas.
+          ctx.save();
+          ctx.beginPath();ctx.rect(b.x,b.y-7,b.w,50);ctx.clip();
+          ctx.fillStyle='#356c55';
+          ctx.fillRect(b.x,b.y-7,b.w,15);
+          ctx.fillStyle='#291e35';
+          ctx.fillRect(b.x,b.y+8,b.w,35);
           if(top&&topRect){
             const h=43,w=Math.max(60,Math.round(h*topRect.w/topRect.h));
-            const first=Math.max(0,Math.floor((cameraX-b.x-w)/w));
-            const last=Math.min(Math.ceil(b.w/w),Math.ceil((cameraX+GAME_WIDTH+w-b.x)/w));
-            ctx.save();ctx.beginPath();ctx.rect(b.x,b.y-7,b.w,h+7);ctx.clip();
+            const first=Math.floor((cameraX-w)/w);
+            const last=Math.ceil((cameraX+GAME_WIDTH+w)/w);
             for(let ix=first;ix<=last;ix++){
-              const destX=b.x+ix*w,y=b.y-7;
+              const destX=ix*w,y=b.y-7;
+              if(destX+w<b.x||destX>b.x+b.w)continue;
+              // 1px de sobreposição em cada lateral para ocultar frestas
+              // subpixel criadas pelo escalonamento do sprite transparente.
               if(ix%2===0)
-                ctx.drawImage(top,topRect.x,topRect.y,topRect.w,topRect.h,destX,y,w,h);
+                ctx.drawImage(top,topRect.x,topRect.y,topRect.w,topRect.h,
+                  destX-1,y,w+2,h);
               else{
-                ctx.save();ctx.translate(destX+w,0);ctx.scale(-1,1);
-                ctx.drawImage(top,topRect.x,topRect.y,topRect.w,topRect.h,0,y,w,h);
+                ctx.save();ctx.translate(destX+w+1,0);ctx.scale(-1,1);
+                ctx.drawImage(top,topRect.x,topRect.y,topRect.w,topRect.h,
+                  0,y,w+2,h);
                 ctx.restore();
               }
             }
-            ctx.restore();
-          }else{
-            ctx.fillStyle='#355e48';ctx.fillRect(b.x,b.y-5,b.w,10);
           }
+          ctx.restore();
         }
         function drawForestBackground(){
           ctx.fillStyle='#10152f';ctx.fillRect(0,0,GAME_WIDTH,GAME_HEIGHT);
@@ -3684,8 +3730,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           drawForestScenery(); // cenário inteiro atrás do terreno e dos personagens
           for(const b of level2Blocks){
             if(b.type==='forestGround')drawForestGround(b);
-            else if(b.type==='wood')drawObject(extras.wood,b.x,b.y,b.w,b.h);
-            else if(b.type==='magic')drawObject(extras.magic,b.x,b.y,b.w,b.h);
+            else if(b.type==='wood'||b.type==='magic')drawForestPlatform(b);
           }
           for(const x of FOREST_CHECKPOINTS){
             const lit=checkpointReached&&checkpointX>=x;

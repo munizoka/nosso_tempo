@@ -155,6 +155,52 @@ check('Final da Fase 2 acompanha a largura nova, preservando medalhão e totem',
  mario.includes('const FOREST_CLUE_X=FOREST_END-170;')&&
  mario.includes("giveStoryItem('medallion')")&&
  mario.includes('forestTotemActivated=true;'));
+
+const oneWaySource=mario.match(/        function isOneWayPlatform\(b\)\{[\s\S]*?\n        \}/)?.[0];
+check('Colisão unilateral reutilizável está presente no jogo',!!oneWaySource);
+function forestOneWayForLevel(level){
+ return new Function('level',oneWaySource+'\nreturn isOneWayPlatform;')(level);
+}
+check('Madeira e magia da Fase 2 deixam atravessar por baixo',
+ forestOneWayForLevel(2)({type:'wood'})&&
+ forestOneWayForLevel(2)({type:'magic'})&&
+ !forestOneWayForLevel(2)({type:'forestGround'})&&
+ !forestOneWayForLevel(2)({type:'pipe'})&&
+ mario.includes('if(isOneWayPlatform(b))continue;')&&
+ mario.includes('if(isOneWayPlatform(b) && !(player.vy>=0&&oldFootY<=b.y+4))continue;'));
+check('Colisão das outras fases não muda ao atravessar madeira ou magia',
+ !forestOneWayForLevel(1)({type:'wood'})&&
+ !forestOneWayForLevel(3)({type:'magic'})&&
+ forestOneWayForLevel(1)({type:'valleyPlatform'})&&
+ forestOneWayForLevel(1)({type:'valleyBridge'})&&
+ forestOneWayForLevel(3)({type:'skyPlatform'}));
+check('Pulo sobe por baixo, pouso só ocorre cruzando o deck ao descer',
+ mario.includes('const oldFootY=player.y+player.h;')&&
+ mario.includes('player.y+=player.vy;')&&
+ mario.includes('player.vy>=0&&oldFootY<=b.y+4')&&
+ mario.includes('if(player.vy>0){player.y=b.y-player.h;player.vy=0;player.grounded=true;}')&&
+ mario.includes('const standing=player.vy>=0&&Math.abs((player.y+player.h)-oldY)<3'));
+check('PNG das plataformas 49 e 50 recortado só nas margens transparentes',
+ mario.includes('const forestPlatformVisualCache=new Map();')&&
+ mario.includes('function drawForestPlatform(b)')&&
+ mario.includes('rect=forestDetectAlphaBounds(img);')&&
+ mario.includes("const deckInset=Math.round(h*(b.type==='magic'?.32:.16));")&&
+ mario.includes('ctx.drawImage(img,r.x,r.y,r.w,r.h,x,y,w,h);')&&
+ mario.includes("else if(b.type==='wood'||b.type==='magic')drawForestPlatform(b);")&&
+ !mario.includes("drawObject(extras.wood,b.x,b.y,b.w,b.h)"));
+check('Grama 253 fica contínua sem microfrestas entre trechos',
+ mario.includes("ctx.fillStyle='#356c55';")&&
+ mario.includes('ctx.fillRect(b.x,b.y-7,b.w,15);')&&
+ mario.includes('const destX=ix*w,y=b.y-7;')&&
+ mario.includes('destX-1,y,w+2,h')&&
+ mario.includes('ctx.translate(destX+w+1,0);ctx.scale(-1,1);')&&
+ !mario.includes('const first=Math.max(0,Math.floor((cameraX-b.x-w)/w));'));
+check('Moedas da Fase 2 sob plataformas seguem coletáveis',
+ mario.includes('function updateLevelCoins()')&&
+ mario.includes('updateLevelCoins();')&&
+ forestOneWayForLevel(2)({type:'wood'})&&
+ forestOneWayForLevel(2)({type:'magic'}));
+
 check('Inventário com dezoito espaços',mario.includes('inv-story-grid')&&mario.includes('inv-consumable-grid')&&mario.includes('for(let n=0;n<9;n++)'));
 check('Sprite 68 e categorias RPG',mario.includes('68.png')&&mario.includes('ITENS DE HISTÓRIA')&&mario.includes('CONSUMÍVEIS'));
 check('Relógio virtual congela na pausa',mario.includes('if(!inventoryOpen&&!menuOpen){')&&mario.includes('gameNow+=dt*1000')&&mario.includes("if(!sceneReady||inventoryOpen||menuOpen||state==='menu')return"));
