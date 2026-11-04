@@ -649,8 +649,8 @@ const valleyArtSource=mario.match(/        const valleyAssetPaths=\{[\s\S]*?\n  
 check('Catálogo de assets do Vale da Fase 1 é isolável',!!valleyArtSource);
 const valleyAssets=new Function(valleyArtSource+'\nreturn valleyAssetPaths;')();
 const valleyFiles=Object.values(valleyAssets);
-check('24 artes oficiais 210 a 234 carregadas sem Super Suco',
- valleyFiles.length===24&&
+check('25 artes do Vale incluindo 238 grass, sem Super Suco',
+ valleyFiles.length===25&&valleyAssets.grassTrim==='238 grass.png'&&
  !valleyFiles.includes('232 potion.png')&&
  valleyFiles.every(file=>fs.existsSync(path.join(root,file))&&fs.statSync(path.join(root,file)).size>1000));
 check('Spritesheets com atenção mapeados por nome exato',
@@ -698,6 +698,23 @@ check('Fase 1 usa parallax, spritesheets recortados e plataforma unilateral',
  mario.includes("valleyAtlas('trees'")&&
  mario.includes("b.type==='valleyPlatform'||b.type==='valleyBridge'")&&
  mario.includes("function drawLevelOne(){\n          drawValleyBackground();"));
+
+check('Faixa 238 foi incluída sem recortar spritesheet nem alterar colisão',
+ mario.includes("grassTrim:'238 grass.png'")&&
+ mario.includes('function drawValleyLowVegetation()')&&
+ mario.includes('const groundY=380,drawY=Math.round(groundY-h*.722)')&&
+ mario.includes("ground.type!=='valleyGround'")&&
+ mario.includes('drawValleyLowVegetation();')&&
+ mario.includes('ctx.rect(ground.x,groundY-164,ground.w,164)')&&
+ !mario.includes("grassTrim',0,0"));
+check('Solo possui preenchimento contínuo sob os tiles para evitar frestas',
+ mario.includes("ctx.fillStyle='#875029';ctx.fillRect(b.x,b.y,b.w,b.h)")&&
+ mario.includes("ctx.fillStyle='#4cb342';ctx.fillRect(b.x,b.y,b.w,12)")&&
+ mario.includes("valleyAtlas('soil'"));
+check('Camadas de parallax espelhadas para evitar juntas verticais bruscas',
+ mario.includes('const shift=cameraX*speed;')&&
+ mario.includes('ctx.translate(sx+width,0);ctx.scale(-1,1);')&&
+ mario.includes("valleyParallax('forest',.24"));
 
 // AFK Gabriel: oito imagens, três rotinas e retomada imediata do controle.
 const gabrielAfkFiles=[
