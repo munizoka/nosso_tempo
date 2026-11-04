@@ -1220,8 +1220,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           leek:{
             idle:'205 leak idle.png',alert:'206 leek shocked.png',
             walk1:'207 leek walk 1.png',walkMid:'208 leek mid.png',
-            walk2:'208 leek walk 2.png'
-            // A pose de derrota ainda não existe: queda provisória feita no Canvas.
+            walk2:'208 leek walk 2.png',dead:'209 leek dead.png'
           }
         };
         processedAssets.mobFrames={mushroom:{},leek:{}};
@@ -1484,7 +1483,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
             const sprite=sprites.dead;
             if(sprite)drawSpriteOnFeet(sprite,e.x+e.w/2,e.y+e.h,e.h,e.facing);
             else if(e.type==='leek'&&sprites.idle){
-              // Sem PNG de derrota ainda: o próprio Alhopó cai de lado.
+              // Fallback caso o PNG 209 não tenha carregado: o próprio Alhopó cai de lado.
               const idle=sprites.idle,height=48;
               const width=Math.max(1,Math.round(height*idle.width/idle.height));
               ctx.save();ctx.translate(e.x+e.w/2,e.y+e.h-12);
