@@ -1384,6 +1384,71 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           img.src=path;
         });
 
+
+        // Vale das Origens: referências REAIS do GitHub; jamais carregar 232 potion.png.
+        const valleyAssetPaths={
+          sky:'210 landscape.png',soil:'211 atenção.png',castle:'212 castle.png',
+          forest:'213 forest.png',mountains:'214 montains.png',
+          forest2:'215 forest 2.png',jungle:'216 jungle.png',
+          stone:'217 atenção 2.png',wood:'218 atenção 3.png',
+          bridge:'219 bridge.png',slopes:'220 atenção 4.png',
+          trees:'221 atenção 5.png',plants:'222 atenção 6.png',
+          rocks:'223 atenção 7.png',fences:'224 atenção 8.png',
+          water:'225 atenção 9.png',house:'226 house.png',
+          windmill:'227 atenção 10.png',cave:'228 cave.png',
+          checkpoint:'229 torch.png',chestClosed:'230 chest.png',
+          chestOpen:'231 opened chest.png',effects:'233 shines.png',
+          signs:'234 signs.png'
+        };
+        const valleyArt={},valleyAtlasCache=new Map();
+        for(const [key,path] of Object.entries(valleyAssetPaths)){
+          const image=new Image();
+          image.onload=()=>{valleyArt[key]=image;};
+          image.onerror=()=>console.warn('Asset do Vale indisponível:',path);
+          image.src=encodeURI(path); // espaços e acentos precisam coincidir.
+        }
+        // Recorta somente UMA célula do spritesheet; nunca renderiza a folha inteira.
+        // Cache evita recortar novamente a cada frame. Grade varia por recurso.
+        function valleyFrame(key,col,row,cols,rows){
+          const source=valleyArt[key];if(!source?.naturalWidth)return null;
+          const id=[key,col,row,cols,rows].join(':');
+          if(valleyAtlasCache.has(id))return valleyAtlasCache.get(id);
+          const sw=source.naturalWidth,sh=source.naturalHeight;
+          const x1=Math.floor(col*sw/cols),x2=Math.floor((col+1)*sw/cols);
+          const y1=Math.floor(row*sh/rows),y2=Math.floor((row+1)*sh/rows);
+          const tile=document.createElement('canvas');
+          tile.width=Math.max(1,x2-x1);tile.height=Math.max(1,y2-y1);
+          const painter=tile.getContext('2d');painter.imageSmoothingEnabled=false;
+          painter.drawImage(source,x1,y1,tile.width,tile.height,0,0,tile.width,tile.height);
+          const result=trimTransparent(tile);
+          valleyAtlasCache.set(id,result);
+          return result;
+        }
+        function valleyVisible(x,w,pad=128){
+          return x+w>=cameraX-pad&&x<=cameraX+GAME_WIDTH+pad;
+        }
+        function valleyImage(key,x,y,w,h,alpha=1){
+          const image=valleyArt[key];if(!image||!valleyVisible(x,w))return;
+          ctx.save();ctx.globalAlpha=alpha;
+          ctx.drawImage(image,Math.round(x),Math.round(y),Math.round(w),Math.round(h));
+          ctx.restore();
+        }
+        function valleyAtlas(key,col,row,cols,rows,x,y,w,h,alpha=1){
+          if(!valleyVisible(x,w))return;
+          const image=valleyFrame(key,col,row,cols,rows);if(!image)return;
+          ctx.save();ctx.globalAlpha=alpha;
+          ctx.drawImage(image,Math.round(x),Math.round(y),Math.round(w),Math.round(h));
+          ctx.restore();
+        }
+        function valleyParallax(key,speed,y,width,height,alpha=1){
+          const image=valleyArt[key];if(!image?.naturalWidth)return;
+          const offset=((cameraX*speed)%width+width)%width;
+          ctx.save();ctx.globalAlpha=alpha;
+          for(let screenX=-offset-width;screenX<GAME_WIDTH+width;screenX+=width)
+            ctx.drawImage(image,Math.round(screenX),y,width,height);
+          ctx.restore();
+        }
+
         const player={x:50,y:100,w:24,h:40,vx:0,vy:0,speed:5.5,jumpPower:-13,gravity:0.6,grounded:false,direction:1,animFrame:0,animTimer:0};
         // AFK: cosmético, nunca altera posição, hitbox, inventário ou salvamento.
         const gabrielAfk={idle:0,wait:12,action:null,time:0,last:null};
@@ -2693,27 +2758,112 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
             ctx.restore();
           }
         }
-        function drawLevelOne(){
-          ctx.fillStyle='#5c94fc';ctx.fillRect(0,0,GAME_WIDTH,GAME_HEIGHT);
-          ctx.fillStyle='#fff';
-          for(const c of clouds){
-            let cx=(c.x-cameraX*.2)%(GAME_WIDTH*4);
-            if(cx<-200)cx+=GAME_WIDTH*4;cx=Math.round(cx);
-            ctx.fillRect(cx,c.y,c.w,c.h);
-            ctx.fillRect(cx+10,c.y-10,c.w-20,c.h+20);
+
+        function drawValleyGround(b){
+          // 211 atenção.png: 4 colunas x 2 linhas de tiles de terra e grama.
+          const first=Math.max(0,Math.floor((cameraX-b.x-64)/64));
+          const last=Math.min(Math.ceil(b.w/64)-1,Math.ceil((cameraX+GAME_WIDTH+64-b.x)/64));
+          for(let i=first;i<=last;i++){
+            const x=b.x+i*64,w=Math.min(64,b.x+b.w-x);
+            valleyAtlas('soil',i%3===0?0:2+i%2,0,4,2,x,b.y,w,64);
+            valleyAtlas('soil',1,0,4,2,x,b.y+64,w,64);
+            valleyAtlas('soil',1,0,4,2,x,b.y+128,w,42);
+            if(!valleyArt.soil){
+              ctx.fillStyle='#875029';ctx.fillRect(x,b.y,w,170);
+              ctx.fillStyle='#60be47';ctx.fillRect(x,b.y,w,10);
+            }
           }
-          ctx.save();ctx.translate(-Math.round(cameraX),0);
+        }
+        function drawValleyBackground(){
+          ctx.fillStyle='#8bd7fd';ctx.fillRect(0,0,GAME_WIDTH,GAME_HEIGHT);
+          if(valleyArt.sky)ctx.drawImage(valleyArt.sky,0,0,GAME_WIDTH,GAME_HEIGHT);
+          valleyParallax('mountains',.10,162,960,188,.9);
+          valleyParallax('forest',.24,165,830,215,.83);
+          valleyParallax('forest2',.39,174,820,205,.74);
+          // Floresta densa apenas na aproximação da caverna.
+          if(cameraX>3500&&cameraX<5400)
+            valleyParallax('jungle',.52,88,950,292,.18);
+        }
+        function drawValleyDecorations(){
+          for(const obj of valleyDecor){
+            const x=obj.x,h=obj.h;if(!valleyVisible(x,obj.w||300))continue;
+            if(obj.kind==='tree')
+              valleyAtlas('trees',obj.v,0,3,1,x,380-h,
+                Math.round(h*([.7,.75,.85][obj.v]||.8)),h,.91);
+            if(obj.kind==='house')valleyImage('house',x,380-h,obj.w,h,.96);
+            if(obj.kind==='cave')valleyImage('cave',x,380-h,obj.w,h,.91);
+            if(obj.kind==='windmill'){
+              // 227 atenção 10.png tem corpo e hélices separados, na mesma folha.
+              valleyAtlas('windmill',0,0,2,1,x,380-h,190,h);
+              const blades=valleyFrame('windmill',1,0,2,1);
+              if(blades){
+                ctx.save();ctx.translate(x+146,380-h+105);
+                ctx.rotate(elapsedSeconds*.85);
+                ctx.drawImage(blades,-83,-83,166,166);ctx.restore();
+              }
+            }
+          }
+          for(const sign of valleySigns)
+            valleyAtlas('signs',sign.p,0,4,1,sign.x,325,52,55,.97);
+          for(let x=180;x<VALLEY_END-200;x+=310){
+            if(!valleyVisible(x,80))continue;
+            const id=Math.floor(x/310);
+            valleyAtlas('plants',id%6,id%2,6,4,x,356,39,24,.84);
+            if(id%3===0)
+              valleyAtlas('rocks',id%6,0,6,3,x+85,351,48,29,.73);
+          }
+          for(const x of [820,2110,3670,4940,6950])
+            valleyAtlas('fences',0,0,6,2,x,340,86,40,.92);
+        }
+        function drawValleyTerrain(){
           for(const b of level1Blocks){
-            if(b.type==='ground')drawOriginalGround(b);
-            else drawObject(processedAssets[b.type],b.x,b.y,b.w,b.h);
+            if(!valleyVisible(b.x,b.w))continue;
+            if(b.type==='valleyGround')drawValleyGround(b);
+            else if(b.type==='valleyBridge'){
+              valleyImage('bridge',b.x-17,b.y-26,b.w+34,84);
+              if(!valleyArt.bridge){ctx.fillStyle='#996035';ctx.fillRect(b.x,b.y,b.w,18);}
+            }else if(b.type==='valleyPlatform'){
+              // 218 atenção 3.png: sprites diferentes no mesmo atlas.
+              valleyAtlas('wood',1,0,3,3,b.x,b.y-9,b.w,27);
+              if(!valleyArt.wood){ctx.fillStyle='#b47a3f';ctx.fillRect(b.x,b.y,b.w,18);}
+            }else if(b.type==='valleyStone'){
+              valleyAtlas('slopes',2,0,8,4,b.x,b.y,b.w,b.h);
+              if(!valleyArt.slopes){ctx.fillStyle='#8c8d6c';ctx.fillRect(b.x,b.y,b.w,b.h);}
+            }
           }
-          drawObject(processedAssets.castle,castle.x,castle.y,castle.w,castle.h);
+          // 225 atenção 9.png: recurso modular, não um fundo completo.
+          for(const x of [1472,2880,4352,6080])
+            valleyAtlas('water',0,0,3,4,x,381,128,40,.94);
+        }
+        function drawValleyObjects(){
+          for(const x of valleyCheckpoints){
+            if(!valleyVisible(x,64))continue;
+            const lit=checkpointReached&&checkpointX>=x;
+            valleyAtlas('checkpoint',lit?1:0,0,2,1,x-10,280,55,100);
+            if(!valleyArt.checkpoint){
+              ctx.fillStyle=lit?'#f8ce55':'#65c9e1';ctx.fillRect(x,295,20,85);
+            }
+          }
+          for(const chest of valleyChests){
+            if(!valleyVisible(chest.x,chest.w))continue;
+            const open=collectedPickups.has(chest.id);
+            valleyImage(open?'chestOpen':'chestClosed',chest.x,chest.y,chest.w,chest.h);
+          }
+        }
+
+        function drawLevelOne(){
+          drawValleyBackground();
+          ctx.save();ctx.translate(-Math.round(cameraX),0);
+          drawValleyDecorations();
+          drawValleyTerrain();
+          valleyImage('castle',castle.x,castle.y,castle.w,castle.h);
+          if(!valleyArt.castle)drawObject(processedAssets.castle,castle.x,castle.y,castle.w,castle.h);
+          drawValleyObjects();
           if(state==='cutscene')drawCinematicCharacters(cinematicSeconds);
           else drawVitoriaNew(princess.x+princess.w/2,princess.y+princess.h,{
             pose:Math.floor(gameNow/6500)%3===0?'ok':'idle',speaking:false
           });
-          drawEnemies();
-          drawHero();
+          drawEnemies();drawHero();
           ctx.restore();
           if(state==='cutscene')drawCinematicText(cinematicSeconds);
         }
