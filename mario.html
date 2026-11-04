@@ -1479,7 +1479,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           {x:510,y:348,w:32,h:32,vx:-1.35,type:'mushroom',alive:true},
           {x:1080,y:348,w:32,h:32,vx:-1.45,type:'mushroom',alive:true},
           {x:1850,y:348,w:32,h:32,vx:-1.45,type:'mushroom',alive:true},
-          {x:2470,y:348,w:32,h:32,vx:-1.5,type:'leek',alive:true},
+          {x:2690,y:348,w:32,h:32,vx:-1.5,type:'leek',alive:true},
           {x:3270,y:348,w:32,h:32,vx:-1.45,type:'mushroom',alive:true},
           {x:3940,y:348,w:32,h:32,vx:-1.65,type:'leek',alive:true},
           {x:4680,y:348,w:32,h:32,vx:-1.45,type:'mushroom',alive:true},
@@ -2768,6 +2768,9 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
             valleyAtlas('soil',i%3===0?0:2+i%2,0,4,2,x,b.y,w,64);
             valleyAtlas('soil',1,0,4,2,x,b.y+64,w,64);
             valleyAtlas('soil',1,0,4,2,x,b.y+128,w,42);
+            // 220 atenção 4.png: acabamento das bordas de terrenos.
+            if(i===0)valleyAtlas('slopes',0,2,8,4,x,b.y,36,54,.88);
+            if(i===Math.ceil(b.w/64)-1)valleyAtlas('slopes',7,2,8,4,x+w-36,b.y,36,54,.88);
             if(!valleyArt.soil){
               ctx.fillStyle='#875029';ctx.fillRect(x,b.y,w,170);
               ctx.fillStyle='#60be47';ctx.fillRect(x,b.y,w,10);
@@ -2827,7 +2830,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
               valleyAtlas('wood',1,0,3,3,b.x,b.y-9,b.w,27);
               if(!valleyArt.wood){ctx.fillStyle='#b47a3f';ctx.fillRect(b.x,b.y,b.w,18);}
             }else if(b.type==='valleyStone'){
-              valleyAtlas('slopes',2,0,8,4,b.x,b.y,b.w,b.h);
+              valleyAtlas('stone',0,0,4,4,b.x,b.y,b.w,b.h);
               if(!valleyArt.slopes){ctx.fillStyle='#8c8d6c';ctx.fillRect(b.x,b.y,b.w,b.h);}
             }
           }
@@ -2848,6 +2851,9 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
             if(!valleyVisible(chest.x,chest.w))continue;
             const open=collectedPickups.has(chest.id);
             valleyImage(open?'chestOpen':'chestClosed',chest.x,chest.y,chest.w,chest.h);
+            // Só a linha dourada do 233: não ativa efeitos de cura.
+            if(open)valleyAtlas('effects',Math.floor(elapsedSeconds*4)%6,0,6,2,
+              chest.x+25,chest.y-13,31,31,.75);
           }
         }
 
