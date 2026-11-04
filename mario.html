@@ -1558,7 +1558,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           {kind:'tree',x:6370,h:260,v:2},{kind:'tree',x:6700,h:175,v:0},
           {kind:'tree',x:7200,h:235,v:1}
         ];
-        const valleySigns=[{x:300,p:0},{x:1780,p:0},{x:3100,p:2},
+        const valleySigns=[{x:300,p:0},{x:1780,p:0},{x:3100,p:0},
           {x:4650,p:0},{x:6300,p:0},{x:7260,p:3}];
         const level2Blocks=[
           {x:0,y:380,w:550,h:160,type:'forestGround'},
@@ -2936,26 +2936,32 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
         function drawValleyGapBackdrops(){
           const art=valleyArt.hole;
           for(const gap of valleyGaps){
-            if(gap.w<=0||!valleyVisible(gap.x,gap.w))continue;
+            if(gap.w<=0||!valleyVisible(gap.x-12,gap.w+24))continue;
             ctx.save();
-            // Fundo em camada atrás dos blocos de grama e das pontes.
-            // Limita apenas a VISIBILIDADE ao vão: não deforma a textura,
-            // nem cria hitbox/colisão ou interfere na queda do jogador.
+            // A antiga máscara começava em y=380 e deixava 32px de céu
+            // aparecendo entre as bordas de grama. Cobrir o vão desde y=348.
+            // Acima da grama: só o vão. Abaixo dela: 12px de sobreposição
+            // escondida atrás dos blocos, sem vazamento pelas laterais.
+            const topY=348;
             ctx.beginPath();
-            ctx.rect(gap.x,380,gap.w,GAME_HEIGHT-380);
+            ctx.rect(gap.x,topY,gap.w,380-topY);
+            ctx.rect(gap.x-12,380,gap.w+24,GAME_HEIGHT-380);
             ctx.clip();
+            // Fundo opaco mesmo se o PNG 249 tiver pixels transparentes:
+            // nunca revelar o céu azul no intervalo entre as beiradas.
             ctx.fillStyle='#241a25';
-            ctx.fillRect(gap.x,380,gap.w,GAME_HEIGHT-380);
+            ctx.fillRect(gap.x,topY,gap.w,380-topY);
+            ctx.fillRect(gap.x-12,380,gap.w+24,GAME_HEIGHT-380);
             if(art){
               const iw=art.naturalWidth||art.width;
               const ih=art.naturalHeight||art.height;
               if(iw>0&&ih>0){
-                // O painel 249 é MAIOR que o buraco; revelamos somente
-                // a região central atrás da abertura, sem comprimir na horizontal.
-                const imageWidth=Math.max(216,Math.round(gap.w*1.75));
+                // Preservar a proporção e mostrar o centro do painel por trás
+                // do vão estreito; não esticar a imagem para caber nele.
+                const imageWidth=Math.max(256,Math.round(gap.w*2));
                 const imageHeight=Math.round(imageWidth*ih/iw);
                 const imageX=gap.x+Math.round((gap.w-imageWidth)/2);
-                const imageY=358; // inicia por trás da linha de grama y=380
+                const imageY=342;
                 ctx.drawImage(art,imageX,imageY,imageWidth,imageHeight);
               }
             }
