@@ -631,7 +631,7 @@ check('Vitoria percorre o ciclo passo-meio-passo-meio',
  'walk1,walkMid,walk2,walkMid,walk1'&&selectVitoria({moving:false})==='idle');
 check('Vitoria tem altura visual próxima ao novo Gabriel e pés alinhados',
  mario.includes('const VITORIA_VISUAL_HEIGHT=68;')&&
- mario.includes('const princess={x:3400,y:312,w:32,h:68}')&&
+ mario.includes('const princess={x:7485,y:312,w:32,h:68}')&&
  mario.includes('drawSpriteOnFeet(image,centerX,footY,height,facing)'));
 check('Três fases e cutscene inicial usam novo renderizador',
  mario.includes('drawVitoriaNew(princess.x+princess.w/2,princess.y+princess.h,')&&
@@ -642,6 +642,62 @@ check('Sprite antigo de Vitoria disponível somente como fallback',
 check('Todas as poses adicionais estão nomeadas e prontas para futuras ações',
  ['lookUp','lookDown','surprised','happy','thinking','jumpRise','jumpApex','landing',
  'worried','celebrating','ok'].every(p=>new RegExp('\\b'+p+':').test(mario)));
+
+
+// Vale das Origens — regressão da reconstrução integral da Fase 1.
+const valleyArtSource=mario.match(/        const valleyAssetPaths=\{[\s\S]*?\n        \};/)?.[0];
+check('Catálogo de assets do Vale da Fase 1 é isolável',!!valleyArtSource);
+const valleyAssets=new Function(valleyArtSource+'\nreturn valleyAssetPaths;')();
+const valleyFiles=Object.values(valleyAssets);
+check('24 artes oficiais 210 a 234 carregadas sem Super Suco',
+ valleyFiles.length===24&&
+ !valleyFiles.includes('232 potion.png')&&
+ valleyFiles.every(file=>fs.existsSync(path.join(root,file))&&fs.statSync(path.join(root,file)).size>1000));
+check('Spritesheets com atenção mapeados por nome exato',
+ ['211 atenção.png','217 atenção 2.png','218 atenção 3.png','220 atenção 4.png',
+  '221 atenção 5.png','222 atenção 6.png','223 atenção 7.png',
+  '224 atenção 8.png','225 atenção 9.png','227 atenção 10.png']
+ .every(file=>valleyFiles.includes(file))&&
+ mario.includes('function valleyFrame(key,col,row,cols,rows)')&&
+ mario.includes('valleyAtlasCache=new Map()')&&
+ mario.includes('valleyAtlas('));
+const valleyLayoutSource=mario.match(/        const VALLEY_END=8000;[\s\S]*?        const level2Blocks=\[/)?.[0]?.split('        const level2Blocks=[')[0];
+check('Geometria da nova fase de 8000px isolável',!!valleyLayoutSource);
+const valleyWorld=new Function(valleyLayoutSource+
+ '\nreturn {VALLEY_END,princess,castle,level1Blocks,level1EnemyTemplate,valleyCheckpoints,valleyChests};')();
+const valleyGrounds=valleyWorld.level1Blocks.filter(b=>b.type==='valleyGround').sort((a,b)=>a.x-b.x);
+check('Novo chão cobre cinco áreas de 8000 px com buracos fáceis',
+ valleyWorld.VALLEY_END===8000&&valleyGrounds.length===5&&
+ valleyGrounds[0].x===0&&
+ valleyGrounds.at(-1).x+valleyGrounds.at(-1).w===valleyWorld.VALLEY_END&&
+ valleyGrounds.slice(1).every((g,i)=>g.x-(valleyGrounds[i].x+valleyGrounds[i].w)<=128));
+check('Castelo e Vitoria ficam perto do fim da fase',
+ valleyWorld.princess.x>7300&&valleyWorld.castle.x>valleyWorld.princess.x&&
+ valleyWorld.castle.x+valleyWorld.castle.w<=valleyWorld.VALLEY_END);
+check('Bolota e Alhopó ficam em solo válido',
+ valleyWorld.level1EnemyTemplate.length>=8&&
+ valleyWorld.level1EnemyTemplate.every(e=>
+  ['mushroom','leek'].includes(e.type)&&
+  valleyGrounds.some(g=>e.x>=g.x&&e.x+e.w<=g.x+g.w)));
+check('Dois checkpoints e três baús entregam somente moedas',
+ valleyWorld.valleyCheckpoints.length===2&&
+ valleyWorld.valleyChests.length===3&&
+ valleyWorld.valleyCheckpoints.every(x=>valleyGrounds.some(g=>x>=g.x&&x<=g.x+g.w))&&
+ mario.includes("showItemToast('BAÚ ENCONTRADO! +3 MOEDAS')")&&
+ !mario.includes("addConsumable('superJuice'"));
+check('Câmera, respawn e saves seguem nova largura sem alterar esquema Firebase',
+ mario.includes('level===1?VALLEY_END-GAME_WIDTH')&&
+ mario.includes('level===1?VALLEY_END:level===2?FOREST_END:SKY_END')&&
+ mario.includes('lv===1?VALLEY_END-40:3900')&&
+ mario.includes('player.x=level===1?(checkpointReached?checkpointX:50)')&&
+ rules.includes('sgbValidSave(data,slotId)'));
+check('Fase 1 usa parallax, spritesheets recortados e plataforma unilateral',
+ mario.includes('function drawValleyBackground()')&&
+ mario.includes('function drawValleyTerrain()')&&
+ mario.includes("valleyAtlas('soil'")&&
+ mario.includes("valleyAtlas('trees'")&&
+ mario.includes("b.type==='valleyPlatform'||b.type==='valleyBridge'")&&
+ mario.includes("function drawLevelOne(){\n          drawValleyBackground();"));
 
 // AFK Gabriel: oito imagens, três rotinas e retomada imediata do controle.
 const gabrielAfkFiles=[
