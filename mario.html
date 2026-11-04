@@ -622,14 +622,28 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
         // Cada moeda pode ser coletada uma única vez por campanha.
         // As duas primeiras tomam o lugar dos antigos blocos '?' da fase 1.
         const COIN_PICKUPS=[
-          {level:1,x:260,y:228},
-          {level:1,x:555,y:228},
-          {level:1,x:850,y:327},
-          {level:1,x:1430,y:327},
-          {level:1,x:1830,y:327},
-          {level:1,x:2410,y:327},
-          {level:1,x:2770,y:327},
-          {level:1,x:3280,y:327},
+          {level:1,x:260,y:327},
+          {level:1,x:460,y:327},
+          {level:1,x:665,y:251},
+          {level:1,x:980,y:327},
+          {level:1,x:1290,y:327},
+          {level:1,x:1680,y:327},
+          {level:1,x:2060,y:251},
+          {level:1,x:2350,y:327},
+          {level:1,x:2650,y:327},
+          {level:1,x:3130,y:327},
+          {level:1,x:3420,y:251},
+          {level:1,x:3690,y:327},
+          {level:1,x:4130,y:327},
+          {level:1,x:4560,y:327},
+          {level:1,x:4930,y:251},
+          {level:1,x:5180,y:327},
+          {level:1,x:5590,y:327},
+          {level:1,x:5990,y:327},
+          {level:1,x:6370,y:327},
+          {level:1,x:6680,y:251},
+          {level:1,x:6980,y:327},
+          {level:1,x:7290,y:327},
           {level:2,x:170,y:327},
           {level:2,x:740,y:327},
           {level:2,x:1060,y:327},
@@ -652,6 +666,28 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
             if(activeSlot!==null)saveCurrentSlot(false);
           }
         }
+        // Baús concedem moedas; o Super Suco não entra nesta atualização.
+        function updateValleyRewards(){
+          if(level!==1||state!=='playing')return;
+          for(const x of valleyCheckpoints){
+            if(x<=checkpointX||player.x+player.w<x-20||
+               player.x>x+30||player.y+player.h<330)continue;
+            checkpointReached=true;checkpointX=x;score+=250;
+            checkpointChime();setHUD();
+            emitPixelBurst(x,325,['#ffeab2','#a8efcd','#ffffff'],15,110);
+            showItemToast('CHECKPOINT DO VALE ATIVADO!');
+            if(activeSlot!==null)saveCurrentSlot(false);
+          }
+          for(const chest of valleyChests){
+            if(collectedPickups.has(chest.id)||!isColliding(player,chest))continue;
+            collectedPickups.add(chest.id);
+            coins=Math.min(9999,coins+3);score+=100;setHUD();
+            emitPixelBurst(chest.x+chest.w/2,chest.y+16,['#fff6aa','#e8b340','#fffcdf'],13,105);
+            showItemToast('BAÚ ENCONTRADO! +3 MOEDAS');
+            if(activeSlot!==null)saveCurrentSlot(false);
+          }
+        }
+
         function drawLevelCoins(){
           ctx.save();ctx.translate(-Math.round(cameraX),0);
           for(const coin of COIN_PICKUPS){
@@ -1348,39 +1384,124 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           img.src=path;
         });
 
+
+        // Vale das Origens: referências REAIS do GitHub; jamais carregar 232 potion.png.
+        const valleyAssetPaths={
+          sky:'210 landscape.png',soil:'211 atenção.png',castle:'212 castle.png',
+          forest:'213 forest.png',mountains:'214 montains.png',
+          forest2:'215 forest 2.png',jungle:'216 jungle.png',
+          stone:'217 atenção 2.png',wood:'218 atenção 3.png',
+          bridge:'219 bridge.png',slopes:'220 atenção 4.png',
+          trees:'221 atenção 5.png',plants:'222 atenção 6.png',
+          rocks:'223 atenção 7.png',fences:'224 atenção 8.png',
+          water:'225 atenção 9.png',house:'226 house.png',
+          windmill:'227 atenção 10.png',cave:'228 cave.png',
+          checkpoint:'229 torch.png',chestClosed:'230 chest.png',
+          chestOpen:'231 opened chest.png',effects:'233 shines.png',
+          signs:'234 signs.png'
+        };
+        const valleyArt={},valleyAtlasCache=new Map();
+        for(const [key,path] of Object.entries(valleyAssetPaths)){
+          const image=new Image();
+          image.onload=()=>{valleyArt[key]=image;};
+          image.onerror=()=>console.warn('Asset do Vale indisponível:',path);
+          image.src=encodeURI(path); // espaços e acentos precisam coincidir.
+        }
+        // Recorta somente UMA célula do spritesheet; nunca renderiza a folha inteira.
+        // Cache evita recortar novamente a cada frame. Grade varia por recurso.
+        function valleyFrame(key,col,row,cols,rows){
+          const source=valleyArt[key];if(!source?.naturalWidth)return null;
+          const id=[key,col,row,cols,rows].join(':');
+          if(valleyAtlasCache.has(id))return valleyAtlasCache.get(id);
+          const sw=source.naturalWidth,sh=source.naturalHeight;
+          const x1=Math.floor(col*sw/cols),x2=Math.floor((col+1)*sw/cols);
+          const y1=Math.floor(row*sh/rows),y2=Math.floor((row+1)*sh/rows);
+          const tile=document.createElement('canvas');
+          tile.width=Math.max(1,x2-x1);tile.height=Math.max(1,y2-y1);
+          const painter=tile.getContext('2d');painter.imageSmoothingEnabled=false;
+          painter.drawImage(source,x1,y1,tile.width,tile.height,0,0,tile.width,tile.height);
+          const result=trimTransparent(tile);
+          valleyAtlasCache.set(id,result);
+          return result;
+        }
+        function valleyVisible(x,w,pad=128){
+          return x+w>=cameraX-pad&&x<=cameraX+GAME_WIDTH+pad;
+        }
+        function valleyImage(key,x,y,w,h,alpha=1){
+          const image=valleyArt[key];if(!image||!valleyVisible(x,w))return;
+          ctx.save();ctx.globalAlpha=alpha;
+          ctx.drawImage(image,Math.round(x),Math.round(y),Math.round(w),Math.round(h));
+          ctx.restore();
+        }
+        function valleyAtlas(key,col,row,cols,rows,x,y,w,h,alpha=1){
+          if(!valleyVisible(x,w))return;
+          const image=valleyFrame(key,col,row,cols,rows);if(!image)return;
+          ctx.save();ctx.globalAlpha=alpha;
+          ctx.drawImage(image,Math.round(x),Math.round(y),Math.round(w),Math.round(h));
+          ctx.restore();
+        }
+        function valleyParallax(key,speed,y,width,height,alpha=1){
+          const image=valleyArt[key];if(!image?.naturalWidth)return;
+          const offset=((cameraX*speed)%width+width)%width;
+          ctx.save();ctx.globalAlpha=alpha;
+          for(let screenX=-offset-width;screenX<GAME_WIDTH+width;screenX+=width)
+            ctx.drawImage(image,Math.round(screenX),y,width,height);
+          ctx.restore();
+        }
+
         const player={x:50,y:100,w:24,h:40,vx:0,vy:0,speed:5.5,jumpPower:-13,gravity:0.6,grounded:false,direction:1,animFrame:0,animTimer:0};
         // AFK: cosmético, nunca altera posição, hitbox, inventário ou salvamento.
         const gabrielAfk={idle:0,wait:12,action:null,time:0,last:null};
-        // Vitoria com escala de jovem adulta (Gabriel normal = 64px; Vitoria = 68px).
-        // Pé permanece em y=380; a caixa de interação acompanha a nova altura.
-        const princess={x:3400,y:312,w:32,h:68};
-        const castle={x:3450,y:180,w:200,h:200};
-        const clouds=[
-          {x:100,y:50,w:60,h:20},{x:400,y:80,w:80,h:25},{x:800,y:40,w:70,h:20},
-          {x:1200,y:70,w:90,h:30},{x:1600,y:50,w:60,h:20},{x:2000,y:80,w:80,h:25},
-          {x:2500,y:40,w:70,h:20},{x:2900,y:70,w:90,h:30}
-        ];
-        // Layout da FASE 1 mantido, incluindo os mesmos buracos e obstáculos.
+        // Vale das Origens (Fase 1): 8000 px, progressão amigável e visual reconstruído.
+        const VALLEY_END=8000;
+        const princess={x:7485,y:312,w:32,h:68};
+        const castle={x:7535,y:46,w:430,h:334};
+        const valleyCheckpoints=[2464,5200];
+        const valleyChests=[1165,3510,5640].map(x=>({x,y:325,w:72,h:55,id:'valley:chest:'+x}));
         const level1Blocks=[
-          {x:0,y:380,w:1200,h:150,type:'ground'},
-          {x:1300,y:380,w:800,h:150,type:'ground'},
-          {x:2250,y:380,w:1800,h:150,type:'ground'},
-          {x:400,y:300,w:60,h:80,type:'pipe'},
-          {x:750,y:260,w:60,h:120,type:'pipe'},
-          {x:950,y:260,w:60,h:120,type:'pipe'},
-          {x:500,y:220,w:48,h:48,type:'brick'},
-          {x:596,y:220,w:48,h:48,type:'brick'},
-          {x:2900,y:332,w:48,h:48,type:'brick'},
-          {x:2948,y:284,w:48,h:96,type:'brick'},
-          {x:2996,y:236,w:48,h:144,type:'brick'},
-          {x:3044,y:188,w:48,h:192,type:'brick'}
+          {x:0,y:380,w:1472,h:170,type:'valleyGround'},
+          {x:1600,y:380,w:1280,h:170,type:'valleyGround'},
+          {x:3008,y:380,w:1344,h:170,type:'valleyGround'},
+          {x:4480,y:380,w:1600,h:170,type:'valleyGround'},
+          {x:6208,y:380,w:1792,h:170,type:'valleyGround'},
+          {x:1472,y:331,w:128,h:18,type:'valleyBridge'},
+          {x:4352,y:331,w:128,h:18,type:'valleyBridge'},
+          {x:560,y:292,w:184,h:18,type:'valleyPlatform'},
+          {x:1900,y:300,w:192,h:18,type:'valleyPlatform'},
+          {x:3260,y:300,w:192,h:18,type:'valleyPlatform'},
+          {x:4790,y:294,w:192,h:18,type:'valleyPlatform'},
+          {x:6650,y:295,w:190,h:18,type:'valleyPlatform'},
+          {x:850,y:336,w:54,h:44,type:'valleyStone'},
+          {x:3760,y:330,w:62,h:50,type:'valleyStone'},
+          {x:6840,y:337,w:54,h:43,type:'valleyStone'}
         ];
         const level1EnemyTemplate=[
-          {x:600,y:348,w:32,h:32,vx:-1.5,type:'mushroom',alive:true},
-          {x:1130,y:348,w:32,h:32,vx:-1.5,type:'mushroom',alive:true},
-          {x:1800,y:348,w:32,h:32,vx:-2,type:'leek',alive:true},
-          {x:2350,y:348,w:32,h:32,vx:-2,type:'leek',alive:true}
+          {x:510,y:348,w:32,h:32,vx:-1.35,type:'mushroom',alive:true},
+          {x:1080,y:348,w:32,h:32,vx:-1.45,type:'mushroom',alive:true},
+          {x:1850,y:348,w:32,h:32,vx:-1.45,type:'mushroom',alive:true},
+          {x:2690,y:348,w:32,h:32,vx:-1.5,type:'leek',alive:true},
+          {x:3270,y:348,w:32,h:32,vx:-1.45,type:'mushroom',alive:true},
+          {x:3940,y:348,w:32,h:32,vx:-1.65,type:'leek',alive:true},
+          {x:4680,y:348,w:32,h:32,vx:-1.45,type:'mushroom',alive:true},
+          {x:5470,y:348,w:32,h:32,vx:-1.65,type:'leek',alive:true},
+          {x:6470,y:348,w:32,h:32,vx:-1.45,type:'mushroom',alive:true},
+          {x:7060,y:348,w:32,h:32,vx:-1.7,type:'leek',alive:true}
         ];
+        // Objetos decorativos ficam atrás da física do cenário.
+        const valleyDecor=[
+          {kind:'tree',x:75,h:270,v:2},{kind:'tree',x:375,h:150,v:0},
+          {kind:'tree',x:765,h:225,v:1},{kind:'house',x:920,w:315,h:234},
+          {kind:'tree',x:1360,h:190,v:1},{kind:'tree',x:1750,h:265,v:2},
+          {kind:'tree',x:2140,h:145,v:0},{kind:'tree',x:2590,h:245,v:1},
+          {kind:'tree',x:2970,h:280,v:2},{kind:'tree',x:3350,h:205,v:1},
+          {kind:'tree',x:4000,h:285,v:2},{kind:'cave',x:4610,w:290,h:218},
+          {kind:'tree',x:4880,h:155,v:0},{kind:'tree',x:5190,h:230,v:1},
+          {kind:'windmill',x:5780,w:310,h:315},
+          {kind:'tree',x:6370,h:260,v:2},{kind:'tree',x:6700,h:175,v:0},
+          {kind:'tree',x:7200,h:235,v:1}
+        ];
+        const valleySigns=[{x:300,p:0},{x:1780,p:0},{x:3100,p:2},
+          {x:4650,p:0},{x:6300,p:0},{x:7260,p:3}];
         const level2Blocks=[
           {x:0,y:380,w:550,h:160,type:'forestGround'},
           {x:675,y:380,w:640,h:160,type:'forestGround'},
@@ -1557,8 +1678,8 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
             lives:Math.floor(clamp(data.lives,1,99,5)),
             elapsedSeconds:clamp(data.elapsedSeconds,0,999999,0),
             superRemaining:clamp(data.superRemaining,0,SUPER_DURATION,0),
-            player:{x:clamp(data.player?.x,0,3900,50),y:clamp(data.player?.y,-100,390,100),direction:data.player?.direction===-1?-1:1},
-            checkpoint:{reached:data.checkpoint?.reached===true,x:clamp(data.checkpoint?.x,0,3900,0)},
+            player:{x:clamp(data.player?.x,0,lv===1?VALLEY_END-40:3900,50),y:clamp(data.player?.y,-100,390,100),direction:data.player?.direction===-1?-1:1},
+            checkpoint:{reached:data.checkpoint?.reached===true,x:clamp(data.checkpoint?.x,0,lv===1?VALLEY_END:3900,0)},
             skyCheckpoint:{reached:data.skyCheckpoint?.reached===true,x:clamp(data.skyCheckpoint?.x,0,3900,0)},
             levelComplete:completed,inventory:{version:2,story,consumables},
             collectedPickups:Array.isArray(data.collectedPickups)?data.collectedPickups.filter(x=>typeof x==='string'&&x.length<=64).slice(0,100):[],
@@ -1659,7 +1780,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
             state='playing';player.x=data.player.x;player.y=data.player.y;
             player.vx=0;player.vy=0;player.grounded=false;player.animFrame=0;
             player.direction=data.player.direction;
-            const width=level===1?4000:level===2?FOREST_END:SKY_END;
+            const width=level===1?VALLEY_END:level===2?FOREST_END:SKY_END;
             cameraX=Math.max(0,Math.min(width-GAME_WIDTH,player.x-320));
           }else{
             state='map';
@@ -1878,9 +1999,10 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
 
         function resetPosition(){
           cancelGabrielAfk();
-          player.x=level===1?50:level===2?(checkpointReached?checkpointX:50):(skyCheckpointReached?skyCheckpointX:50);
+          player.x=level===1?(checkpointReached?checkpointX:50):level===2?(checkpointReached?checkpointX:50):(skyCheckpointReached?skyCheckpointX:50);
           player.y=100;player.vx=0;player.vy=0;player.grounded=false;
           player.direction=1;player.animFrame=0;cameraX=0;
+          if(level===1&&checkpointReached)cameraX=Math.max(0,Math.min(VALLEY_END-GAME_WIDTH,player.x-320));
           if(level===2&&checkpointReached)cameraX=Math.max(0,Math.min(FOREST_END-GAME_WIDTH,player.x-320));
           if(level===3&&skyCheckpointReached)cameraX=Math.max(0,Math.min(SKY_END-GAME_WIDTH,player.x-320));
         }
@@ -2144,7 +2266,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           const footX=enemy.vx>0?nextX+enemy.w+4:nextX-4;
           const footY=enemy.y+enemy.h+5;
           return terrain.some(b=>
-            (b.type==='ground'||b.type==='forestGround'||b.type==='pipe'||
+            (b.type==='ground'||b.type==='valleyGround'||b.type==='forestGround'||b.type==='pipe'||
              b.type==='brick'||b.type==='surprise'||b.type==='wood'||b.type==='magic') &&
             footX>=b.x && footX<b.x+b.w &&
             footY>=b.y && footY<b.y+b.h
@@ -2157,7 +2279,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           const eyeY=enemy.y+enemy.h*.48;
           if(dx*look<0||Math.abs(dx)>270||Math.abs((player.y+player.h/2)-eyeY)>65)return false;
           const a=Math.min(ex,px),b=Math.max(ex,px);
-          return !terrain.some(tile=>tile.type!=='ground'&&tile.type!=='forestGround'&&tile.type!=='skyPlatform'&&
+          return !terrain.some(tile=>tile.type!=='ground'&&tile.type!=='valleyGround'&&tile.type!=='valleyPlatform'&&tile.type!=='valleyBridge'&&tile.type!=='forestGround'&&tile.type!=='skyPlatform'&&
             tile.x<b&&tile.x+tile.w>a&&tile.y<eyeY&&tile.y+tile.h>eyeY);
         }
         const ENEMY_LOST_SIGHT_SECONDS=10;
@@ -2168,7 +2290,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           const eyeY=enemy.y+enemy.h*.48;
           if(Math.abs(px-ex)>300||Math.abs((player.y+player.h/2)-eyeY)>65)return false;
           const a=Math.min(ex,px),b=Math.max(ex,px);
-          return !terrain.some(tile=>tile.type!=='ground'&&tile.type!=='forestGround'&&tile.type!=='skyPlatform'&&
+          return !terrain.some(tile=>tile.type!=='ground'&&tile.type!=='valleyGround'&&tile.type!=='valleyPlatform'&&tile.type!=='valleyBridge'&&tile.type!=='forestGround'&&tile.type!=='skyPlatform'&&
             tile.x<b&&tile.x+tile.w>a&&tile.y<eyeY&&tile.y+tile.h>eyeY);
         }
         function defeatEnemy(enemy,points){
@@ -2247,7 +2369,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
             }
             if(!blocked&&enemy.vx!==0)enemy.x+=enemy.vx*enemyDifficultyMultiplier();
             for(const b of terrain){
-              if(b.type!=='ground'&&b.type!=='forestGround'&&isColliding(enemy,b)){
+              if(!['ground','valleyGround','valleyPlatform','valleyBridge','forestGround'].includes(b.type)&&isColliding(enemy,b)){
                 if(enemy.vx<0)enemy.x=b.x+b.w;
                 else if(enemy.vx>0)enemy.x=b.x-enemy.w;
                 if(enemy.aiState==='patrol')enemy.vx*=-1;
@@ -2376,7 +2498,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           player.x+=player.vx;
           if(player.x<0)player.x=0;
           for(const b of terrain){
-            if(b.type==='skyPlatform')continue;
+            if(b.type==='skyPlatform'||b.type==='valleyPlatform'||b.type==='valleyBridge')continue;
             if(isColliding(player,b)){
               if(player.vx>0)player.x=b.x-player.w;
               else if(player.vx<0)player.x=b.x+b.w;
@@ -2389,7 +2511,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           if(level===3&&player.y<32){player.y=32;player.vy=Math.max(player.vy,0);}
           for(const b of terrain){
             // Plataformas celestiais permitem passar por baixo e pousar por cima.
-            if(b.type==='skyPlatform' && !(player.vy>=0&&oldFootY<=b.y+7))continue;
+            if((b.type==='skyPlatform'||b.type==='valleyPlatform'||b.type==='valleyBridge') && !(player.vy>=0&&oldFootY<=b.y+7))continue;
             if(isColliding(player,b)){
               if(player.vy>0){player.y=b.y-player.h;player.vy=0;player.grounded=true;}
               else if(player.vy<0){player.y=b.y+b.h;player.vy=0;}
@@ -2425,6 +2547,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           tickCombatEffects(dt);
           updateLevelPickups();
           updateLevelCoins();
+          if(level===1)updateValleyRewards();
           if(level===3)updateSkyBirds(elapsedSeconds);
           else updateEnemies();
           if(state!=='playing')return;
@@ -2436,7 +2559,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           if(level===3&&player.grounded&&player.x+player.w>=SKY_ALTAR_X-35&&player.x<SKY_ALTAR_X+45){
             activateSkyAltar(now);return;
           }
-          const maxCamera=level===1?3250:(level===2?FOREST_END-GAME_WIDTH:SKY_END-GAME_WIDTH);
+          const maxCamera=level===1?VALLEY_END-GAME_WIDTH:(level===2?FOREST_END-GAME_WIDTH:SKY_END-GAME_WIDTH);
           cameraX=Math.max(0,Math.min(maxCamera,player.x-GAME_WIDTH/2.5));
           if(isDashing())player.animFrame=1;
           else if(!player.grounded)player.animFrame=2;
@@ -2635,27 +2758,118 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
             ctx.restore();
           }
         }
-        function drawLevelOne(){
-          ctx.fillStyle='#5c94fc';ctx.fillRect(0,0,GAME_WIDTH,GAME_HEIGHT);
-          ctx.fillStyle='#fff';
-          for(const c of clouds){
-            let cx=(c.x-cameraX*.2)%(GAME_WIDTH*4);
-            if(cx<-200)cx+=GAME_WIDTH*4;cx=Math.round(cx);
-            ctx.fillRect(cx,c.y,c.w,c.h);
-            ctx.fillRect(cx+10,c.y-10,c.w-20,c.h+20);
+
+        function drawValleyGround(b){
+          // 211 atenção.png: 4 colunas x 2 linhas de tiles de terra e grama.
+          const first=Math.max(0,Math.floor((cameraX-b.x-64)/64));
+          const last=Math.min(Math.ceil(b.w/64)-1,Math.ceil((cameraX+GAME_WIDTH+64-b.x)/64));
+          for(let i=first;i<=last;i++){
+            const x=b.x+i*64,w=Math.min(64,b.x+b.w-x);
+            valleyAtlas('soil',i%3===0?0:2+i%2,0,4,2,x,b.y,w,64);
+            valleyAtlas('soil',1,0,4,2,x,b.y+64,w,64);
+            valleyAtlas('soil',1,0,4,2,x,b.y+128,w,42);
+            // 220 atenção 4.png: acabamento das bordas de terrenos.
+            if(i===0)valleyAtlas('slopes',0,2,8,4,x,b.y,36,54,.88);
+            if(i===Math.ceil(b.w/64)-1)valleyAtlas('slopes',7,2,8,4,x+w-36,b.y,36,54,.88);
+            if(!valleyArt.soil){
+              ctx.fillStyle='#875029';ctx.fillRect(x,b.y,w,170);
+              ctx.fillStyle='#60be47';ctx.fillRect(x,b.y,w,10);
+            }
           }
-          ctx.save();ctx.translate(-Math.round(cameraX),0);
+        }
+        function drawValleyBackground(){
+          ctx.fillStyle='#8bd7fd';ctx.fillRect(0,0,GAME_WIDTH,GAME_HEIGHT);
+          if(valleyArt.sky)ctx.drawImage(valleyArt.sky,0,0,GAME_WIDTH,GAME_HEIGHT);
+          valleyParallax('mountains',.10,162,960,188,.9);
+          valleyParallax('forest',.24,165,830,215,.83);
+          valleyParallax('forest2',.39,174,820,205,.74);
+          // Floresta densa apenas na aproximação da caverna.
+          if(cameraX>3500&&cameraX<5400)
+            valleyParallax('jungle',.52,88,950,292,.18);
+        }
+        function drawValleyDecorations(){
+          for(const obj of valleyDecor){
+            const x=obj.x,h=obj.h;if(!valleyVisible(x,obj.w||300))continue;
+            if(obj.kind==='tree')
+              valleyAtlas('trees',obj.v,0,3,1,x,380-h,
+                Math.round(h*([.7,.75,.85][obj.v]||.8)),h,.91);
+            if(obj.kind==='house')valleyImage('house',x,380-h,obj.w,h,.96);
+            if(obj.kind==='cave')valleyImage('cave',x,380-h,obj.w,h,.91);
+            if(obj.kind==='windmill'){
+              // 227 atenção 10.png tem corpo e hélices separados, na mesma folha.
+              valleyAtlas('windmill',0,0,2,1,x,380-h,190,h);
+              const blades=valleyFrame('windmill',1,0,2,1);
+              if(blades){
+                ctx.save();ctx.translate(x+146,380-h+105);
+                ctx.rotate(elapsedSeconds*.85);
+                ctx.drawImage(blades,-83,-83,166,166);ctx.restore();
+              }
+            }
+          }
+          for(const sign of valleySigns)
+            valleyAtlas('signs',sign.p,0,4,1,sign.x,325,52,55,.97);
+          for(let x=180;x<VALLEY_END-200;x+=310){
+            if(!valleyVisible(x,80))continue;
+            const id=Math.floor(x/310);
+            valleyAtlas('plants',id%6,id%2,6,4,x,356,39,24,.84);
+            if(id%3===0)
+              valleyAtlas('rocks',id%6,0,6,3,x+85,351,48,29,.73);
+          }
+          for(const x of [820,2110,3670,4940,6950])
+            valleyAtlas('fences',0,0,6,2,x,340,86,40,.92);
+        }
+        function drawValleyTerrain(){
           for(const b of level1Blocks){
-            if(b.type==='ground')drawOriginalGround(b);
-            else drawObject(processedAssets[b.type],b.x,b.y,b.w,b.h);
+            if(!valleyVisible(b.x,b.w))continue;
+            if(b.type==='valleyGround')drawValleyGround(b);
+            else if(b.type==='valleyBridge'){
+              valleyImage('bridge',b.x-17,b.y-26,b.w+34,84);
+              if(!valleyArt.bridge){ctx.fillStyle='#996035';ctx.fillRect(b.x,b.y,b.w,18);}
+            }else if(b.type==='valleyPlatform'){
+              // 218 atenção 3.png: sprites diferentes no mesmo atlas.
+              valleyAtlas('wood',1,0,3,3,b.x,b.y-9,b.w,27);
+              if(!valleyArt.wood){ctx.fillStyle='#b47a3f';ctx.fillRect(b.x,b.y,b.w,18);}
+            }else if(b.type==='valleyStone'){
+              valleyAtlas('stone',0,0,4,4,b.x,b.y,b.w,b.h);
+              if(!valleyArt.slopes){ctx.fillStyle='#8c8d6c';ctx.fillRect(b.x,b.y,b.w,b.h);}
+            }
           }
-          drawObject(processedAssets.castle,castle.x,castle.y,castle.w,castle.h);
+          // 225 atenção 9.png: recurso modular, não um fundo completo.
+          for(const x of [1472,2880,4352,6080])
+            valleyAtlas('water',0,0,3,4,x,381,128,40,.94);
+        }
+        function drawValleyObjects(){
+          for(const x of valleyCheckpoints){
+            if(!valleyVisible(x,64))continue;
+            const lit=checkpointReached&&checkpointX>=x;
+            valleyAtlas('checkpoint',lit?1:0,0,2,1,x-10,280,55,100);
+            if(!valleyArt.checkpoint){
+              ctx.fillStyle=lit?'#f8ce55':'#65c9e1';ctx.fillRect(x,295,20,85);
+            }
+          }
+          for(const chest of valleyChests){
+            if(!valleyVisible(chest.x,chest.w))continue;
+            const open=collectedPickups.has(chest.id);
+            valleyImage(open?'chestOpen':'chestClosed',chest.x,chest.y,chest.w,chest.h);
+            // Só a linha dourada do 233: não ativa efeitos de cura.
+            if(open)valleyAtlas('effects',Math.floor(elapsedSeconds*4)%6,0,6,2,
+              chest.x+25,chest.y-13,31,31,.75);
+          }
+        }
+
+        function drawLevelOne(){
+          drawValleyBackground();
+          ctx.save();ctx.translate(-Math.round(cameraX),0);
+          drawValleyDecorations();
+          drawValleyTerrain();
+          valleyImage('castle',castle.x,castle.y,castle.w,castle.h);
+          if(!valleyArt.castle)drawObject(processedAssets.castle,castle.x,castle.y,castle.w,castle.h);
+          drawValleyObjects();
           if(state==='cutscene')drawCinematicCharacters(cinematicSeconds);
           else drawVitoriaNew(princess.x+princess.w/2,princess.y+princess.h,{
             pose:Math.floor(gameNow/6500)%3===0?'ok':'idle',speaking:false
           });
-          drawEnemies();
-          drawHero();
+          drawEnemies();drawHero();
           ctx.restore();
           if(state==='cutscene')drawCinematicText(cinematicSeconds);
         }
