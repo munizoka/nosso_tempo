@@ -2938,31 +2938,36 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           for(const gap of valleyGaps){
             if(gap.w<=0||!valleyVisible(gap.x-12,gap.w+24))continue;
             ctx.save();
-            // A antiga máscara começava em y=380 e deixava 32px de céu
-            // aparecendo entre as bordas de grama. Cobrir o vão desde y=348.
-            // Acima da grama: só o vão. Abaixo dela: 12px de sobreposição
-            // escondida atrás dos blocos, sem vazamento pelas laterais.
-            const topY=348;
+            // O buraco começa no solo (y=380), não 32px acima dele.
+            // A margem de 4px no topo encaixa sob a relva; as margens
+            // laterais de 12px ficam ATRÁS dos blocos de terra.
+            const groundY=380;
+            const lipOverlap=4;
+            const sideOverlap=12;
             ctx.beginPath();
-            ctx.rect(gap.x,topY,gap.w,380-topY);
-            ctx.rect(gap.x-12,380,gap.w+24,GAME_HEIGHT-380);
+            ctx.rect(gap.x,groundY-lipOverlap,gap.w,lipOverlap);
+            ctx.rect(gap.x-sideOverlap,groundY,
+              gap.w+sideOverlap*2,GAME_HEIGHT-groundY);
             ctx.clip();
-            // Fundo opaco mesmo se o PNG 249 tiver pixels transparentes:
-            // nunca revelar o céu azul no intervalo entre as beiradas.
-            ctx.fillStyle='#241a25';
-            ctx.fillRect(gap.x,topY,gap.w,380-topY);
-            ctx.fillRect(gap.x-12,380,gap.w+24,GAME_HEIGHT-380);
+            // Base opaca evita o fundo azul em qualquer transparência do PNG.
+            ctx.fillStyle='#38241f';
+            ctx.fillRect(gap.x-sideOverlap,groundY-lipOverlap,
+              gap.w+sideOverlap*2,GAME_HEIGHT-groundY+lipOverlap);
             if(art){
               const iw=art.naturalWidth||art.width;
               const ih=art.naturalHeight||art.height;
               if(iw>0&&ih>0){
-                // Preservar a proporção e mostrar o centro do painel por trás
-                // do vão estreito; não esticar a imagem para caber nele.
-                const imageWidth=Math.max(256,Math.round(gap.w*2));
-                const imageHeight=Math.round(imageWidth*ih/iw);
-                const imageX=gap.x+Math.round((gap.w-imageWidth)/2);
-                const imageY=342;
-                ctx.drawImage(art,imageX,imageY,imageWidth,imageHeight);
+                // 249.png contém copa/raízes na borda superior. Usar somente
+                // o núcleo rochoso central da ARTE, e não o cabeçalho inteiro.
+                // Esse é um recorte de fonte, nunca um spritesheet/recorte visual
+                // arbitrário da saída: escala X e Y seguem a proporção do PNG.
+                const sx=Math.round(iw*.30),sw=Math.round(iw*.40);
+                const sy=Math.round(ih*.26),sh=Math.round(ih*.52);
+                const width=Math.max(180,gap.w+40);
+                const height=Math.round(width*sh/sw);
+                const x=gap.x+Math.round((gap.w-width)/2);
+                const y=groundY-10;
+                ctx.drawImage(art,sx,sy,sw,sh,x,y,width,height);
               }
             }
             ctx.restore();
