@@ -649,18 +649,23 @@ const valleyArtSource=mario.match(/        const valleyAssetPaths=\{[\s\S]*?\n  
 check('Catálogo de assets do Vale da Fase 1 é isolável',!!valleyArtSource);
 const valleyAssets=new Function(valleyArtSource+'\nreturn valleyAssetPaths;')();
 const valleyFiles=Object.values(valleyAssets);
-check('25 artes do Vale incluindo 238 grass, sem Super Suco',
- valleyFiles.length===25&&valleyAssets.grassTrim==='238 grass.png'&&
+check('Assets da Fase 1 são isolados e Super Suco permanece desativado',
+ valleyFiles.length===18&&valleyAssets.grassTrim==='238 grass.png'&&
  !valleyFiles.includes('232 potion.png')&&
  valleyFiles.every(file=>fs.existsSync(path.join(root,file))&&fs.statSync(path.join(root,file)).size>1000));
-check('Spritesheets com atenção mapeados por nome exato',
- ['211 atenção.png','217 atenção 2.png','218 atenção 3.png','220 atenção 4.png',
-  '221 atenção 5.png','222 atenção 6.png','223 atenção 7.png',
-  '224 atenção 8.png','225 atenção 9.png','227 atenção 10.png']
+check('Moinho, árvores e cerca usam os quatro PNGs completos',
+ valleyAssets.windmill==='227.png'&&
+ valleyAssets.treeOak==='235 tree.png'&&
+ valleyAssets.treeCurved==='236 giga tree.png'&&
+ valleyAssets.fenceComplete==='237 fancy.png'&&
+ !valleyFiles.includes('227 atenção 10.png')&&
+ !valleyFiles.includes('221 atenção 5.png')&&
+ !valleyFiles.includes('224 atenção 8.png'));
+check('Remanescem apenas os atlas de solo, água, tocha e brilho',
+ ['211 atenção.png','225 atenção 9.png','229 torch.png','233 shines.png']
  .every(file=>valleyFiles.includes(file))&&
  mario.includes('function valleyFrame(key,col,row,cols,rows)')&&
- mario.includes('valleyAtlasCache=new Map()')&&
- mario.includes('valleyAtlas('));
+ mario.includes('valleyAtlasCache=new Map()'));
 const valleyLayoutSource=mario.match(/        const VALLEY_END=8000;[\s\S]*?        const level2Blocks=\[/)?.[0]?.split('        const level2Blocks=[')[0];
 check('Geometria da nova fase de 8000px isolável',!!valleyLayoutSource);
 const valleyWorld=new Function(valleyLayoutSource+
@@ -695,7 +700,7 @@ check('Fase 1 usa parallax, spritesheets recortados e plataforma unilateral',
  mario.includes('function drawValleyBackground()')&&
  mario.includes('function drawValleyTerrain()')&&
  mario.includes("valleyAtlas('soil'")&&
- mario.includes("valleyAtlas('trees'")&&
+ mario.includes("valleyStandaloneAtFoot(asset,obj.x,380,obj.h,.96)")&&
  mario.includes("b.type==='valleyPlatform'||b.type==='valleyBridge'")&&
  mario.includes("function drawLevelOne(){\n          drawValleyBackground();"));
 
@@ -715,6 +720,39 @@ check('Camadas de parallax espelhadas para evitar juntas verticais bruscas',
  mario.includes('const shift=cameraX*speed;')&&
  mario.includes('ctx.translate(sx+width,0);ctx.scale(-1,1);')&&
  mario.includes("valleyParallax('forest',.24"));
+
+check('Moinho e árvores aparecem inteiros em proporção original e ancorados no chão',
+ mario.includes('function valleyTrimStandalone(img)')&&
+ mario.includes('opacity<16')&&
+ mario.includes("const valleyWholeObjects=new Set(['windmill','treeOak','treeCurved','fenceComplete'])")&&
+ mario.includes('const width=Math.round(height*iw/ih)')&&
+ mario.includes("valleyStandaloneAtFoot('windmill',obj.x,380,obj.h,.99)")&&
+ !mario.includes("valleyAtlas('windmill'")&&
+ !mario.includes("valleyAtlas('trees'"));
+check('Cerca completa substitui atlas antigo e fica acima da vegetação',
+ mario.includes("valleyStandaloneAtFoot('fenceComplete',x,380,51,.98)")&&
+ mario.includes('drawValleyForegroundProps();')&&
+ !mario.includes("valleyAtlas('fences'"));
+check('Placas têm seta pixel art completa e são desenhadas depois do chão',
+ mario.includes('function drawValleySign(sign)')&&
+ mario.includes('ctx.lineTo(x+72,y+20)')&&
+ mario.includes('ctx.lineTo(x+67,y+20)')&&
+ mario.includes('for(const sign of valleySigns)drawValleySign(sign)')&&
+ !mario.includes("valleyAtlas('signs'"));
+check('Nenhum sprite fragmentado de madeira, pedra ou folha de encosta é desenhado',
+ mario.includes('function drawValleyWoodPlatform(block)')&&
+ mario.includes('function drawValleyRock(block)')&&
+ !mario.includes("valleyAtlas('wood'")&&
+ !mario.includes("valleyAtlas('slopes'")&&
+ !mario.includes("valleyAtlas('stone'")&&
+ !mario.includes("valleyAtlas('rocks'")&&
+ !mario.includes("valleyAtlas('plants'"));
+check('Parallax não inclui camadas responsáveis por faixas artificiais no céu',
+ !valleyFiles.includes('215 forest 2.png')&&
+ !valleyFiles.includes('216 jungle.png')&&
+ !mario.includes("valleyParallax('jungle'")&&
+ !mario.includes("valleyParallax('forest2'")&&
+ mario.includes("valleyParallax('mountains',.10"));
 
 // AFK Gabriel: oito imagens, três rotinas e retomada imediata do controle.
 const gabrielAfkFiles=[

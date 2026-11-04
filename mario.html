@@ -1385,30 +1385,59 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
         });
 
 
-        // Vale das Origens: referências REAIS do GitHub; jamais carregar 232 potion.png.
+        // Vale das Origens: usar somente assets confiáveis; objetos grandes são PNGs INTEIROS.
+        // O Super Suco 232 continua reservado e NÃO é carregado.
         const valleyAssetPaths={
           sky:'210 landscape.png',soil:'211 atenção.png',castle:'212 castle.png',
           forest:'213 forest.png',mountains:'214 montains.png',
-          forest2:'215 forest 2.png',jungle:'216 jungle.png',
-          stone:'217 atenção 2.png',wood:'218 atenção 3.png',
-          bridge:'219 bridge.png',slopes:'220 atenção 4.png',
-          trees:'221 atenção 5.png',plants:'222 atenção 6.png',
-          rocks:'223 atenção 7.png',fences:'224 atenção 8.png',
-          water:'225 atenção 9.png',house:'226 house.png',
-          windmill:'227 atenção 10.png',cave:'228 cave.png',
+          bridge:'219 bridge.png',water:'225 atenção 9.png',
+          house:'226 house.png',cave:'228 cave.png',
           checkpoint:'229 torch.png',chestClosed:'230 chest.png',
           chestOpen:'231 opened chest.png',effects:'233 shines.png',
-          signs:'234 signs.png',grassTrim:'238 grass.png'
+          windmill:'227.png',treeOak:'235 tree.png',
+          treeCurved:'236 giga tree.png',fenceComplete:'237 fancy.png',
+          grassTrim:'238 grass.png'
         };
         const valleyArt={},valleyAtlasCache=new Map();
+        // A sombra quase transparente do PNG pode criar pixels soltos nas bordas.
+        // Recortamos somente as MARGENS EXTERNAS vazias do objeto completo:
+        // nunca separamos copas, hélices, travessas ou outros componentes.
+        function valleyTrimStandalone(img){
+          const canvas=document.createElement('canvas');
+          canvas.width=img.naturalWidth;canvas.height=img.naturalHeight;
+          const g=canvas.getContext('2d',{willReadFrequently:true});
+          g.drawImage(img,0,0);
+          const a=g.getImageData(0,0,canvas.width,canvas.height).data;
+          let minX=canvas.width,minY=canvas.height,maxX=-1,maxY=-1;
+          for(let y=0;y<canvas.height;y++)for(let x=0;x<canvas.width;x++){
+            const opacity=a[(y*canvas.width+x)*4+3];
+            if(opacity<16)continue;
+            minX=Math.min(minX,x);maxX=Math.max(maxX,x);
+            minY=Math.min(minY,y);maxY=Math.max(maxY,y);
+          }
+          if(maxX<0)return img;
+          const margin=2;
+          minX=Math.max(0,minX-margin);minY=Math.max(0,minY-margin);
+          maxX=Math.min(canvas.width-1,maxX+margin);
+          maxY=Math.min(canvas.height-1,maxY+margin);
+          const w=maxX-minX+1,h=maxY-minY+1;
+          const cropped=document.createElement('canvas');
+          cropped.width=w;cropped.height=h;
+          const ctx2=cropped.getContext('2d');ctx2.imageSmoothingEnabled=false;
+          ctx2.drawImage(canvas,minX,minY,w,h,0,0,w,h);
+          return cropped;
+        }
+        const valleyWholeObjects=new Set(['windmill','treeOak','treeCurved','fenceComplete']);
         for(const [key,path] of Object.entries(valleyAssetPaths)){
           const image=new Image();
-          image.onload=()=>{valleyArt[key]=image;};
+          image.onload=()=>{
+            try{valleyArt[key]=valleyWholeObjects.has(key)?valleyTrimStandalone(image):image;}
+            catch(error){console.warn('Falha no PNG inteiro:',path,error);valleyArt[key]=image;}
+          };
           image.onerror=()=>console.warn('Asset do Vale indisponível:',path);
-          image.src=encodeURI(path); // espaços e acentos precisam coincidir.
+          image.src=encodeURI(path);
         }
-        // Recorta somente UMA célula do spritesheet; nunca renderiza a folha inteira.
-        // Cache evita recortar novamente a cada frame. Grade varia por recurso.
+        // Os atlas ainda necessários (solo, água, checkpoint, brilho) têm recortes separados.
         function valleyFrame(key,col,row,cols,rows){
           const source=valleyArt[key];if(!source?.naturalWidth)return null;
           const id=[key,col,row,cols,rows].join(':');
@@ -1432,6 +1461,14 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           ctx.save();ctx.globalAlpha=alpha;
           ctx.drawImage(image,Math.round(x),Math.round(y),Math.round(w),Math.round(h));
           ctx.restore();
+        }
+        // Objeto indivisível, com proporção original e pés apoiados no chão.
+        function valleyStandaloneAtFoot(key,x,groundY,height,alpha=1){
+          const image=valleyArt[key];if(!image)return;
+          const iw=image.naturalWidth||image.width,ih=image.naturalHeight||image.height;
+          if(!iw||!ih)return;
+          const width=Math.round(height*iw/ih);
+          valleyImage(key,x,groundY-height,width,height,alpha);
         }
         function valleyAtlas(key,col,row,cols,rows,x,y,w,h,alpha=1){
           if(!valleyVisible(x,w))return;
@@ -1506,7 +1543,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           {kind:'tree',x:2970,h:280,v:2},{kind:'tree',x:3350,h:205,v:1},
           {kind:'tree',x:4000,h:285,v:2},{kind:'cave',x:4610,w:290,h:218},
           {kind:'tree',x:4880,h:155,v:0},{kind:'tree',x:5190,h:230,v:1},
-          {kind:'windmill',x:5780,w:310,h:315},
+          {kind:'windmill',x:5780,h:350},
           {kind:'tree',x:6370,h:260,v:2},{kind:'tree',x:6700,h:175,v:0},
           {kind:'tree',x:7200,h:235,v:1}
         ];
@@ -2782,9 +2819,6 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
             valleyAtlas('soil',i%3===0?0:2+i%2,0,4,2,x,b.y,w,64);
             valleyAtlas('soil',1,0,4,2,x,b.y+64,w,64);
             valleyAtlas('soil',1,0,4,2,x,b.y+128,w,42);
-            // 220 atenção 4.png: acabamento das bordas de terrenos.
-            if(i===0)valleyAtlas('slopes',0,2,8,4,x,b.y,36,54,.88);
-            if(i===Math.ceil(b.w/64)-1)valleyAtlas('slopes',7,2,8,4,x+w-36,b.y,36,54,.88);
             if(!valleyArt.soil){
               ctx.fillStyle='#875029';ctx.fillRect(x,b.y,w,170);
               ctx.fillStyle='#60be47';ctx.fillRect(x,b.y,w,10);
@@ -2794,43 +2828,59 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
         function drawValleyBackground(){
           ctx.fillStyle='#8bd7fd';ctx.fillRect(0,0,GAME_WIDTH,GAME_HEIGHT);
           if(valleyArt.sky)ctx.drawImage(valleyArt.sky,0,0,GAME_WIDTH,GAME_HEIGHT);
+          // 215 e 216 incluem imagens incompatíveis com o céu; produziam
+          // retângulos azulados e silhuetas fantasma. Não renderizá-las.
           valleyParallax('mountains',.10,162,960,188,.9);
           valleyParallax('forest',.24,165,830,215,.83);
-          valleyParallax('forest2',.39,174,820,205,.74);
-          // Floresta densa apenas na aproximação da caverna.
-          if(cameraX>3500&&cameraX<5400)
-            valleyParallax('jungle',.52,88,950,292,.18);
         }
         function drawValleyDecorations(){
           for(const obj of valleyDecor){
-            const x=obj.x,h=obj.h;if(!valleyVisible(x,obj.w||300))continue;
-            if(obj.kind==='tree')
-              valleyAtlas('trees',obj.v,0,3,1,x,380-h,
-                Math.round(h*([.7,.75,.85][obj.v]||.8)),h,.91);
-            if(obj.kind==='house')valleyImage('house',x,380-h,obj.w,h,.96);
-            if(obj.kind==='cave')valleyImage('cave',x,380-h,obj.w,h,.91);
-            if(obj.kind==='windmill'){
-              // 227 atenção 10.png tem corpo e hélices separados, na mesma folha.
-              valleyAtlas('windmill',0,0,2,1,x,380-h,190,h);
-              const blades=valleyFrame('windmill',1,0,2,1);
-              if(blades){
-                ctx.save();ctx.translate(x+146,380-h+105);
-                ctx.rotate(elapsedSeconds*.85);
-                ctx.drawImage(blades,-83,-83,166,166);ctx.restore();
-              }
-            }
+            if(obj.kind==='tree'){
+              const asset=obj.v===0?'treeOak':obj.v===1?'treeCurved':
+                'treeOak';
+              valleyStandaloneAtFoot(asset,obj.x,380,obj.h,.96);
+            }else if(obj.kind==='house')valleyImage('house',obj.x,380-obj.h,obj.w,obj.h,.96);
+            else if(obj.kind==='cave')valleyImage('cave',obj.x,380-obj.h,obj.w,obj.h,.94);
+            else if(obj.kind==='windmill')
+              valleyStandaloneAtFoot('windmill',obj.x,380,obj.h,.99);
           }
-          for(const sign of valleySigns)
-            valleyAtlas('signs',sign.p,0,4,1,sign.x,325,52,55,.97);
-          for(let x=180;x<VALLEY_END-200;x+=310){
-            if(!valleyVisible(x,80))continue;
-            const id=Math.floor(x/310);
-            valleyAtlas('plants',id%6,id%2,6,4,x,356,39,24,.84);
-            if(id%3===0)
-              valleyAtlas('rocks',id%6,0,6,3,x+85,351,48,29,.73);
+        }
+        // Placa pixel art funcional: seta desenhada por inteiro e bem visível.
+        // Evita os recortes incorretos de 234 signs.png.
+        function drawValleySign(sign){
+          const x=sign.x,y=300;if(!valleyVisible(x,88))return;
+          ctx.save();
+          // Poste alinhado ao chão y=380.
+          ctx.fillStyle='#543019';ctx.fillRect(x+38,y+31,12,49);
+          ctx.fillStyle='#b66b31';ctx.fillRect(x+41,y+33,6,46);
+          // Placa completa com moldura e volume de madeira.
+          ctx.fillStyle='#472517';ctx.fillRect(x,y,86,37);
+          ctx.fillStyle='#c57b36';ctx.fillRect(x+3,y+3,80,30);
+          ctx.fillStyle='#f4b661';ctx.fillRect(x+7,y+7,72,4);
+          ctx.fillStyle='#865026';ctx.fillRect(x+7,y+28,72,4);
+          ctx.fillStyle='#e6c594';ctx.fillRect(x+8,y+18,4,4);
+          ctx.fillRect(x+74,y+18,4,4);
+          // Seta DIREITA: nunca mais uma placa aparecendo só como madeira.
+          ctx.fillStyle='#45291e';ctx.fillRect(x+22,y+16,33,9);
+          ctx.beginPath();ctx.moveTo(x+51,y+8);ctx.lineTo(x+72,y+20);
+          ctx.lineTo(x+51,y+33);ctx.closePath();ctx.fill();
+          ctx.fillStyle='#ffecb4';ctx.fillRect(x+22,y+18,31,5);
+          ctx.beginPath();ctx.moveTo(x+53,y+12);ctx.lineTo(x+67,y+20);
+          ctx.lineTo(x+53,y+28);ctx.closePath();ctx.fill();
+          // Perto do castelo: mais um detalhe de torre, sem esconder a seta.
+          if(sign.p===3){
+            ctx.fillStyle='#6f3b26';ctx.fillRect(x+9,y+15,9,14);
+            ctx.fillStyle='#f9df95';ctx.fillRect(x+11,y+13,5,15);
+            ctx.fillStyle='#d58d45';ctx.fillRect(x+9,y+11,3,4);
+            ctx.fillRect(x+16,y+11,3,4);
           }
+          ctx.restore();
+        }
+        function drawValleyForegroundProps(){
+          // Primeiro terreno e vegetação; depois placas e cercas. Não ficam ocultas.
           for(const x of [820,2110,3670,4940,6950])
-            valleyAtlas('fences',0,0,6,2,x,340,86,40,.92);
+            valleyStandaloneAtFoot('fenceComplete',x,380,51,.98);
+          for(const sign of valleySigns)drawValleySign(sign);
         }
         function drawValleyLowVegetation(){
           const image=valleyArt.grassTrim;
@@ -2859,6 +2909,31 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
             ctx.restore();
           }
         }
+        function drawValleyWoodPlatform(block){
+          const x=block.x,y=block.y,w=block.w,h=block.h;
+          ctx.save();
+          // Plataforma contínua, sem recortar pedaços aleatórios do 218.
+          ctx.fillStyle='#533020';ctx.fillRect(x-2,y-2,w+4,h+4);
+          ctx.fillStyle='#b57840';ctx.fillRect(x,y,w,h);
+          ctx.fillStyle='#e4aa5a';ctx.fillRect(x+2,y+2,w-4,4);
+          ctx.fillStyle='#6b3b25';ctx.fillRect(x+2,y+h-5,w-4,3);
+          for(let xx=x+25;xx<x+w-6;xx+=27){
+            ctx.fillStyle='#7e4728';ctx.fillRect(xx,y+3,2,h-6);
+          }
+          ctx.fillStyle='#765130';
+          ctx.fillRect(x+9,y+h,10,8);ctx.fillRect(x+w-19,y+h,10,8);
+          ctx.restore();
+        }
+        function drawValleyRock(block){
+          const x=block.x,y=block.y,w=block.w,h=block.h;
+          ctx.save();
+          ctx.fillStyle='#393f36';ctx.fillRect(x,y+8,w,h-8);
+          ctx.fillStyle='#817b71';ctx.fillRect(x+3,y+4,w-6,h-7);
+          ctx.fillStyle='#b7ada1';ctx.fillRect(x+8,y+5,w-20,8);
+          ctx.fillStyle='#80b94b';ctx.fillRect(x+4,y+2,w-8,5);
+          ctx.fillStyle='#386f37';ctx.fillRect(x+4,y+7,w-12,3);
+          ctx.restore();
+        }
         function drawValleyTerrain(){
           for(const b of level1Blocks){
             if(!valleyVisible(b.x,b.w))continue;
@@ -2866,14 +2941,8 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
             else if(b.type==='valleyBridge'){
               valleyImage('bridge',b.x-17,b.y-26,b.w+34,84);
               if(!valleyArt.bridge){ctx.fillStyle='#996035';ctx.fillRect(b.x,b.y,b.w,18);}
-            }else if(b.type==='valleyPlatform'){
-              // 218 atenção 3.png: sprites diferentes no mesmo atlas.
-              valleyAtlas('wood',1,0,3,3,b.x,b.y-9,b.w,27);
-              if(!valleyArt.wood){ctx.fillStyle='#b47a3f';ctx.fillRect(b.x,b.y,b.w,18);}
-            }else if(b.type==='valleyStone'){
-              valleyAtlas('stone',0,0,4,4,b.x,b.y,b.w,b.h);
-              if(!valleyArt.slopes){ctx.fillStyle='#8c8d6c';ctx.fillRect(b.x,b.y,b.w,b.h);}
-            }
+            }else if(b.type==='valleyPlatform')drawValleyWoodPlatform(b);
+            else if(b.type==='valleyStone')drawValleyRock(b);
           }
           // 225 atenção 9.png: recurso modular, não um fundo completo.
           for(const x of [1472,2880,4352,6080])
@@ -2904,6 +2973,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           drawValleyDecorations();
           drawValleyLowVegetation(); // integra a vegetação 238 ao solo sem tocar na hitbox
           drawValleyTerrain();
+          drawValleyForegroundProps(); // cercas completas e setas visíveis acima da vegetação
           valleyImage('castle',castle.x,castle.y,castle.w,castle.h);
           if(!valleyArt.castle)drawObject(processedAssets.castle,castle.x,castle.y,castle.w,castle.h);
           drawValleyObjects();
