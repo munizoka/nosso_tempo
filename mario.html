@@ -565,7 +565,10 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
         let lastDashDustAt=-1;
         let damagedHeartUntil=0,damagedHeartIndex=-1,lastHeartSignature='';
         let forestPlatforms = [];
-        const FOREST_END = 3400;
+        const FOREST_END = 3400; // Etapa visual do remake: extensão preservada por enquanto.
+        const FOREST_CHECKPOINT_X=1540;
+        const FOREST_WITCH_HOUSE_X=1630;
+        const FOREST_WITCH_HOUSE_HEIGHT=235;
         const testMode = new URLSearchParams(window.location.search).get('teste');
         const MAP_BOUNDS={left:62,right:738,top:99,bottom:376};
         const mapHead={x:139,y:319,r:17,speed:150};
@@ -1401,6 +1404,56 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           treeCurved:'236 giga tree.png',fenceComplete:'237 fancy.png',
           grassTrim:'238 grass.png'
         };
+        // Fase 2 remake, etapa 1: PNGs completos, sem atlas adivinhado.
+        // A casa da bruxa é SOMENTE cenário nesta etapa, sem entrada ou áudio.
+        const forestRemakePaths={
+          sky:'250 dark.png',
+          mountains:'251.png',
+          distantForest:'252.png',
+          groundTop:'253.png',
+          groundSoil:'254.png',
+          ancestorTree:'255.png',
+          witchHouse:'256 witchs house.png'
+        };
+        const forestRemakeArt={},forestSourceRects={};
+        // Encontra apenas a caixa ALFA externa; não corta partes de um objeto.
+        // Usa coordenadas de origem em vez de manter cópias pesadas dos PNGs.
+        function forestSourceRect(key){
+          const img=forestRemakeArt[key];
+          if(!img?.naturalWidth)return null;
+          return forestSourceRects[key]||
+            {x:0,y:0,w:img.naturalWidth,h:img.naturalHeight};
+        }
+        function forestDetectAlphaBounds(img){
+          const w=img.naturalWidth,h=img.naturalHeight;
+          const tmp=document.createElement('canvas');tmp.width=w;tmp.height=h;
+          const g=tmp.getContext('2d',{willReadFrequently:true});
+          g.drawImage(img,0,0);
+          const data=g.getImageData(0,0,w,h).data;
+          let x0=w,y0=h,x1=-1,y1=-1;
+          for(let y=0;y<h;y++)for(let x=0;x<w;x++){
+            if(data[(y*w+x)*4+3]<16)continue;
+            if(x<x0)x0=x;if(x>x1)x1=x;
+            if(y<y0)y0=y;if(y>y1)y1=y;
+          }
+          if(x1<0)return {x:0,y:0,w,h};
+          return {x:x0,y:y0,w:x1-x0+1,h:y1-y0+1};
+        }
+        for(const [key,path] of Object.entries(forestRemakePaths)){
+          const img=new Image();
+          img.onload=()=>{
+            forestRemakeArt[key]=img;
+            if(key==='sky')return; // Fundo opaco, sem crop.
+            try{forestSourceRects[key]=forestDetectAlphaBounds(img);}
+            catch(e){
+              console.warn('Floresta Sombria: margem transparente indisponível',path,e);
+              forestSourceRects[key]={x:0,y:0,w:img.naturalWidth,h:img.naturalHeight};
+            }
+          };
+          img.onerror=()=>console.warn('Asset da Floresta Sombria indisponível:',path);
+          img.src=encodeURI(path); // Mantém espaços e nome exato no GitHub.
+        }
+
         const valleyArt={},valleyAtlasCache=new Map();
         // A sombra quase transparente do PNG pode criar pixels soltos nas bordas.
         // Recortamos somente as MARGENS EXTERNAS vazias do objeto completo:
@@ -1581,7 +1634,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
         const level2EnemyTemplate=[
           {x:790,y:348,w:32,h:32,vx:-1.6,type:'mushroom',alive:true},
           {x:1010,y:348,w:32,h:32,vx:1.6,type:'leek',alive:true},
-          {x:1590,y:348,w:32,h:32,vx:-1.8,type:'mushroom',alive:true},
+          {x:2070,y:348,w:32,h:32,vx:-1.8,type:'mushroom',alive:true},
           {x:1810,y:348,w:32,h:32,vx:1.6,type:'leek',alive:true},
           {x:2490,y:348,w:32,h:32,vx:-1.9,type:'mushroom',alive:true},
           {x:3050,y:348,w:32,h:32,vx:-2,type:'leek',alive:true}
@@ -2597,10 +2650,13 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
             skyCheckpointReached=true;skyCheckpointX=1650;score+=250;setHUD();
             emitPixelBurst(1675,347,['#a5f3fc','#e4c5ff','#fffde1'],18,130);checkpointChime();
           }
-          if(level===2 && !checkpointReached && player.x+player.w>1760 &&
-             player.x<1825 && player.y+player.h>305){
-            checkpointReached=true;checkpointX=1730;score+=250;setHUD();
-            emitPixelBurst(1776,328,['#edcdff','#e9aaff','#fff6cc'],18,130);checkpointChime();
+          if(level===2 && !checkpointReached &&
+             player.x+player.w>FOREST_CHECKPOINT_X-6 &&
+             player.x<FOREST_CHECKPOINT_X+48 && player.y+player.h>305){
+            checkpointReached=true;checkpointX=FOREST_CHECKPOINT_X-20;
+            score+=250;setHUD();
+            emitPixelBurst(FOREST_CHECKPOINT_X+20,328,
+              ['#edcdff','#e9aaff','#fff6cc'],18,130);checkpointChime();
           }
           tickCombatEffects(dt);
           updateLevelPickups();
@@ -2777,44 +2833,96 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           }
           ctx.restore();
         }
-        function drawForestGround(b){
-          const top=extras.forestGround,inside=extras.dirt;
-          ctx.save();ctx.beginPath();ctx.rect(b.x,b.y,b.w,b.h);ctx.clip();
-          ctx.fillStyle='#201526';ctx.fillRect(b.x,b.y,b.w,b.h);
-          const tile=32;
-          for(let x=b.x;x<b.x+b.w;x+=tile){
-            // Usa 48.jpg para a terra interna; se nao carregar, recorta a textura do 47.png.
-            for(let y=b.y+tile;y<b.y+b.h;y+=tile){
-              if(inside)ctx.drawImage(inside,x,y,tile,tile);
-              else if(top)ctx.drawImage(top,0,Math.floor(top.height*.48),top.width,Math.max(1,Math.floor(top.height*.40)),x,y,tile,tile);
+        // Fundo da floresta com camadas transparentes e sem linhas verticais
+        // abruptas: cada segundo panorama é espelhado, sem esticar objetos.
+        function forestDrawParallax(key,speed,width,bottomY,alpha=1){
+          const img=forestRemakeArt[key],r=forestSourceRect(key);
+          if(!img||!r)return;
+          const height=Math.max(1,Math.round(width*r.h/r.w));
+          const y=bottomY-height;
+          const shift=cameraX*speed;
+          const first=Math.floor(shift/width)-1,last=Math.ceil((shift+GAME_WIDTH)/width)+1;
+          ctx.save();ctx.globalAlpha=alpha;
+          for(let i=first;i<=last;i++){
+            const destX=Math.round(i*width-shift);
+            if(i%2===0)
+              ctx.drawImage(img,r.x,r.y,r.w,r.h,destX,y,width,height);
+            else{
+              ctx.save();ctx.translate(destX+width,0);ctx.scale(-1,1);
+              ctx.drawImage(img,r.x,r.y,r.w,r.h,0,y,width,height);
+              ctx.restore();
             }
-            if(top)ctx.drawImage(top,x,b.y,tile,tile);
-            else {ctx.fillStyle='#234e3e';ctx.fillRect(x,b.y,tile,8);}
           }
           ctx.restore();
         }
-        function drawForestBackground(){
-          if(extras.sky)drawObject(extras.sky,0,0,GAME_WIDTH,GAME_HEIGHT);
-          else {ctx.fillStyle='#10152f';ctx.fillRect(0,0,GAME_WIDTH,GAME_HEIGHT);}
-          function layer(img,speed,y,height,alpha=1,width=900){
-            if(!img)return;
-            const offset=((cameraX*speed)%width+width)%width;
-            ctx.save();ctx.globalAlpha=alpha;
-            for(let x=-offset-width;x<GAME_WIDTH+width;x+=width)
-              drawObject(img,x,y,width,height);
-            ctx.restore();
+        function forestDrawWholeAtGround(key,x,groundY,height,alpha=1){
+          const img=forestRemakeArt[key],r=forestSourceRect(key);
+          if(!img||!r)return;
+          const width=Math.round(height*r.w/r.h);
+          if(x>cameraX+GAME_WIDTH+width||x+width<cameraX-120)return;
+          ctx.save();ctx.globalAlpha=alpha;
+          ctx.drawImage(img,r.x,r.y,r.w,r.h,
+            Math.round(x),Math.round(groundY-height),width,height);
+          ctx.restore();
+        }
+        function drawForestScenery(){
+          // Árvores inteiras, com copa e raízes preservadas: sem spritesheet.
+          // Não ocupam a clareira central da casa da bruxa.
+          const trees=[
+            {x:110,h:245},{x:575,h:215},{x:1050,h:270},
+            {x:1295,h:192},{x:2195,h:270},{x:2630,h:232},
+            {x:3160,h:205}
+          ];
+          for(const tree of trees)
+            forestDrawWholeAtGround('ancestorTree',tree.x,380,tree.h,.96);
+          // A casa de bruxa está ao centro, na frente das árvores distantes.
+          // Gabriel e os inimigos passam diante dela. Interior/sons são futuros.
+          forestDrawWholeAtGround('witchHouse',
+            FOREST_WITCH_HOUSE_X,380,FOREST_WITCH_HOUSE_HEIGHT,.99);
+        }
+        function drawForestGround(b){
+          const dirt=forestRemakeArt.groundSoil,soil=forestSourceRect('groundSoil');
+          const top=forestRemakeArt.groundTop,topRect=forestSourceRect('groundTop');
+          // O preenchimento contínuo impede que o céu apareça entre os tiles.
+          ctx.save();ctx.beginPath();ctx.rect(b.x,b.y,b.w,b.h);ctx.clip();
+          ctx.fillStyle='#251a2e';ctx.fillRect(b.x,b.y,b.w,b.h);
+          const unit=64;
+          const start=Math.max(0,Math.floor((cameraX-b.x-unit)/unit));
+          const end=Math.min(Math.ceil(b.w/unit),Math.ceil((cameraX+GAME_WIDTH-b.x+unit)/unit));
+          if(dirt&&soil)for(let ix=start;ix<=end;ix++){
+            const x=b.x+ix*unit;
+            for(let y=b.y+26;y<b.y+b.h;y+=unit)
+              ctx.drawImage(dirt,soil.x,soil.y,soil.w,soil.h,x,y,unit,unit);
           }
-          layer(extras.mountains,.16,120,270,.85,1050);
-          layer(extras.trees,.32,80,315,.9,950);
-          // Árvores próximas, mas sempre atrás das plataformas e do jogador.
-          if(extras.giantTree){
-            ctx.save();ctx.globalAlpha=.77;
-            for(let x=100;x<FOREST_END+700;x+=660){
-              const sx=x-cameraX*.55;
-              if(sx>-150&&sx<GAME_WIDTH+150)drawObject(extras.giantTree,sx,35,130,375);
+          ctx.restore();
+          // Superfície 253: PNG INTEIRO, somente margens alfa removidas;
+          // repetição espelhada para evitar copas/raízes cortadas na emenda.
+          if(top&&topRect){
+            const h=43,w=Math.max(60,Math.round(h*topRect.w/topRect.h));
+            const first=Math.max(0,Math.floor((cameraX-b.x-w)/w));
+            const last=Math.min(Math.ceil(b.w/w),Math.ceil((cameraX+GAME_WIDTH+w-b.x)/w));
+            ctx.save();ctx.beginPath();ctx.rect(b.x,b.y-7,b.w,h+7);ctx.clip();
+            for(let ix=first;ix<=last;ix++){
+              const destX=b.x+ix*w,y=b.y-7;
+              if(ix%2===0)
+                ctx.drawImage(top,topRect.x,topRect.y,topRect.w,topRect.h,destX,y,w,h);
+              else{
+                ctx.save();ctx.translate(destX+w,0);ctx.scale(-1,1);
+                ctx.drawImage(top,topRect.x,topRect.y,topRect.w,topRect.h,0,y,w,h);
+                ctx.restore();
+              }
             }
             ctx.restore();
+          }else{
+            ctx.fillStyle='#355e48';ctx.fillRect(b.x,b.y-5,b.w,10);
           }
+        }
+        function drawForestBackground(){
+          ctx.fillStyle='#10152f';ctx.fillRect(0,0,GAME_WIDTH,GAME_HEIGHT);
+          if(forestRemakeArt.sky)
+            ctx.drawImage(forestRemakeArt.sky,0,0,GAME_WIDTH,GAME_HEIGHT);
+          forestDrawParallax('mountains',.12,1320,345,.90);
+          forestDrawParallax('distantForest',.29,1050,395,.91);
         }
 
         function drawValleyGround(b){
@@ -3489,14 +3597,15 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
         function drawLevelTwo(){
           drawForestBackground();
           ctx.save();ctx.translate(-Math.round(cameraX),0);
+          drawForestScenery(); // cenário inteiro atrás do terreno e dos personagens
           for(const b of level2Blocks){
             if(b.type==='forestGround')drawForestGround(b);
             else if(b.type==='wood')drawObject(extras.wood,b.x,b.y,b.w,b.h);
             else if(b.type==='magic')drawObject(extras.magic,b.x,b.y,b.w,b.h);
           }
           const flag=checkpointReached?extras.checkpointOn:extras.checkpointOff;
-          if(flag)drawObject(flag,1755,312,42,68);
-          else {ctx.fillStyle='#8e6db1';ctx.fillRect(1765,325,4,55);}
+          if(flag)drawObject(flag,FOREST_CHECKPOINT_X,312,42,68);
+          else {ctx.fillStyle='#8e6db1';ctx.fillRect(FOREST_CHECKPOINT_X+10,325,4,55);}
           drawForestTotem();
           if(state==='forestIntro'||state==='forestOutro')drawForestStoryActors();
           if(state==='forestOutro')drawForestClueProp();
