@@ -752,9 +752,18 @@ check('Caminhadas de Alan, Humberto e Vitoria agora têm três poses',
 check('Alhopó substitui todos os cinco inimigos tartaruga',
  (mario.match(/type:'leek'/g)||[]).length>=5 &&
  !mario.includes("type:'turtle'")&&!mario.includes("turtle:{"));
-check('Alhopó mantém colisões de 32px e ganha desenho mais alto',
- mario.includes("const height=e.type==='leek'?49:e.h") &&
+const visualHeightSource=mario.match(/const height=e\.type==='leek'\?49:e\.type==='mushroom'\?42:e\.h;/)?.[0];
+check('Altura visual dos inimigos mantém escalas e hitboxes independentes',
+ !!visualHeightSource);
+const enemyVisualHeight=e=>new Function('e',visualHeightSource+'return height;')(e);
+check('Bolota aumenta para 42px e mantém colisão de 32x32',
+ enemyVisualHeight({type:'mushroom',h:32})===42 &&
+ mario.includes("y:348,w:32,h:32,vx:-1.5,type:'mushroom'"));
+check('Alhopó permanece com 49px visuais e hitbox de 32x32',
+ enemyVisualHeight({type:'leek',h:32})===49 &&
  mario.includes("y:348,w:32,h:32,vx:-2,type:'leek'"));
+check('Outros tipos preservam a própria altura de colisão',
+ enemyVisualHeight({type:'outro',h:32})===32);
 check('Arquivo PNG de derrota 209 do Alhopó existe e é válido',
  fs.existsSync(path.join(root,'209 leek dead.png')) &&
  fs.statSync(path.join(root,'209 leek dead.png')).size>1000);
