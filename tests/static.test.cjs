@@ -201,6 +201,60 @@ check('Moedas da Fase 2 sob plataformas seguem coletáveis',
  forestOneWayForLevel(2)({type:'wood'})&&
  forestOneWayForLevel(2)({type:'magic'}));
 
+
+// Regressão real de renderização: extras.wood e extras.magic são CANVAS,
+// produzidos por cropSprite(). Uma simples busca de strings não teria
+// detectado o bug que deixou TODAS as plataformas invisíveis.
+const forestPlatformRenderer=mario.match(
+ /        const forestPlatformVisualCache=new Map\(\);[\s\S]*?(?=        function drawForestScenery\(\))/)?.[0];
+check('Renderizador da plataforma da Fase 2 existe',!!forestPlatformRenderer);
+function testForestPlatformDraw(sourceType){
+ const calls=[],ctx={
+  drawImage:(...args)=>calls.push({op:'image',args}),
+  fillRect:(...args)=>calls.push({op:'fill',args}),
+  fillStyle:''
+ };
+ const original={
+  width:400,height:80
+ };
+ const canvasWood={width:400,height:80};
+ const canvasMagic={width:460,height:100};
+ const imageWood={width:400,height:80,naturalWidth:400,naturalHeight:80};
+ const extras={wood:sourceType==='image'?imageWood:canvasWood,magic:canvasMagic};
+ const render=new Function('extras','ctx','forestDetectAlphaBounds',
+  forestPlatformRenderer+'\nreturn drawForestPlatform;')(
+  extras,ctx,(img)=>{
+   if(!img.naturalWidth)throw new Error('Canvas must not be processed as HTMLImageElement');
+   return {x:0,y:0,w:img.naturalWidth,h:img.naturalHeight};
+  });
+ render({x:100,y:315,w:130,h:24,type:'wood'});
+ render({x:300,y:260,w:118,h:24,type:'magic',moving:true});
+ render({x:364,y:260,w:118,h:24,type:'magic',moving:true});
+ return calls;
+}
+const platformCanvasCalls=testForestPlatformDraw('canvas');
+const platformImageCalls=testForestPlatformDraw('image');
+check('Plataformas 49 e 50 recortadas em canvas voltam a ser desenhadas',
+ platformCanvasCalls.filter(c=>c.op==='image').length===3&&
+ platformCanvasCalls.filter(c=>c.op==='fill').length===0&&
+ platformCanvasCalls.filter(c=>c.op==='image').every(c=>c.args.length===9));
+check('O renderizador desenha também sprites HTMLImageElement',
+ platformImageCalls.filter(c=>c.op==='image').length===3);
+check('Plataforma móvel segue a posição física atual, sem imagem parada',
+ platformCanvasCalls.filter(c=>c.op==='image')[1].args[5]===300&&
+ platformCanvasCalls.filter(c=>c.op==='image')[2].args[5]===364);
+check('Sprites não carregados mostram piso provisório em vez de invisibilidade',
+ (()=>{
+  const ctx={fillStyle:'',drawImage:()=>{throw new Error('Should not draw image')},
+    fillRect:()=>{ctx.fills++},fills:0};
+  const extras={wood:null};
+  const render=new Function('extras','ctx','forestDetectAlphaBounds',
+    forestPlatformRenderer+'\nreturn drawForestPlatform;')(
+    extras,ctx,()=>{throw new Error('No sprite');});
+  render({x:100,y:300,w:128,h:24,type:'wood'});
+  return ctx.fills===2;
+ })());
+
 check('Inventário com dezoito espaços',mario.includes('inv-story-grid')&&mario.includes('inv-consumable-grid')&&mario.includes('for(let n=0;n<9;n++)'));
 check('Sprite 68 e categorias RPG',mario.includes('68.png')&&mario.includes('ITENS DE HISTÓRIA')&&mario.includes('CONSUMÍVEIS'));
 check('Relógio virtual congela na pausa',mario.includes('if(!inventoryOpen&&!menuOpen){')&&mario.includes('gameNow+=dt*1000')&&mario.includes("if(!sceneReady||inventoryOpen||menuOpen||state==='menu')return"));
