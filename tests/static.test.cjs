@@ -159,7 +159,7 @@ check('Final da Fase 2 acompanha a largura nova, preservando medalhão e totem',
 const oneWaySource=mario.match(/        function isOneWayPlatform\(b\)\{[\s\S]*?\n        \}/)?.[0];
 check('Colisão unilateral reutilizável está presente no jogo',!!oneWaySource);
 function forestOneWayForLevel(level){
- return new Function('level',oneWaySource+'\nreturn isOneWayPlatform;')();
+ return new Function('level',oneWaySource+'\nreturn isOneWayPlatform;')(level);
 }
 check('Madeira e magia da Fase 2 deixam atravessar por baixo',
  forestOneWayForLevel(2)({type:'wood'})&&
