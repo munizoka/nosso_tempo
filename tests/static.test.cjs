@@ -684,7 +684,7 @@ check('Quatro buracos preservam colisões e usam painel 249 sem distorção',
  valleyWorld.valleyGaps.length===4&&
  valleyWorld.valleyGaps.every(g=>g.w===128)&&
  valleyWorld.valleyGaps.map(g=>g.x).join(',')==='1472,2880,4352,6080'&&
- mario.includes('const imageWidth=Math.max(216,Math.round(gap.w*1.75));')&&
+ mario.includes('const imageWidth=Math.max(256,Math.round(gap.w*2));')&&
  mario.includes('const imageHeight=Math.round(imageWidth*ih/iw);')&&
  mario.includes('const imageX=gap.x+Math.round((gap.w-imageWidth)/2);')&&
  mario.includes('ctx.drawImage(art,imageX,imageY,imageWidth,imageHeight);')&&
@@ -795,7 +795,8 @@ check('Baús abertos e fechados são recortados externamente e apoiados no solo'
 check('Textura 249 fica atrás dos blocos sem água ou plataforma invisível',
  mario.includes("hole:'249.png'")&&
  mario.includes('function drawValleyGapBackdrops()')&&
- mario.includes("ctx.rect(gap.x,380,gap.w,GAME_HEIGHT-380)")&&
+ mario.includes('ctx.rect(gap.x,topY,gap.w,380-topY)')&&
+ mario.includes('ctx.rect(gap.x-12,380,gap.w+24,GAME_HEIGHT-380)')&&
  mario.includes("ctx.fillStyle='#241a25'")&&
  !mario.includes("valleyAtlas('water'")&&
  !valleyFiles.includes('225 atenção 9.png')&&
@@ -804,7 +805,8 @@ check('Todas as placas que indicam o caminho principal apontam para a direita',
  valleyWorld.level1Blocks.filter(b=>b.type==='valleyBridge').every(b=>b.y===380)&&
  mario.includes("{x:4650,p:0}")&&
  !mario.includes("{x:4650,p:1}")&&
- mario.includes("{x:3100,p:2}")&&
+ mario.includes("{x:3100,p:0}")&&
+ !mario.includes("{x:3100,p:2}")&&
  mario.includes("{x:7260,p:3}"));
 
 check('Plataforma 248 é desenhada inteira em proporção natural sem recortes',
@@ -816,8 +818,12 @@ check('Plataforma 248 é desenhada inteira em proporção natural sem recortes',
  !mario.includes("valleyAtlas('wood'"));
 check('Fundo 249 é um painel grande recortado pela abertura, atrás do terreno',
  mario.includes("hole:'249.png'")&&
- mario.includes('ctx.rect(gap.x,380,gap.w,GAME_HEIGHT-380);')&&
- mario.includes('const imageY=358;')&&
+ mario.includes('ctx.rect(gap.x,topY,gap.w,380-topY);')&&
+ mario.includes('ctx.rect(gap.x-12,380,gap.w+24,GAME_HEIGHT-380);')&&
+ mario.includes('const imageY=342;')&&
+ mario.includes('const topY=348;')&&
+ mario.includes('ctx.fillRect(gap.x,topY,gap.w,380-topY);')&&
+ mario.includes('ctx.fillRect(gap.x-12,380,gap.w+24,GAME_HEIGHT-380);')&&
  mario.includes("drawValleyGapBackdrops(); // parede do abismo atrás das pontes e do solo")&&
  mario.includes('drawValleyGapBackdrops();')&&
  !mario.includes("valleyAtlas('water'"));
