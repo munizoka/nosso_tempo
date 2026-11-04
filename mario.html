@@ -1398,7 +1398,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           windmill:'227 atenção 10.png',cave:'228 cave.png',
           checkpoint:'229 torch.png',chestClosed:'230 chest.png',
           chestOpen:'231 opened chest.png',effects:'233 shines.png',
-          signs:'234 signs.png'
+          signs:'234 signs.png',grassTrim:'238 grass.png'
         };
         const valleyArt={},valleyAtlasCache=new Map();
         for(const [key,path] of Object.entries(valleyAssetPaths)){
@@ -1442,10 +1442,20 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
         }
         function valleyParallax(key,speed,y,width,height,alpha=1){
           const image=valleyArt[key];if(!image?.naturalWidth)return;
-          const offset=((cameraX*speed)%width+width)%width;
+          // Panoramas 213-216 não são seamless: espelhar cópias alternadas
+          // elimina a emenda vertical brusca sem cortar folhas/árvores.
+          const shift=cameraX*speed;
+          const first=Math.floor(shift/width)-1;
+          const last=Math.ceil((shift+GAME_WIDTH)/width)+1;
           ctx.save();ctx.globalAlpha=alpha;
-          for(let screenX=-offset-width;screenX<GAME_WIDTH+width;screenX+=width)
-            ctx.drawImage(image,Math.round(screenX),y,width,height);
+          for(let i=first;i<=last;i++){
+            const sx=Math.round(i*width-shift);
+            if(i%2===0)ctx.drawImage(image,sx,y,width,height);
+            else{
+              ctx.save();ctx.translate(sx+width,0);ctx.scale(-1,1);
+              ctx.drawImage(image,0,y,width,height);ctx.restore();
+            }
+          }
           ctx.restore();
         }
 
@@ -2760,6 +2770,10 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
         }
 
         function drawValleyGround(b){
+          // Preenchimento CONTÍNUO evita mostrar o céu por frestas dos tiles 211.
+          // A área de colisão (y=380) não muda; o desenho começa no mesmo y.
+          ctx.fillStyle='#875029';ctx.fillRect(b.x,b.y,b.w,b.h);
+          ctx.fillStyle='#4cb342';ctx.fillRect(b.x,b.y,b.w,12);
           // 211 atenção.png: 4 colunas x 2 linhas de tiles de terra e grama.
           const first=Math.max(0,Math.floor((cameraX-b.x-64)/64));
           const last=Math.min(Math.ceil(b.w/64)-1,Math.ceil((cameraX+GAME_WIDTH+64-b.x)/64));
@@ -2818,6 +2832,33 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           for(const x of [820,2110,3670,4940,6950])
             valleyAtlas('fences',0,0,6,2,x,340,86,40,.92);
         }
+        function drawValleyLowVegetation(){
+          const image=valleyArt.grassTrim;
+          if(!image?.naturalWidth)return;
+          // 238 grass.png é uma faixa INTEIRA com grande margem transparente;
+          // não usar atlas e não dividir a imagem em células.
+          const h=186,w=Math.max(1,Math.round(h*image.naturalWidth/image.naturalHeight));
+          // A parte visível da faixa termina em ~72% da altura da arte.
+          // Ela toca exatamente o início do chão jogável em y=380.
+          const groundY=380,drawY=Math.round(groundY-h*.722);
+          for(const ground of level1Blocks){
+            if(ground.type!=='valleyGround'||!valleyVisible(ground.x,ground.w))continue;
+            ctx.save();
+            ctx.beginPath();ctx.rect(ground.x,groundY-164,ground.w,164);ctx.clip();
+            const first=Math.max(0,Math.floor((cameraX-ground.x- w)/w));
+            const last=Math.min(Math.ceil(ground.w/w),Math.ceil((cameraX+GAME_WIDTH-ground.x+w)/w));
+            for(let i=first;i<=last;i++){
+              const x=ground.x+i*w;
+              if(!valleyVisible(x,w))continue;
+              if(i%2===0)ctx.drawImage(image,x,drawY,w,h);
+              else{
+                ctx.save();ctx.translate(x+w,0);ctx.scale(-1,1);
+                ctx.drawImage(image,0,drawY,w,h);ctx.restore();
+              }
+            }
+            ctx.restore();
+          }
+        }
         function drawValleyTerrain(){
           for(const b of level1Blocks){
             if(!valleyVisible(b.x,b.w))continue;
@@ -2861,6 +2902,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           drawValleyBackground();
           ctx.save();ctx.translate(-Math.round(cameraX),0);
           drawValleyDecorations();
+          drawValleyLowVegetation(); // integra a vegetação 238 ao solo sem tocar na hitbox
           drawValleyTerrain();
           valleyImage('castle',castle.x,castle.y,castle.w,castle.h);
           if(!valleyArt.castle)drawObject(processedAssets.castle,castle.x,castle.y,castle.w,castle.h);
