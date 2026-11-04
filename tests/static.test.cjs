@@ -649,18 +649,24 @@ const valleyArtSource=mario.match(/        const valleyAssetPaths=\{[\s\S]*?\n  
 check('Catálogo de assets do Vale da Fase 1 é isolável',!!valleyArtSource);
 const valleyAssets=new Function(valleyArtSource+'\nreturn valleyAssetPaths;')();
 const valleyFiles=Object.values(valleyAssets);
-check('Assets da Fase 1 são isolados e Super Suco permanece desativado',
- valleyFiles.length===18&&valleyAssets.grassTrim==='238 grass.png'&&
+check('20 assets no Vale incluindo 239–242 sem Super Suco',
+ valleyFiles.length===20&&valleyAssets.grassTrim==='238 grass.png'&&
  !valleyFiles.includes('232 potion.png')&&
  valleyFiles.every(file=>fs.existsSync(path.join(root,file))&&fs.statSync(path.join(root,file)).size>1000));
-check('Moinho, árvores e cerca usam os quatro PNGs completos',
- valleyAssets.windmill==='227.png'&&
+check('Novo moinho, árvores e cerca usam PNGs completos',
+ valleyAssets.windmill==='241 moinho.png'&&
  valleyAssets.treeOak==='235 tree.png'&&
  valleyAssets.treeCurved==='236 giga tree.png'&&
  valleyAssets.fenceComplete==='237 fancy.png'&&
  !valleyFiles.includes('227 atenção 10.png')&&
  !valleyFiles.includes('221 atenção 5.png')&&
  !valleyFiles.includes('224 atenção 8.png'));
+check('Ponte, rocha e fundo dos buracos têm os PNGs novos',
+ valleyAssets.bridge==='239 bridge.png'&&
+ valleyAssets.rock==='240 rock.png'&&
+ valleyAssets.hole==='242 hole.png'&&
+ !valleyFiles.includes('219 bridge.png')&&
+ !valleyFiles.includes('227.png'));
 check('Remanescem apenas os atlas de solo, água, tocha e brilho',
  ['211 atenção.png','225 atenção 9.png','229 torch.png','233 shines.png']
  .every(file=>valleyFiles.includes(file))&&
@@ -669,8 +675,14 @@ check('Remanescem apenas os atlas de solo, água, tocha e brilho',
 const valleyLayoutSource=mario.match(/        const VALLEY_END=8000;[\s\S]*?        const level2Blocks=\[/)?.[0]?.split('        const level2Blocks=[')[0];
 check('Geometria da nova fase de 8000px isolável',!!valleyLayoutSource);
 const valleyWorld=new Function(valleyLayoutSource+
- '\nreturn {VALLEY_END,princess,castle,level1Blocks,level1EnemyTemplate,valleyCheckpoints,valleyChests};')();
+ '\nreturn {VALLEY_END,princess,castle,level1Blocks,level1EnemyTemplate,valleyCheckpoints,valleyChests,valleyGaps};')();
 const valleyGrounds=valleyWorld.level1Blocks.filter(b=>b.type==='valleyGround').sort((a,b)=>a.x-b.x);
+check('Buracos são derivados da geometria original e recebem fundo 242',
+ valleyWorld.valleyGaps.length===4&&
+ valleyWorld.valleyGaps.every(g=>g.w===128)&&
+ valleyWorld.valleyGaps.map(g=>g.x).join(',')==='1472,2880,4352,6080'&&
+ mario.includes("ctx.drawImage(art,gap.x,346,gap.w,220)")&&
+ mario.includes('drawValleyGapBackdrops();'));
 check('Novo chão cobre cinco áreas de 8000 px com buracos fáceis',
  valleyWorld.VALLEY_END===8000&&valleyGrounds.length===5&&
  valleyGrounds[0].x===0&&
@@ -724,7 +736,7 @@ check('Camadas de parallax espelhadas para evitar juntas verticais bruscas',
 check('Moinho e árvores aparecem inteiros em proporção original e ancorados no chão',
  mario.includes('function valleyTrimStandalone(img)')&&
  mario.includes('opacity<16')&&
- mario.includes("const valleyWholeObjects=new Set(['windmill','treeOak','treeCurved','fenceComplete'])")&&
+ mario.includes("const valleyWholeObjects=new Set(['windmill','bridge','rock','treeOak','treeCurved','fenceComplete','chestClosed','chestOpen'])")&&
  mario.includes('const width=Math.round(height*iw/ih)')&&
  mario.includes("valleyStandaloneAtFoot('windmill',obj.x,380,obj.h,.99)")&&
  !mario.includes("valleyAtlas('windmill'")&&
@@ -753,6 +765,29 @@ check('Parallax não inclui camadas responsáveis por faixas artificiais no céu
  !mario.includes("valleyParallax('jungle'")&&
  !mario.includes("valleyParallax('forest2'")&&
  mario.includes("valleyParallax('mountains',.10"));
+
+check('Pontes compartilham a altura do chão e não deixam Gabriel flutuando',
+ valleyWorld.level1Blocks.filter(b=>b.type==='valleyBridge').length===2&&
+ valleyWorld.level1Blocks.filter(b=>b.type==='valleyBridge').every(b=>b.y===380)&&
+ mario.includes('function drawValleyBridge(block)')&&
+ mario.includes('const x=block.x-13,y=block.y-deckOffset;')&&
+ mario.includes("valleyImage('bridge',x,y,width,height);"));
+check('Pedras possuem textura 240 sem alterar o tamanho das hitboxes',
+ valleyWorld.level1Blocks.filter(b=>b.type==='valleyStone').length===3&&
+ mario.includes("const img=valleyArt.rock;")&&
+ mario.includes("const foot=block.y+block.h;")&&
+ mario.includes("valleyStandaloneAtFoot('rock',block.x+(block.w-width)/2,foot,height)"));
+check('Baús abertos e fechados são recortados externamente e apoiados no solo',
+ valleyWorld.valleyChests.every(c=>c.y+c.h===380)&&
+ mario.includes("'chestClosed','chestOpen'")&&
+ mario.includes('chest.y+chest.h,height);')&&
+ mario.includes("showItemToast('BAÚ ENCONTRADO! +3 MOEDAS')"));
+check('Textura 242 atrás da água e ponte, sem plataforma invisível',
+ mario.includes("hole:'242 hole.png'")&&
+ mario.includes('function drawValleyGapBackdrops()')&&
+ mario.includes("ctx.rect(gap.x,380,gap.w,GAME_HEIGHT-380)")&&
+ mario.includes("valleyAtlas('water',0,0,3,4,gap.x,388,gap.w,27,.86)")&&
+ !valleyWorld.level1Blocks.some(b=>b.type==='valleyHole'));
 
 // AFK Gabriel: oito imagens, três rotinas e retomada imediata do controle.
 const gabrielAfkFiles=[
@@ -869,10 +904,14 @@ check('Altura visual dos inimigos mantém escalas e hitboxes independentes',
 const enemyVisualHeight=e=>new Function('e',visualHeightSource+'return height;')(e);
 check('Bolota aumenta para 42px e mantém colisão de 32x32',
  enemyVisualHeight({type:'mushroom',h:32})===42 &&
- mario.includes("y:348,w:32,h:32,vx:-1.5,type:'mushroom'"));
+ valleyWorld.level1EnemyTemplate.some(e=>e.type==='mushroom')&&
+ valleyWorld.level1EnemyTemplate.filter(e=>e.type==='mushroom')
+ .every(e=>e.w===32&&e.h===32));
 check('Alhopó permanece com 49px visuais e hitbox de 32x32',
  enemyVisualHeight({type:'leek',h:32})===49 &&
- mario.includes("y:348,w:32,h:32,vx:-2,type:'leek'"));
+ valleyWorld.level1EnemyTemplate.some(e=>e.type==='leek')&&
+ valleyWorld.level1EnemyTemplate.filter(e=>e.type==='leek')
+ .every(e=>e.w===32&&e.h===32));
 check('Outros tipos preservam a própria altura de colisão',
  enemyVisualHeight({type:'outro',h:32})===32);
 check('Arquivo PNG de derrota 209 do Alhopó existe e é válido',
