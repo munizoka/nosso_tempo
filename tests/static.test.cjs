@@ -122,11 +122,13 @@ check('Indicador de Super Forca agora mostra duracao da fase',mario.includes('id
  mario.includes("meter.classList.toggle('active',show)") &&
  mario.includes("style.width='100%'") &&
  mario.includes('SUPER FORÇA · ATÉ O FIM DA FASE'));
-check('Sprites opcionais de cinco poses para os dois inimigos',[
- '84 bolota idle.png','85 bolota walk 1.png','86 bolota walk 2.png',
- '87 bolota dead.png','88 bolota espanto.png','89 trutle espanto.png',
- '90 turtle dead.png','91 turtle walk 1.png','92 turtle idle.png','93 turtle walk 2.png'
-].every(asset=>mario.includes(asset))&&mario.includes("img.onerror=()=>"));
+check('Bolota e Alhopó têm sprites novos e não usam mais a tartaruga',[
+ '84 bolota idle.png','202 bolota walk 1.png','203 bolota mid.png',
+ '204 bolota walk 2.png','87 bolota dead.png','88 bolota espanto.png',
+ '205 leak idle.png','206 leek shocked.png','207 leek walk 1.png',
+ '208 leek mid.png','208 leek walk 2.png'
+].every(asset=>mario.includes(asset))&&mario.includes("img.onerror=()=>")&&
+ !mario.includes("turtle:{")&&!mario.includes("type:'turtle'"));
 check('Patrulha, alerta e perseguicao com memoria',mario.includes("enemy.aiState='alert'") &&
  mario.includes("enemy.aiState='chase'")&&mario.includes('enemy.patrolSpeed*1.25') &&
  mario.includes('enemy.alertUntil=elapsedSeconds+.42'));
@@ -198,6 +200,7 @@ const chaseDemo=new Function(`
  function isColliding(){return false}
  function hasFloorAhead(){return true}
  function enemyDifficultyMultiplier(){return 1}
+ function updateLeekShowOff(){}
  function isDashing(){return false}
  function defeatEnemy(){}
  function setHUD(){}
@@ -217,28 +220,29 @@ check('Game Over com mensagem de Vitoria sem acento',
  mario.includes("overlay('GAME OVER','A VITORIA FOI TALARICADA','CLIQUE EM RECOMEÇAR')") &&
  !mario.includes("overlay('GAME OVER','AS VIDAS ACABARAM'"));
 
-check('Frames walk1/walk2 alinhados na mesma tela',mario.includes('function alignEnemyWalkFrames(type)') &&
- mario.includes('alignEnemyWalkFrames(type);') &&
- mario.includes('height-source.height') &&
- mario.includes("for(const pose of ['walk1','walk2'])"));
+check('Inimigos alinham os três frames de caminhada',
+ mario.includes('function alignEnemyWalkFrames(type)')&&
+ mario.includes('alignEnemyWalkFrames(type);')&&
+ mario.includes('height-source.height')&&
+ mario.includes("const names=['walk1','walkMid','walk2']"));
 const walkAlignSource=mario.match(/        function alignEnemyWalkFrames\(type\)\{[\s\S]*?\n        \}/)?.[0];
-check('Alinhamento de sprites extraível',!!walkAlignSource);
-const walkingImages={mushroom:{walk1:{width:40,height:50},walk2:{width:44,height:46}}};
+check('Alinhamento de sprite extraível',!!walkAlignSource);
+const walkingImages={mushroom:{
+ walk1:{width:40,height:50},walkMid:{width:42,height:48},walk2:{width:44,height:46}}};
 const drawCalls=[];
 new Function('processedAssets','document',walkAlignSource+'\nalignEnemyWalkFrames("mushroom")')(
  {mobFrames:walkingImages},
  {createElement:()=>({width:0,height:0,getContext:()=>({imageSmoothingEnabled:false,
-   drawImage:(...args)=>drawCalls.push(args)})})}
+ drawImage:(...args)=>drawCalls.push(args)})})}
 );
-check('Frames mantêm dimensão igual e pés na mesma base',
- walkingImages.mushroom.walk1.width===44 && walkingImages.mushroom.walk2.width===44 &&
- walkingImages.mushroom.walk1.height===50 && walkingImages.mushroom.walk2.height===50 &&
- drawCalls[0][2]===0 && drawCalls[1][2]===4);
-
+check('Frames walk1, walkMid e walk2 mantêm base e dimensão iguais',
+ ['walk1','walkMid','walk2'].every(x=>
+ walkingImages.mushroom[x].width===44&&walkingImages.mushroom[x].height===50)&&
+ drawCalls.length===3&&drawCalls[0][2]===0&&drawCalls[1][2]===2&&drawCalls[2][2]===4);
 check('Quadros do inimigo dependem de deslocamento e não da posição X',
  mario.includes('const traveled=Math.abs(enemy.x-oldX)') &&
  mario.includes('enemy.walkDistance=(enemy.walkDistance||0)+traveled') &&
- mario.includes('Math.floor((e.walkDistance||0)/10)%2') &&
+ mario.includes('enemyWalkPose(e.walkDistance||0)') &&
  !mario.includes('elapsedSeconds*8+e.x*.03'));
 
 const actualEnemySource=mario.match(/        function updateEnemies\(\)\{[\s\S]*?\n        \}/)?.[0];
@@ -250,6 +254,7 @@ function simulateWalk(vx){
  function activeBlocks(){return []} function enemyCanSpotHero(){return false}
  function enemyHasVisualContact(){return false} function hasFloorAhead(){return true}
  function isColliding(){return false} function enemyDifficultyMultiplier(){return 1}
+ function updateLeekShowOff(){}
  function isDashing(){return false} function defeatEnemy(){}
  function setHUD(){} function loseLife(){}
  const ENEMY_LOST_SIGHT_SECONDS=10;
@@ -258,7 +263,7 @@ function simulateWalk(vx){
  for(let i=0;i<22;i++){
    updateEnemies();
    const e=enemies[0];distances.push(e.walkDistance);
-   frames.push(Math.floor((e.walkDistance||0)/10)%2);
+   frames.push(Math.floor((e.walkDistance||0)/7)%4);
  }
  return {distances,frames};
  `)();
@@ -266,7 +271,7 @@ function simulateWalk(vx){
 const walkRight=simulateWalk(2),walkLeft=simulateWalk(-2);
 check('Esquerda e direita alternam no mesmo ritmo por distância',
  walkLeft.frames.join(',')===walkRight.frames.join(',') &&
- walkRight.frames.includes(0)&&walkRight.frames.includes(1) &&
+ [0,1,2,3].every(frame=>walkRight.frames.includes(frame)) &&
  walkLeft.distances.every((v,i)=>v===walkRight.distances[i]));
 
 // Gabriel 2026: imagens individuais substituem pintura da boca.
@@ -280,7 +285,7 @@ check('21 novas imagens Gabriel publicadas no GitHub',
  gabrielFiles.every(file=>fs.existsSync(path.join(root,file))&&fs.statSync(path.join(root,file)).size>1000));
 check('Poses adultas carregadas e recortadas pela transparência',
  mario.includes('const gabrielSpritePaths=')&&
- mario.includes("idle:'126 idle.png'")&&mario.includes("walk1:'127 walk 1.png'")&&
+ mario.includes("idle:'126 idle.png'")&&mario.includes("walk1:'190 walk 1.png',walkMid:'191 mid.png',walk2:'192 walk 2.png'")&&
  mario.includes("talkOpen:'131.png'")&&mario.includes("talkClosed:'132.png'")&&
  mario.includes("dash:'142.png'")&&mario.includes("jumpApex:'144.png'")&&
  mario.includes('processedAssets.gabriel[form][pose]=cropSprite(image)'));
@@ -304,10 +309,9 @@ check('Pulo em três fases guiado pela velocidade',
 check('Somente Super Gabriel pode executar dash',
  selectPose({powered:true,dashing:true})==='dash'&&
  selectPose({powered:false,dashing:true})==='idle');
-check('Caminhada só tem dois quadros e retorno ao Idle',
- selectPose({moving:true,walkFrame:0})==='walk1'&&
- selectPose({moving:true,walkFrame:1})==='walk2'&&
- selectPose({moving:false,walkFrame:1})==='idle');
+check('Gabriel normal percorre o ciclo passo-meio-passo-meio',
+ [0,1,2,3,4].map(walkFrame=>selectPose({moving:true,walkFrame})).join(',')===
+ 'walk1,walkMid,walk2,walkMid,walk1'&&selectPose({moving:false})==='idle');
 check('Dialogo prioriza imagens de boca dos dois personagens',
  selectPose({powered:false,speaking:true,voiceOpen:true})==='talkOpen'&&
  selectPose({powered:true,speaking:true,voiceOpen:false})==='talkClosed');
@@ -380,7 +384,7 @@ check('Balção vende apenas o hambúrguer da Super Força por 10 moedas',
  mario.includes("coins-=CANO_PRICE")&&mario.includes('canoBuyBurger()'));
 check('NPCs usam sprites separados, escala normalizada e passeiam',
  mario.includes('const canoNpcPaths=')&&mario.includes('const scale=height/img.height')&&
- mario.includes('npc.x+=npc.dir*distance')&&mario.includes("npc.pose=Math.floor(npc.walked/12)%2?'walk2':'walk1'"));
+ mario.includes('npc.x+=npc.dir*distance')&&mario.includes("npc.pose=['walk1','walkMid','walk2','walkMid'][Math.floor(npc.walked/9)%4]"));
 check('Discussões são embaralhadas e não repetem antes de esgotar baralho',
  (mario.match(/\[\['ALAN',/g)||[]).length>=10&&
  mario.includes('function shuffledShopDeck(avoidFirst=shopLastConversation)')&&
@@ -417,7 +421,7 @@ check('Inventário cheio impede compra e preserva saldo',
 // A loja e as fases usam o mesmo seletor do Gabriel.
 check('CANO BURGER compartilha animação sem saltos indevidos',
  mario.includes('const walkFrame=powered?Math.floor(superRunClock/.09)%4:')&&
- mario.includes('inShop?Math.floor(shopHeroDistance/30)%2:player.animFrame')&&
+ mario.includes('inShop?Math.floor(shopHeroDistance/22)%4:player.animFrame')&&
  mario.includes("grounded:inShop||state!=='playing'||player.grounded")&&
  mario.includes('drawGabrielNew(player.x+player.w/2,CANO_FLOOR,{inShop:true})'));
 check('Gabriel volta ao Idle quando para na loja',
@@ -622,10 +626,9 @@ check('Vitoria alterna fala em boca aberta/fechada sem mudar escala',
  selectVitoria({speaking:true,voiceOpen:true})==='talkOpen'&&
  selectVitoria({speaking:true,voiceOpen:false})==='talkClosed'&&
  selectVitoria({speaking:false,pose:'worried'})==='worried');
-check('Vitoria alterna walk 1/walk 2 e preserva Idle',
- selectVitoria({moving:true,walkFrame:0})==='walk1'&&
- selectVitoria({moving:true,walkFrame:1})==='walk2'&&
- selectVitoria({moving:false})==='idle');
+check('Vitoria percorre o ciclo passo-meio-passo-meio',
+ [0,1,2,3,4].map(walkFrame=>selectVitoria({moving:true,walkFrame})).join(',')===
+ 'walk1,walkMid,walk2,walkMid,walk1'&&selectVitoria({moving:false})==='idle');
 check('Vitoria tem altura visual próxima ao novo Gabriel e pés alinhados',
  mario.includes('const VITORIA_VISUAL_HEIGHT=68;')&&
  mario.includes('const princess={x:3400,y:312,w:32,h:68}')&&
