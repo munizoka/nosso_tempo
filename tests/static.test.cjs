@@ -126,7 +126,7 @@ check('Bolota e Alhopó têm sprites novos e não usam mais a tartaruga',[
  '84 bolota idle.png','202 bolota walk 1.png','203 bolota mid.png',
  '204 bolota walk 2.png','87 bolota dead.png','88 bolota espanto.png',
  '205 leak idle.png','206 leek shocked.png','207 leek walk 1.png',
- '208 leek mid.png','208 leek walk 2.png'
+ '208 leek mid.png','208 leek walk 2.png','209 leek dead.png'
 ].every(asset=>mario.includes(asset))&&mario.includes("img.onerror=()=>")&&
  !mario.includes("turtle:{")&&!mario.includes("type:'turtle'"));
 check('Patrulha, alerta e perseguicao com memoria',mario.includes("enemy.aiState='alert'") &&
@@ -755,9 +755,14 @@ check('Alhopó substitui todos os cinco inimigos tartaruga',
 check('Alhopó mantém colisões de 32px e ganha desenho mais alto',
  mario.includes("const height=e.type==='leek'?49:e.h") &&
  mario.includes("y:348,w:32,h:32,vx:-2,type:'leek'"));
-check('Alhopó derrotado gira de lado sem usar sprite antigo da tartaruga',
+check('Arquivo PNG de derrota 209 do Alhopó existe e é válido',
+ fs.existsSync(path.join(root,'209 leek dead.png')) &&
+ fs.statSync(path.join(root,'209 leek dead.png')).size>1000);
+check('Derrota do Alhopó exibe 209 com fallback e sem tartaruga',
+ mario.includes("walk2:'208 leek walk 2.png',dead:'209 leek dead.png'")&&
+ mario.includes('const sprite=sprites.dead')&&
+ mario.includes('if(sprite)drawSpriteOnFeet(sprite,e.x+e.w/2,e.y+e.h,e.h,e.facing)')&&
  mario.includes("else if(e.type==='leek'&&sprites.idle)")&&
- mario.includes("ctx.rotate(-Math.PI/2)")&&
  !mario.includes("90 turtle dead.png")&&
  mario.includes("const original=e.type==='mushroom'?processedAssets.enemyFrames?.[0]:null"));
 const enemyWalkSource=mario.match(/        const ENEMY_WALK_STEPS=[\s\S]*?\n        function alignEnemyWalkFrames\(/)?.[0]?.split('        function alignEnemyWalkFrames(')[0];
