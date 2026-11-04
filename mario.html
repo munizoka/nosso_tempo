@@ -1390,11 +1390,12 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
         const valleyAssetPaths={
           sky:'210 landscape.png',soil:'211 atenção.png',castle:'212 castle.png',
           forest:'213 forest.png',mountains:'214 montains.png',
-          bridge:'219 bridge.png',water:'225 atenção 9.png',
+          bridge:'239 bridge.png',rock:'240 rock.png',hole:'242 hole.png',
+          water:'225 atenção 9.png',
           house:'226 house.png',cave:'228 cave.png',
           checkpoint:'229 torch.png',chestClosed:'230 chest.png',
           chestOpen:'231 opened chest.png',effects:'233 shines.png',
-          windmill:'227.png',treeOak:'235 tree.png',
+          windmill:'241 moinho.png',treeOak:'235 tree.png',
           treeCurved:'236 giga tree.png',fenceComplete:'237 fancy.png',
           grassTrim:'238 grass.png'
         };
@@ -1427,7 +1428,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           ctx2.drawImage(canvas,minX,minY,w,h,0,0,w,h);
           return cropped;
         }
-        const valleyWholeObjects=new Set(['windmill','treeOak','treeCurved','fenceComplete']);
+        const valleyWholeObjects=new Set(['windmill','bridge','rock','treeOak','treeCurved','fenceComplete','chestClosed','chestOpen']);
         for(const [key,path] of Object.entries(valleyAssetPaths)){
           const image=new Image();
           image.onload=()=>{
@@ -1511,8 +1512,8 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           {x:3008,y:380,w:1344,h:170,type:'valleyGround'},
           {x:4480,y:380,w:1600,h:170,type:'valleyGround'},
           {x:6208,y:380,w:1792,h:170,type:'valleyGround'},
-          {x:1472,y:331,w:128,h:18,type:'valleyBridge'},
-          {x:4352,y:331,w:128,h:18,type:'valleyBridge'},
+          {x:1472,y:380,w:128,h:18,type:'valleyBridge'},
+          {x:4352,y:380,w:128,h:18,type:'valleyBridge'},
           {x:560,y:292,w:184,h:18,type:'valleyPlatform'},
           {x:1900,y:300,w:192,h:18,type:'valleyPlatform'},
           {x:3260,y:300,w:192,h:18,type:'valleyPlatform'},
@@ -1522,6 +1523,14 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           {x:3760,y:330,w:62,h:50,type:'valleyStone'},
           {x:6840,y:337,w:54,h:43,type:'valleyStone'}
         ];
+        // Os quatro espaços entre trechos de solo ficam com textura ao fundo.
+        // Os dois primeiros e últimos são buracos; duas travessias têm pontes.
+        const valleyGroundSegments=level1Blocks.filter(b=>b.type==='valleyGround')
+          .sort((a,b)=>a.x-b.x);
+        const valleyGaps=valleyGroundSegments.slice(0,-1).map((g,i)=>({
+          x:g.x+g.w,
+          w:valleyGroundSegments[i+1].x-(g.x+g.w)
+        }));
         const level1EnemyTemplate=[
           {x:510,y:348,w:32,h:32,vx:-1.35,type:'mushroom',alive:true},
           {x:1080,y:348,w:32,h:32,vx:-1.45,type:'mushroom',alive:true},
@@ -2924,29 +2933,63 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           ctx.fillRect(x+9,y+h,10,8);ctx.fillRect(x+w-19,y+h,10,8);
           ctx.restore();
         }
+        function drawValleyBridge(block){
+          const img=valleyArt.bridge;
+          if(!img){
+            ctx.fillStyle='#82502f';ctx.fillRect(block.x,block.y-4,block.w,8);
+            return;
+          }
+          const iw=img.naturalWidth||img.width,ih=img.naturalHeight||img.height;
+          if(!iw||!ih)return;
+          // O piso da arte ocupa aprox. 62% da altura do asset 239.
+          // A hitbox passa exatamente por esse piso, em y=380 (igual ao chão).
+          // Postes/cordas sobem acima; pés/estruturas podem entrar no abismo.
+          const width=block.w+26,height=Math.round(width*ih/iw);
+          const deckOffset=Math.round(height*.62);
+          const x=block.x-13,y=block.y-deckOffset;
+          valleyImage('bridge',x,y,width,height);
+        }
+        function drawValleyGapBackdrops(){
+          const art=valleyArt.hole;
+          for(const gap of valleyGaps){
+            if(gap.w<=0||!valleyVisible(gap.x,gap.w))continue;
+            ctx.save();
+            // Impede que a parede do abismo invada o terreno vizinho.
+            ctx.beginPath();ctx.rect(gap.x,380,gap.w,GAME_HEIGHT-380);
+            ctx.clip();
+            ctx.fillStyle='#233d30';
+            ctx.fillRect(gap.x,380,gap.w,GAME_HEIGHT-380);
+            if(art)ctx.drawImage(art,gap.x,346,gap.w,220);
+            ctx.restore();
+          }
+        }
         function drawValleyRock(block){
-          const x=block.x,y=block.y,w=block.w,h=block.h;
-          ctx.save();
-          ctx.fillStyle='#393f36';ctx.fillRect(x,y+8,w,h-8);
-          ctx.fillStyle='#817b71';ctx.fillRect(x+3,y+4,w-6,h-7);
-          ctx.fillStyle='#b7ada1';ctx.fillRect(x+8,y+5,w-20,8);
-          ctx.fillStyle='#80b94b';ctx.fillRect(x+4,y+2,w-8,5);
-          ctx.fillStyle='#386f37';ctx.fillRect(x+4,y+7,w-12,3);
-          ctx.restore();
+          const img=valleyArt.rock;
+          const foot=block.y+block.h; // sempre acompanha a colisão, não flutua
+          if(img){
+            const iw=img.naturalWidth||img.width,ih=img.naturalHeight||img.height;
+            if(iw&&ih){
+              const height=block.h;
+              const width=Math.round(height*iw/ih);
+              valleyStandaloneAtFoot('rock',block.x+(block.w-width)/2,foot,height);
+              return;
+            }
+          }
+          // Fallback pequeno apenas enquanto o PNG carrega.
+          ctx.fillStyle='#464f47';ctx.fillRect(block.x,block.y,block.w,block.h);
+          ctx.fillStyle='#83ad57';ctx.fillRect(block.x+3,block.y,block.w-6,7);
         }
         function drawValleyTerrain(){
           for(const b of level1Blocks){
             if(!valleyVisible(b.x,b.w))continue;
             if(b.type==='valleyGround')drawValleyGround(b);
-            else if(b.type==='valleyBridge'){
-              valleyImage('bridge',b.x-17,b.y-26,b.w+34,84);
-              if(!valleyArt.bridge){ctx.fillStyle='#996035';ctx.fillRect(b.x,b.y,b.w,18);}
-            }else if(b.type==='valleyPlatform')drawValleyWoodPlatform(b);
+            else if(b.type==='valleyBridge')drawValleyBridge(b);
+            else if(b.type==='valleyPlatform')drawValleyWoodPlatform(b);
             else if(b.type==='valleyStone')drawValleyRock(b);
           }
-          // 225 atenção 9.png: recurso modular, não um fundo completo.
-          for(const x of [1472,2880,4352,6080])
-            valleyAtlas('water',0,0,3,4,x,381,128,40,.94);
+          // Água à frente do fundo 242, sem deixar uma faixa azul vazia abaixo.
+          for(const gap of valleyGaps)
+            valleyAtlas('water',0,0,3,4,gap.x,388,gap.w,27,.86);
         }
         function drawValleyObjects(){
           for(const x of valleyCheckpoints){
@@ -2960,7 +3003,18 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           for(const chest of valleyChests){
             if(!valleyVisible(chest.x,chest.w))continue;
             const open=collectedPickups.has(chest.id);
-            valleyImage(open?'chestOpen':'chestClosed',chest.x,chest.y,chest.w,chest.h);
+            // A base do PNG deve coincidir com a base da hitbox (y=380).
+            // Ambos os sprites têm suas bordas transparentes removidas no carregador.
+            const key=open?'chestOpen':'chestClosed';
+            const image=valleyArt[key];
+            if(image){
+              const ih=image.naturalHeight||image.height;
+              const iw=image.naturalWidth||image.width;
+              const height=open?64:55;
+              const width=Math.round(height*iw/ih);
+              valleyStandaloneAtFoot(key,chest.x+(chest.w-width)/2,
+                chest.y+chest.h,height);
+            }
             // Só a linha dourada do 233: não ativa efeitos de cura.
             if(open)valleyAtlas('effects',Math.floor(elapsedSeconds*4)%6,0,6,2,
               chest.x+25,chest.y-13,31,31,.75);
@@ -2970,6 +3024,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
         function drawLevelOne(){
           drawValleyBackground();
           ctx.save();ctx.translate(-Math.round(cameraX),0);
+          drawValleyGapBackdrops(); // atrás da água e das pontes
           drawValleyDecorations();
           drawValleyLowVegetation(); // integra a vegetação 238 ao solo sem tocar na hitbox
           drawValleyTerrain();
