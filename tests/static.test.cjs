@@ -869,10 +869,14 @@ check('Altura visual dos inimigos mantém escalas e hitboxes independentes',
 const enemyVisualHeight=e=>new Function('e',visualHeightSource+'return height;')(e);
 check('Bolota aumenta para 42px e mantém colisão de 32x32',
  enemyVisualHeight({type:'mushroom',h:32})===42 &&
- mario.includes("y:348,w:32,h:32,vx:-1.5,type:'mushroom'"));
+ valleyWorld.level1EnemyTemplate.some(e=>e.type==='mushroom')&&
+ valleyWorld.level1EnemyTemplate.filter(e=>e.type==='mushroom')
+ .every(e=>e.w===32&&e.h===32));
 check('Alhopó permanece com 49px visuais e hitbox de 32x32',
  enemyVisualHeight({type:'leek',h:32})===49 &&
- mario.includes("y:348,w:32,h:32,vx:-2,type:'leek'"));
+ valleyWorld.level1EnemyTemplate.some(e=>e.type==='leek')&&
+ valleyWorld.level1EnemyTemplate.filter(e=>e.type==='leek')
+ .every(e=>e.w===32&&e.h===32));
 check('Outros tipos preservam a própria altura de colisão',
  enemyVisualHeight({type:'outro',h:32})===32);
 check('Arquivo PNG de derrota 209 do Alhopó existe e é válido',
