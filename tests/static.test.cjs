@@ -649,8 +649,8 @@ const valleyArtSource=mario.match(/        const valleyAssetPaths=\{[\s\S]*?\n  
 check('Catálogo de assets do Vale da Fase 1 é isolável',!!valleyArtSource);
 const valleyAssets=new Function(valleyArtSource+'\nreturn valleyAssetPaths;')();
 const valleyFiles=Object.values(valleyAssets);
-check('20 assets no Vale incluindo 239–242 sem Super Suco',
- valleyFiles.length===20&&valleyAssets.grassTrim==='238 grass.png'&&
+check('23 assets no Vale incluindo 243–247 sem Super Suco',
+ valleyFiles.length===23&&valleyAssets.grassTrim==='238 grass.png'&&
  !valleyFiles.includes('232 potion.png')&&
  valleyFiles.every(file=>fs.existsSync(path.join(root,file))&&fs.statSync(path.join(root,file)).size>1000));
 check('Novo moinho, árvores e cerca usam PNGs completos',
@@ -661,14 +661,15 @@ check('Novo moinho, árvores e cerca usam PNGs completos',
  !valleyFiles.includes('227 atenção 10.png')&&
  !valleyFiles.includes('221 atenção 5.png')&&
  !valleyFiles.includes('224 atenção 8.png'));
-check('Ponte, rocha e fundo dos buracos têm os PNGs novos',
+check('Ponte, rocha e novo abismo usam sprites corretos',
  valleyAssets.bridge==='239 bridge.png'&&
  valleyAssets.rock==='240 rock.png'&&
- valleyAssets.hole==='242 hole.png'&&
+ valleyAssets.hole==='243_pit.png'&&
+ !valleyFiles.includes('242 hole.png')&&
  !valleyFiles.includes('219 bridge.png')&&
  !valleyFiles.includes('227.png'));
-check('Remanescem apenas os atlas de solo, água, tocha e brilho',
- ['211 atenção.png','225 atenção 9.png','229 torch.png','233 shines.png']
+check('Remanescem apenas os atlas de solo, tocha e brilho',
+ ['211 atenção.png','229 torch.png','233 shines.png']
  .every(file=>valleyFiles.includes(file))&&
  mario.includes('function valleyFrame(key,col,row,cols,rows)')&&
  mario.includes('valleyAtlasCache=new Map()'));
@@ -677,11 +678,12 @@ check('Geometria da nova fase de 8000px isolável',!!valleyLayoutSource);
 const valleyWorld=new Function(valleyLayoutSource+
  '\nreturn {VALLEY_END,princess,castle,level1Blocks,level1EnemyTemplate,valleyCheckpoints,valleyChests,valleyGaps};')();
 const valleyGrounds=valleyWorld.level1Blocks.filter(b=>b.type==='valleyGround').sort((a,b)=>a.x-b.x);
-check('Buracos são derivados da geometria original e recebem fundo 242',
+check('Quatro buracos conservam geometria e usam fundo seco 243',
  valleyWorld.valleyGaps.length===4&&
  valleyWorld.valleyGaps.every(g=>g.w===128)&&
  valleyWorld.valleyGaps.map(g=>g.x).join(',')==='1472,2880,4352,6080'&&
- mario.includes("ctx.drawImage(art,gap.x,346,gap.w,220)")&&
+ mario.includes("const cropY=Math.round(height*.12);")&&
+ mario.includes("ctx.drawImage(art,0,cropY,width,height-cropY,")&&
  mario.includes('drawValleyGapBackdrops();'));
 check('Novo chão cobre cinco áreas de 8000 px com buracos fáceis',
  valleyWorld.VALLEY_END===8000&&valleyGrounds.length===5&&
@@ -745,11 +747,15 @@ check('Cerca completa substitui atlas antigo e fica acima da vegetação',
  mario.includes("valleyStandaloneAtFoot('fenceComplete',x,380,51,.98)")&&
  mario.includes('drawValleyForegroundProps();')&&
  !mario.includes("valleyAtlas('fences'"));
-check('Placas têm seta pixel art completa e são desenhadas depois do chão',
- mario.includes('function drawValleySign(sign)')&&
- mario.includes('ctx.lineTo(x+72,y+20)')&&
- mario.includes('ctx.lineTo(x+67,y+20)')&&
+check('Quatro placas individuais 244–247 aparecem acima do terreno',
+ valleyAssets.signRight==='244_sign_right.png'&&
+ valleyAssets.signLeft==='245_sign_left.png'&&
+ valleyAssets.signUp==='246_sign_up.png'&&
+ valleyAssets.signWarning==='247_sign_warning.png'&&
+ mario.includes("const valleySignAssets=['signRight','signLeft','signUp','signWarning'];")&&
+ mario.includes('valleyStandaloneAtFoot(key,sign.x,380,90,1)')&&
  mario.includes('for(const sign of valleySigns)drawValleySign(sign)')&&
+ !mario.includes("ctx.lineTo(x+72,y+20)")&&
  !mario.includes("valleyAtlas('signs'"));
 check('Nenhum sprite fragmentado de madeira, pedra ou folha de encosta é desenhado',
  mario.includes('function drawValleyWoodPlatform(block)')&&
@@ -782,12 +788,19 @@ check('Baús abertos e fechados são recortados externamente e apoiados no solo'
  mario.includes("'chestClosed','chestOpen'")&&
  mario.includes('chest.y+chest.h,height);')&&
  mario.includes("showItemToast('BAÚ ENCONTRADO! +3 MOEDAS')"));
-check('Textura 242 atrás da água e ponte, sem plataforma invisível',
- mario.includes("hole:'242 hole.png'")&&
+check('Textura 243 representa apenas o abismo sem água ou plataforma invisível',
+ mario.includes("hole:'243_pit.png'")&&
  mario.includes('function drawValleyGapBackdrops()')&&
  mario.includes("ctx.rect(gap.x,380,gap.w,GAME_HEIGHT-380)")&&
- mario.includes("valleyAtlas('water',0,0,3,4,gap.x,388,gap.w,27,.86)")&&
+ mario.includes("ctx.fillStyle='#241a25'")&&
+ !mario.includes("valleyAtlas('water'")&&
+ !valleyFiles.includes('225 atenção 9.png')&&
  !valleyWorld.level1Blocks.some(b=>b.type==='valleyHole'));
+check('Setas tem orientações variadas e alerta próximo ao castelo',
+ valleyWorld.level1Blocks.filter(b=>b.type==='valleyBridge').every(b=>b.y===380)&&
+ mario.includes("{x:4650,p:1}")&&
+ mario.includes("{x:3100,p:2}")&&
+ mario.includes("{x:7260,p:3}"));
 
 // AFK Gabriel: oito imagens, três rotinas e retomada imediata do controle.
 const gabrielAfkFiles=[
