@@ -1155,7 +1155,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
         const gabrielSpritePaths={
           normal:{
             idle:'126 idle.png',idleAlt:'125.png',
-            walk1:'127 walk 1.png',walk2:'128 walk 2.png',
+            walk1:'190 walk 1.png',walkMid:'191 mid.png',walk2:'192 walk 2.png',
             lookUp:'129 up.png',lookDown:'130.png',
             talkOpen:'131.png',talkClosed:'132.png',
             surprised:'133.png',happy:'134.png',thinking:'135.png',
@@ -1188,7 +1188,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
         // Os dois 176 têm nomes diferentes e representam etapas do mesmo salto.
         const vitoriaSpritePaths={
           idle:'166 vitoria idle.png',
-          walk1:'167 vitoria walk.png',walk2:'168 walk 2.png',
+          walk1:'199 vitoria walk 1.png',walkMid:'200 vitoria mid.png',walk2:'201 vitoria walk 2.png',
           lookUp:'169 vitoria up.png',lookDown:'170 vitoria down.png',
           talkOpen:'171 vitoria opened.png',talkClosed:'172 closed.png',
           surprised:'173 vitoria surprised.png',happy:'174 viroria happy.png',
@@ -1211,23 +1211,37 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
         // Os PNGs 84–93 são opcionais até serem enviados ao GitHub.
         // Nomes correspondem exatamente aos arquivos gerados pelo Gabriel.
         const mobSpritePaths={
-          mushroom:{idle:'84 bolota idle.png',walk1:'85 bolota walk 1.png',walk2:'86 bolota walk 2.png',dead:'87 bolota dead.png',alert:'88 bolota espanto.png'},
-          turtle:{alert:'89 trutle espanto.png',dead:'90 turtle dead.png',walk1:'91 turtle walk 1.png',idle:'92 turtle idle.png',walk2:'93 turtle walk 2.png'}
+          mushroom:{
+            idle:'84 bolota idle.png',walk1:'202 bolota walk 1.png',
+            walkMid:'203 bolota mid.png',walk2:'204 bolota walk 2.png',
+            dead:'87 bolota dead.png',alert:'88 bolota espanto.png'
+          },
+          // Alhopó substitui a tartaruga. Os dois arquivos 208 têm nomes distintos.
+          leek:{
+            idle:'205 leak idle.png',alert:'206 leek shocked.png',
+            walk1:'207 leek walk 1.png',walkMid:'208 leek mid.png',
+            walk2:'208 leek walk 2.png'
+            // A pose de derrota ainda não existe: queda provisória feita no Canvas.
+          }
         };
-        processedAssets.mobFrames={mushroom:{},turtle:{}};
+        processedAssets.mobFrames={mushroom:{},leek:{}};
+        const ENEMY_WALK_STEPS=['walk1','walkMid','walk2','walkMid'];
+        function enemyWalkPose(distance){
+          // Independe da direção e da taxa de quadros; acompanha deslocamento real.
+          return ENEMY_WALK_STEPS[Math.floor(Math.abs(distance)/7)%4];
+        }
         function alignEnemyWalkFrames(type){
-          // As poses têm recortes distintos. Uniformizar as duas caminhadas
-          // evita que a largura/altura mude ao alternar frames ou espelhar.
+          // Só normaliza depois dos 3 PNGs carregarem, uma única vez por trio.
           const frames=processedAssets.mobFrames[type];
-          if(!frames?.walk1||!frames?.walk2)return;
-          const width=Math.max(frames.walk1.width,frames.walk2.width);
-          const height=Math.max(frames.walk1.height,frames.walk2.height);
-          for(const pose of ['walk1','walk2']){
+          const names=['walk1','walkMid','walk2'];
+          if(!frames||names.some(name=>!frames[name]))return;
+          const width=Math.max(...names.map(name=>frames[name].width));
+          const height=Math.max(...names.map(name=>frames[name].height));
+          for(const pose of names){
             const source=frames[pose],aligned=document.createElement('canvas');
             aligned.width=width;aligned.height=height;
             const context=aligned.getContext('2d');
             context.imageSmoothingEnabled=false;
-            // Mesmo eixo horizontal e pés alinhados ao solo, sem esticar o sprite.
             context.drawImage(source,Math.round((width-source.width)/2),height-source.height);
             frames[pose]=aligned;
           }
@@ -1238,7 +1252,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
             img.onload=()=>{
               try{
                 processedAssets.mobFrames[type][pose]=trimTransparent(removeGreenScreen(img));
-                if(pose==='walk1'||pose==='walk2')alignEnemyWalkFrames(type);
+                if(pose==='walk1'||pose==='walkMid'||pose==='walk2')alignEnemyWalkFrames(type);
               }
               catch(err){console.warn('Sprite do inimigo não pôde ser processado:',path,err);}
             };
@@ -1250,7 +1264,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
         // NPCs da CANO BURGER: nomes EXATOS dos arquivos existentes na main.
         const canoNpcPaths={
           alan:{
-            idle:'95 alan.png',walk1:'96 alan walk 1.png',walk2:'97 alan walk 2.png',
+            idle:'95 alan.png',walk1:'193 alan walk 1.png',walkMid:'194 alan mid.png',walk2:'195 alan walk 2.png',
             lookUp:'98 alan up.png',lookDown:'99 alan down.png',
             talkOpen:'100 alan open.png',talkClosed:'101 alan close.png',
             wave:'102 alan greet.png',happy:'103 alan happy.png',thinking:'104 thinking.png',
@@ -1262,7 +1276,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           },
           humberto:{
             idle:'107 humberto idle.png',idleAlt:'94 humberto.png',
-            walk1:'108 humberto walk 1.png',walk2:'109 humberto walk 2.png',
+            walk1:'196 humberto walk 1.png',walkMid:'197 humberto mid.png',walk2:'198 humberto walk 2.png',
             lookUp:'110 humberto up.png',lookDown:'111 humberto down.png',
             talkOpen:'112 humbeto open.png',talkClosed:'113 humberto close.png',
             happy:'114 humberto happy.png',wave:'115 humberto tchau.png',
@@ -1365,8 +1379,8 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
         const level1EnemyTemplate=[
           {x:600,y:348,w:32,h:32,vx:-1.5,type:'mushroom',alive:true},
           {x:1130,y:348,w:32,h:32,vx:-1.5,type:'mushroom',alive:true},
-          {x:1800,y:348,w:32,h:32,vx:-2,type:'turtle',alive:true},
-          {x:2350,y:348,w:32,h:32,vx:-2,type:'turtle',alive:true}
+          {x:1800,y:348,w:32,h:32,vx:-2,type:'leek',alive:true},
+          {x:2350,y:348,w:32,h:32,vx:-2,type:'leek',alive:true}
         ];
         const level2Blocks=[
           {x:0,y:380,w:550,h:160,type:'forestGround'},
@@ -1388,11 +1402,11 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
         ];
         const level2EnemyTemplate=[
           {x:790,y:348,w:32,h:32,vx:-1.6,type:'mushroom',alive:true},
-          {x:1010,y:348,w:32,h:32,vx:1.6,type:'turtle',alive:true},
+          {x:1010,y:348,w:32,h:32,vx:1.6,type:'leek',alive:true},
           {x:1590,y:348,w:32,h:32,vx:-1.8,type:'mushroom',alive:true},
-          {x:1810,y:348,w:32,h:32,vx:1.6,type:'turtle',alive:true},
+          {x:1810,y:348,w:32,h:32,vx:1.6,type:'leek',alive:true},
           {x:2490,y:348,w:32,h:32,vx:-1.9,type:'mushroom',alive:true},
-          {x:3050,y:348,w:32,h:32,vx:-2,type:'turtle',alive:true}
+          {x:3050,y:348,w:32,h:32,vx:-2,type:'leek',alive:true}
         ];
 
         // FASE 3: menos chão contínuo, quatro travessias que sobem e descem.
@@ -1466,9 +1480,18 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           ctx.save();ctx.translate(-Math.round(cameraX),0);
           for(const e of fallenEnemies){
             ctx.save();ctx.globalAlpha=Math.min(1,Math.max(0,(e.until-elapsedSeconds)*2.5));
-            const sprite=processedAssets.mobFrames?.[e.type]?.dead;
+            const sprites=processedAssets.mobFrames?.[e.type]||{};
+            const sprite=sprites.dead;
             if(sprite)drawSpriteOnFeet(sprite,e.x+e.w/2,e.y+e.h,e.h,e.facing);
-            else{ctx.fillStyle='#b9835c';ctx.fillRect(e.x+4,e.y+e.h-10,e.w-8,9);}
+            else if(e.type==='leek'&&sprites.idle){
+              // Sem PNG de derrota ainda: o próprio Alhopó cai de lado.
+              const idle=sprites.idle,height=48;
+              const width=Math.max(1,Math.round(height*idle.width/idle.height));
+              ctx.save();ctx.translate(e.x+e.w/2,e.y+e.h-12);
+              ctx.scale(e.facing||1,1);ctx.rotate(-Math.PI/2);
+              ctx.drawImage(idle,-width/2,-height/2,width,height);
+              ctx.restore();
+            }else{ctx.fillStyle='#b9835c';ctx.fillRect(e.x+4,e.y+e.h-10,e.w-8,9);}
             ctx.restore();
           }
           for(const p of sgbParticles){
@@ -2155,6 +2178,27 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
             facing:enemy.facing||(enemy.vx<0?-1:1),until:elapsedSeconds+.65});
           emitPixelBurst(enemy.x+enemy.w/2,enemy.y+enemy.h*.45,['#ffe397','#f6a4b2','#fff8dc'],10,105);
         }
+        function updateLeekShowOff(enemy,grounded){
+          if(enemy.type!=='leek'||enemy.aiState!=='patrol'){
+            enemy.showOffUntil=0;return;
+          }
+          if(enemy.showOffUntil>elapsedSeconds){
+            enemy.vx=0;return;
+          }
+          if(enemy.showOffUntil){
+            enemy.showOffUntil=0;
+            enemy.vx=(enemy.facing||enemy.patrolDirection||1)*enemy.patrolSpeed;
+          }
+          if(!enemy.nextShowOffAt)
+            enemy.nextShowOffAt=elapsedSeconds+5+Math.random()*7;
+          // Não se exibe perto de Gabriel: detectar o herói tem prioridade.
+          if(grounded&&elapsedSeconds>=enemy.nextShowOffAt&&
+            Math.abs(player.x-enemy.x)>290){
+            enemy.showOffUntil=elapsedSeconds+1.0+Math.random()*.6;
+            enemy.nextShowOffAt=elapsedSeconds+9+Math.random()*10;
+            enemy.vx=0;
+          }
+        }
         function updateEnemies(){
           const terrain=activeBlocks();
           for(const enemy of enemies){
@@ -2195,6 +2239,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
               }
             }
             if(enemy.aiState==='patrol'&&enemy.vx)enemy.facing=Math.sign(enemy.vx);
+            updateLeekShowOff(enemy,grounded);
             let blocked=false;
             if(grounded&&enemy.vx!==0&&!hasFloorAhead(enemy,terrain)){
               blocked=true;
@@ -2212,8 +2257,8 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
               }
             }
             // Animação depende apenas da distância que o inimigo REALMENTE andou.
-            // Em ambos os sentidos, o ciclo percorre os mesmos 2 frames e para
-            // durante espanto, colisão com paredes ou beira de precipícios.
+            // Em ambos os sentidos, 1→meio→2→meio; pausa durante susto,
+            // exibição de valentia, paredes ou beira de precipícios.
             const traveled=Math.abs(enemy.x-oldX);
             enemy.walkMoving=enemy.aiState!=='alert'&&Math.abs(enemy.vx)>.05&&traveled>.05;
             if(enemy.walkMoving)enemy.walkDistance=(enemy.walkDistance||0)+traveled;
@@ -2399,9 +2444,9 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           else if(player.vx!==0){
             // Alternância temporal suave, independente da taxa de quadros.
             player.animTimer+=dt;
-            if(player.animTimer>=.12){
-              player.animFrame=player.animFrame===1?0:1;
-              player.animTimer%=.12;
+            if(player.animTimer>=.10){
+              player.animFrame=(player.animFrame+1)%4;
+              player.animTimer%=.10;
             }
           }else{player.animFrame=0;player.animTimer=0;}
           // Após colisões, só avança AFK parado em chão seguro.
@@ -2618,13 +2663,18 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
         function drawEnemies(){
           for(const e of enemies){if(!e.alive)continue;
             const poses=processedAssets.mobFrames?.[e.type]||{};
+            const showingOff=e.type==='leek'&&e.aiState==='patrol'&&
+              e.showOffUntil>elapsedSeconds;
             const frameName=e.aiState==='alert'?'alert':
-              (e.walkMoving?(Math.floor((e.walkDistance||0)/10)%2?'walk2':'walk1'):'idle');
-            const original=processedAssets.enemyFrames?.[e.type==='mushroom'?0:1];
+              (e.walkMoving?enemyWalkPose(e.walkDistance||0):'idle');
+            // Nunca usa o sprite antigo da tartaruga, inclusive no carregamento.
+            const original=e.type==='mushroom'?processedAssets.enemyFrames?.[0]:null;
             const frame=poses[frameName]||poses.idle||original;
-            // Todos os sprites novos olham para a direita; espelho apenas para a esquerda.
+            const height=e.type==='leek'?49:e.h;
             const facing=e.facing||(e.vx<0?-1:1);
-            drawSpriteOnFeet(frame,e.x+e.w/2,e.y+e.h,e.h,facing);
+            const bob=showingOff?Math.round(Math.sin(elapsedSeconds*13)*1.5):0;
+            const sway=showingOff?Math.round(Math.sin(elapsedSeconds*8)):0;
+            drawSpriteOnFeet(frame,e.x+e.w/2+sway,e.y+e.h-bob,height,facing);
             if(e.aiState==='alert'){
               ctx.save();ctx.fillStyle='#ffdd65';ctx.strokeStyle='#392034';ctx.lineWidth=2;
               ctx.font='bold 20px sans-serif';ctx.textAlign='center';ctx.strokeText('!',e.x+e.w/2,e.y-8);
@@ -2713,7 +2763,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           // Não recorre ao sprite de Dash para caminhar.
           if(powered)return walkFrame%4===1?'runPassing1':
             walkFrame%4===3?'runPassing2':'idle';
-          return walkFrame%2===0?'walk1':'walk2';
+          return ['walk1','walkMid','walk2','walkMid'][walkFrame%4];
         }
         function getGabrielVisual({inShop=false}={}){
           const powered=!inShop&&isSuperGabriel();
@@ -2721,7 +2771,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           const speaking=(inShop?shopLine:activeDialogueSpeaker())==='GABRIEL';
           const moving=inShop?(keys.left!==keys.right):Math.abs(player.vx)>.05;
           const walkFrame=powered?Math.floor(superRunClock/.09)%4:
-            inShop?Math.floor(shopHeroDistance/30)%2:player.animFrame;
+            inShop?Math.floor(shopHeroDistance/22)%4:player.animFrame;
           let pose=gabrielPoseName({
             powered,dashing:state==='playing'&&powered&&isDashing(),grounded:inShop||state!=='playing'||player.grounded,
             vy:inShop?0:player.vy,moving,walkFrame,
@@ -2761,14 +2811,14 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
         function vitoriaPoseName({speaking=false,voiceOpen=false,moving=false,
           walkFrame=0,pose='idle'}={}){
           if(speaking)return voiceOpen?'talkOpen':'talkClosed';
-          if(moving)return walkFrame%2===0?'walk1':'walk2';
+          if(moving)return ['walk1','walkMid','walk2','walkMid'][walkFrame%4];
           return pose;
         }
         function drawVitoriaNew(centerX,footY,{height=VITORIA_VISUAL_HEIGHT,
           facing=1,pose='idle',moving=false,speaking=activeDialogueSpeaker()==='VITORIA'}={}){
           const name=vitoriaPoseName({
             speaking,voiceOpen:Math.floor(gameNow/165)%2===0,
-            moving,walkFrame:Math.floor(gameNow/165)%2,pose
+            moving,walkFrame:Math.floor(gameNow/125)%4,pose
           });
           // 36.png continua como fallback de compatibilidade durante carregamento.
           const image=processedAssets.vitoria[name]||
@@ -3702,7 +3752,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
               const speed=npc.name==='alan'?61:83;
               const distance=Math.min(Math.abs(npc.target-npc.x),speed*dt);
               npc.x+=npc.dir*distance;npc.walked+=distance;
-              npc.pose=Math.floor(npc.walked/12)%2?'walk2':'walk1';
+              npc.pose=['walk1','walkMid','walk2','walkMid'][Math.floor(npc.walked/9)%4];
             }
           }
           if(shopConversation){
