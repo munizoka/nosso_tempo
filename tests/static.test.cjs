@@ -729,3 +729,65 @@ check('Relogio e cochilo utilizam todos os seus quadros',
  afkPose('sleep',.3)==='afkYawn'&&
  afkPose('sleep',2)==='afkSleep'&&
  afkPose('sleep',4.4)==='afkYawn');
+
+// Integração visual 190–208 (208 são dois PNGs com nomes diferentes).
+const newWalkAssets=[
+ '190 walk 1.png','191 mid.png','192 walk 2.png',
+ '193 alan walk 1.png','194 alan mid.png','195 alan walk 2.png',
+ '196 humberto walk 1.png','197 humberto mid.png','198 humberto walk 2.png',
+ '199 vitoria walk 1.png','200 vitoria mid.png','201 vitoria walk 2.png',
+ '202 bolota walk 1.png','203 bolota mid.png','204 bolota walk 2.png',
+ '205 leak idle.png','206 leek shocked.png','207 leek walk 1.png',
+ '208 leek mid.png','208 leek walk 2.png'
+];
+check('Vinte imagens novas com nomes exatos estão disponíveis no repositório',
+ newWalkAssets.every(name=>fs.existsSync(path.join(root,name))&&
+ fs.statSync(path.join(root,name)).size>1000));
+check('Caminhadas de Alan, Humberto e Vitoria agora têm três poses',
+ [
+ "walk1:'193 alan walk 1.png',walkMid:'194 alan mid.png',walk2:'195 alan walk 2.png'",
+ "walk1:'196 humberto walk 1.png',walkMid:'197 humberto mid.png'",
+ "walk1:'199 vitoria walk 1.png',walkMid:'200 vitoria mid.png'"
+ ].every(fragment=>mario.includes(fragment)));
+check('Alhopó substitui todos os cinco inimigos tartaruga',
+ (mario.match(/type:'leek'/g)||[]).length>=5 &&
+ !mario.includes("type:'turtle'")&&!mario.includes("turtle:{"));
+check('Alhopó mantém colisões de 32px e ganha desenho mais alto',
+ mario.includes("const height=e.type==='leek'?49:e.h") &&
+ mario.includes("y:348,w:32,h:32,vx:-2,type:'leek'"));
+check('Alhopó derrotado gira de lado sem usar sprite antigo da tartaruga',
+ mario.includes("else if(e.type==='leek'&&sprites.idle)")&&
+ mario.includes("ctx.rotate(-Math.PI/2)")&&
+ !mario.includes("90 turtle dead.png")&&
+ mario.includes("const original=e.type==='mushroom'?processedAssets.enemyFrames?.[0]:null"));
+const enemyWalkSource=mario.match(/        const ENEMY_WALK_STEPS=[\s\S]*?\n        function alignEnemyWalkFrames\(/)?.[0]?.split('        function alignEnemyWalkFrames(')[0];
+check('Ciclo de inimigos isolável e testável',!!enemyWalkSource);
+const enemyWalkPose=new Function(enemyWalkSource+'\nreturn enemyWalkPose;')();
+check('Bolota e Alhopó seguem 1→mid→2→mid independente do sentido',
+ [0,7,14,21,28].map(enemyWalkPose).join(',')===
+ 'walk1,walkMid,walk2,walkMid,walk1' &&
+ enemyWalkPose(-14)===enemyWalkPose(14));
+const showOffSource=mario.match(/        function updateLeekShowOff\(enemy,grounded\)\{[\s\S]*?\n        \}/)?.[0];
+check('Rotina do Alhopó valentão extraível para testes',!!showOffSource);
+const showOff=new Function(
+ "let elapsedSeconds=20;const player={x:1000};"+
+ showOffSource+
+ "return {step:updateLeekShowOff,time:t=>elapsedSeconds=t};"
+)();
+const leek={type:'leek',aiState:'patrol',x:50,vx:1.8,
+ patrolSpeed:1.8,patrolDirection:1,facing:1,nextShowOffAt:14,showOffUntil:0};
+showOff.step(leek,true);
+check('Alhopó faz pose sozinho e interrompe a caminhada',
+ leek.vx===0&&leek.showOffUntil>20&&leek.nextShowOffAt>20);
+showOff.time(20.3);showOff.step(leek,true);
+check('Alhopó permanece imóvel durante a pose',leek.vx===0);
+showOff.time(22);showOff.step(leek,true);
+check('Alhopó retorna à patrulha na mesma direção',
+ leek.showOffUntil===0&&leek.vx===1.8);
+leek.aiState='chase';leek.showOffUntil=30;
+showOff.step(leek,true);
+check('Alhopó interrompe a valentia quando começa a perseguir Gabriel',
+ leek.showOffUntil===0);
+check('Oscilação da pose é puramente visual, sem modificar posição de colisão',
+ mario.includes('const bob=showingOff?Math.round(Math.sin(elapsedSeconds*13)*1.5):0')&&
+ mario.includes('drawSpriteOnFeet(frame,e.x+e.w/2+sway,e.y+e.h-bob,height,facing)'));
