@@ -136,7 +136,7 @@ check('Perseguicao respeita chao e bloqueios',mario.includes('!hasFloorAhead(ene
  mario.includes("enemy.vx=0; // Perseguição não força a queda em buracos.")&&
  mario.includes('function enemyCanSpotHero(enemy,terrain)'));
 check('Sprites e particulas de inimigos derrotados',mario.includes('fallenEnemies.push(')&&
- mario.includes('processedAssets.mobFrames?.[e.type]?.dead')&&mario.includes('defeatEnemy(enemy,150)')&&
+ mario.includes('const sprite=sprites.dead')&&mario.includes('defeatEnemy(enemy,150)')&&
  mario.includes('defeatEnemy(enemy,100)'));
 check('Efeitos das moedas e checkpoints',mario.includes('drawCombatFxWorld()')&&
  mario.includes('function checkpointChime()')&&
