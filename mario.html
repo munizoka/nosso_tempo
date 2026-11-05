@@ -3174,6 +3174,100 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
             ctx.restore();
           }
         }
+        // FASE 2 — REATIVIDADE MÁGICA: olhos e plantas sem novos PNGs.
+        const forestWatchers=forestTreeSpots
+          .filter((tree,i)=>i>0&&i!==3&&i!==6)
+          .map((tree,i)=>({
+            x:tree.x+(i%2?7:-8),
+            y:380-tree.h*.55,
+            phase:i*1.33
+          }));
+        function forestWatcherAlpha(watcher,seconds,heroX){
+          const distance=Math.abs(heroX-watcher.x);
+          // Os olhos somem quando Gabriel se aproxima do tronco.
+          const safety=Math.max(0,Math.min(1,(distance-70)/85));
+          const beat=(seconds+watcher.phase)%6.1;
+          const blink=beat<.12||(beat>.24&&beat<.32)?0:1;
+          return safety*blink*(.28+.58*(.5+.5*
+            Math.sin(seconds*.87+watcher.phase)));
+        }
+        function drawForestWatchers(){
+          const heroX=player.x+player.w/2;
+          ctx.save();
+          for(const watcher of forestWatchers){
+            if(watcher.x<cameraX-25||
+              watcher.x>cameraX+GAME_WIDTH+25)continue;
+            const alpha=forestWatcherAlpha(watcher,elapsedSeconds,heroX);
+            if(alpha<.045)continue;
+            const x=Math.round(watcher.x),y=Math.round(watcher.y);
+            ctx.fillStyle='#8bdef4';ctx.globalAlpha=alpha*.21;
+            ctx.fillRect(x-6,y-2,6,5);ctx.fillRect(x+2,y-2,6,5);
+            ctx.globalAlpha=alpha;ctx.fillStyle='#bbf0ff';
+            ctx.fillRect(x-4,y,2,2);ctx.fillRect(x+4,y,2,2);
+            ctx.fillStyle='#23334c';
+            ctx.fillRect(x-3,y,1,2);ctx.fillRect(x+5,y,1,2);
+          }
+          ctx.restore();
+        }
+        function forestReactiveVisual(x,seconds,heroX){
+          const near=Math.max(0,1-Math.abs(x-heroX)/120);
+          return {
+            near,
+            sway:Math.sin(seconds*1.8+x*.023)*(.012+near*.029),
+            glow:.06+.10*(.5+.5*Math.sin(seconds*2.1+x*.017))+
+              near*.29
+          };
+        }
+        function forestDrawReactiveMushrooms(x,groundY,height,opacity=1){
+          const img=forestRemakeArt.witchMushrooms,r=forestSourceRect('witchMushrooms');
+          if(!img||!r||r.h<=0)return;
+          const w=Math.round(height*r.w/r.h);
+          if(x+w<cameraX-30||x>cameraX+GAME_WIDTH+30)return;
+          const effect=forestReactiveVisual(x+w/2,elapsedSeconds,
+            player.x+player.w/2);
+          ctx.save();
+          ctx.translate(Math.round(x+w/2),groundY);
+          ctx.rotate(effect.sway);
+          // Aura atrás do PNG 263, mais forte apenas perto de Gabriel.
+          ctx.globalAlpha=effect.glow;
+          ctx.fillStyle='#ab79dd';
+          ctx.beginPath();
+          ctx.ellipse(0,-height*.53,Math.max(6,w*.31),
+            height*.28,0,0,Math.PI*2);
+          ctx.fill();
+          ctx.globalAlpha=opacity;
+          ctx.drawImage(img,r.x,r.y,r.w,r.h,
+            -Math.round(w/2),-height,w,height);
+          ctx.restore();
+        }
+        const forestReactivePlantSpots=[
+          450,1190,2180,3060,3350,4500,5180,5970,6850,7440
+        ];
+        const forestReactiveMushroomSpots=[
+          790,1480,2460,4870,5740,7090
+        ];
+        function drawForestReactivePlants(){
+          // Pequenos arbustos procedurais, sempre em solo firme.
+          for(const x of forestReactivePlantSpots){
+            if(x<cameraX-30||x>cameraX+GAME_WIDTH+30||
+              !forestRootsHaveGround(x,16))continue;
+            const effect=forestReactiveVisual(x,elapsedSeconds,
+              player.x+player.w/2);
+            ctx.save();ctx.translate(Math.round(x),380);
+            ctx.rotate(effect.sway);
+            ctx.globalAlpha=.73;ctx.fillStyle='#346b62';
+            ctx.fillRect(-1,-11,2,11);
+            ctx.fillStyle=effect.near>.2?'#72c2b7':'#4b8c77';
+            ctx.fillRect(-6,-9,5,2);ctx.fillRect(1,-7,6,2);
+            ctx.fillRect(-4,-14,3,4);ctx.fillRect(2,-12,3,4);
+            if(effect.near>.08){
+              ctx.globalAlpha=effect.glow*.52;
+              ctx.fillStyle='#a5fff2';
+              ctx.fillRect(-5,-10,2,2);ctx.fillRect(4,-8,2,2);
+            }
+            ctx.restore();
+          }
+        }
         function drawForestWitchDecorations(){
           const house=forestWitchLayout();
           if(!house)return;
@@ -3183,8 +3277,12 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
             house.x+house.w*.49,382,14,.94);
           forestDrawWholeAtGround('witchFence',house.x-124,380,43,.97);
           forestDrawWholeAtGround('witchFence',house.x+house.w+23,380,43,.97);
-          forestDrawWholeAtGround('witchMushrooms',house.x-45,380,33,.98);
-          forestDrawWholeAtGround('witchMushrooms',house.x+house.w+8,380,30,.98);
+          forestDrawReactiveMushrooms(house.x-45,380,33,.98);
+          forestDrawReactiveMushrooms(house.x+house.w+8,380,30,.98);
+          for(const x of forestReactiveMushroomSpots)
+            if(forestRootsHaveGround(x,22))
+              forestDrawReactiveMushrooms(x,380,29,.94);
+          drawForestReactivePlants(); // folhas reagem ao jogador
         }
         function drawForestScenery(){
           // Para não repetir o erro das árvores plantadas SOBRE buracos:
@@ -3199,6 +3297,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
                 tree.x-imageWidth/2,380,tree.h,.96);
             }
           }
+          drawForestWatchers(); // olhos entre as árvores
           // A casa limpa mantém a posição original do PNG 256, e
           // fumaça/janelas acompanham uma mesma transformação.
           drawForestWitchHouse();

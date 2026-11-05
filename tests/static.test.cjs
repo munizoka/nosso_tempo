@@ -418,10 +418,54 @@ check('Brilho aditivo continua preso ao mesmo X e Y da casa',
    layer.composite==='lighter'&&layer.alpha>.85)&&
  glowCall?.[1]===Math.round(3790-95*oldWitchLayout.scale)&&
  glowCall?.[3]===Math.round(1536*oldWitchLayout.scale));
+
+const magicalSource=mario.match(
+ /        \/\/ FASE 2 — REATIVIDADE MÁGICA:[\s\S]*?(?=        function drawForestWitchDecorations\(\))/)?.[0];
+check('Olhos e vegetação da Floresta Sombria isoláveis',!!magicalSource);
+const magicalDraws={rects:[],images:[],ellipses:0,rotations:0};
+const magicalCtx={
+ save(){},restore(){},beginPath(){},fill(){},
+ translate(){},rotate(){magicalDraws.rotations++},
+ fillRect(...args){magicalDraws.rects.push(args)},
+ drawImage(...args){magicalDraws.images.push(args)},
+ ellipse(){magicalDraws.ellipses++}
+};
+const magicalTrees=[{x:270,h:245},{x:960,h:220},{x:1850,h:270},
+ {x:2590,h:240},{x:4740,h:265},{x:5620,h:218},
+ {x:6460,h:260},{x:7320,h:235}];
+const magic=new Function('ctx','cameraX','GAME_WIDTH','elapsedSeconds',
+ 'player','forestTreeSpots','forestRemakeArt','forestSourceRect','forestRootsHaveGround',
+ magicalSource+'\nreturn {forestWatchers,forestWatcherAlpha,forestReactiveVisual,forestDrawReactiveMushrooms,drawForestWatchers,drawForestReactivePlants};')(
+ magicalCtx,800,800,2,{x:100,w:32},magicalTrees,
+ {witchMushrooms:{naturalWidth:200,naturalHeight:120}},
+ ()=>({x:0,y:0,w:200,h:120}),()=>true);
+check('Olhos surgem em árvores e desaparecem quando Gabriel chega perto',
+ magic.forestWatchers.length===5&&
+ magic.forestWatcherAlpha(magic.forestWatchers[0],2,100)>.2&&
+ magic.forestWatcherAlpha(magic.forestWatchers[0],2,
+   magic.forestWatchers[0].x)===0);
+check('Cogumelos aumentam brilho próximo ao jogador',
+ magic.forestReactiveVisual(1000,2,1000).glow>
+ magic.forestReactiveVisual(1000,2,500).glow);
+magic.drawForestWatchers();
+magic.forestDrawReactiveMushrooms(930,380,31,.97);
+magic.drawForestReactivePlants();
+check('Olhos, cogumelos e vegetação desenham via Canvas sem imagens novas',
+ magicalDraws.rects.length>0&&
+ magicalDraws.images.length===1&&
+ magicalDraws.ellipses===1&&
+ magicalDraws.rotations>0&&
+ !/new Image\(/.test(magicalSource));
+check('Reatividade pertence apenas ao cenário da Fase 2',
+ mario.includes('drawForestWatchers(); // olhos entre as árvores')&&
+ mario.includes('drawForestReactivePlants(); // folhas reagem ao jogador')&&
+ mario.includes('forestDrawReactiveMushrooms(house.x-45')&&
+ mario.includes('forestDrawReactiveMushrooms(house.x+house.w+8'));
+
 check('Cercas, cogumelos e caminho ficam no chão, sem novas colisões',
  mario.includes('function drawForestWitchDecorations()')&&
  mario.includes("forestDrawWholeAtGround('witchFence'")&&
- mario.includes("forestDrawWholeAtGround('witchMushrooms'")&&
+ mario.includes("forestDrawReactiveMushrooms(house.x-45")&&
  mario.includes("forestDrawWholeAtGround('witchPath'")&&
  mario.includes('drawForestWitchDecorations(); // acima do chão, antes de Gabriel')&&
  !mario.includes("type:'witchFence'")&&
