@@ -3097,6 +3097,51 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           if(t<2.06)return .90;
           return .10;
         }
+        // Animação de bolhas mágicas feita no Canvas, sem novos assets.
+        function forestWitchBubbleState(seconds){
+          const time=Math.max(0,seconds||0);
+          const bubbles=[],cycle=1.9;
+          for(let i=0;i<5;i++){
+            const age=((time+i*cycle/5)%cycle)/cycle;
+            const sway=Math.sin(time*2.8+i*1.9)*1.7+
+              Math.sin(age*Math.PI*2+i)*1.1;
+            const visibility=Math.min(1,age/.10,(1-age)/.18);
+            bubbles.push({
+              x:(i-2)*2.3+sway,
+              y:-age*(22+(i%3)*4),
+              radius:1.7+(i%3)*.55,
+              alpha:.88*Math.max(0,visibility),
+              pop:age>.88&&age<.97
+            });
+          }
+          return bubbles;
+        }
+        function drawForestWitchBubbles(layout){
+          // Referência na superfície do caldeirão embutido no PNG 257:
+          // aproximadamente 79% X e 81% Y do canvas da casa original.
+          const originX=layout.x-layout.ref.x*layout.scale+
+            layout.original.naturalWidth*.79*layout.scale;
+          const originY=layout.y-layout.ref.y*layout.scale+
+            layout.original.naturalHeight*.81*layout.scale;
+          ctx.save();ctx.lineWidth=.8;
+          for(const bubble of forestWitchBubbleState(elapsedSeconds)){
+            if(bubble.alpha<=0)continue;
+            const x=originX+bubble.x,y=originY+bubble.y;
+            ctx.globalAlpha=bubble.alpha;
+            ctx.fillStyle='#c149f2';ctx.strokeStyle='#552075';
+            ctx.beginPath();ctx.arc(x,y,bubble.radius,0,Math.PI*2);
+            ctx.fill();ctx.stroke();
+            ctx.fillStyle='#ffe1ff';
+            ctx.fillRect(Math.round(x-bubble.radius*.5),
+              Math.round(y-bubble.radius*.65),1,1);
+            if(bubble.pop){
+              ctx.globalAlpha=bubble.alpha*.65;ctx.fillStyle='#f5a0ff';
+              ctx.fillRect(Math.round(x-4),Math.round(y),1,1);
+              ctx.fillRect(Math.round(x+4),Math.round(y-1),1,1);
+            }
+          }
+          ctx.restore();
+        }
         function drawForestWitchHouse(){
           const layout=forestWitchLayout();
           if(!layout)return;
@@ -3110,24 +3155,22 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
             return;
           }
           drawForestWitchSmoke(layout); // fumaça atrás da borda da chaminé
-          const ratioX=clean.naturalWidth/layout.original.naturalWidth;
-          const ratioY=clean.naturalHeight/layout.original.naturalHeight;
-          ctx.drawImage(clean,
-            layout.ref.x*ratioX,layout.ref.y*ratioY,
-            layout.ref.w*ratioX,layout.ref.h*ratioY,
-            Math.round(layout.x),Math.round(layout.y),layout.w,layout.h);
+          // Usar o PNG 257 inteiro: seu desenho pode ultrapassar o bbox
+          // do 256 e ser truncado nos lados se recortado pela referência.
+          const fullX=layout.x-layout.ref.x*layout.scale;
+          const fullY=layout.y-layout.ref.y*layout.scale;
+          const fullW=Math.round(layout.original.naturalWidth*layout.scale);
+          const fullH=Math.round(layout.original.naturalHeight*layout.scale);
+          ctx.drawImage(clean,Math.round(fullX),Math.round(fullY),fullW,fullH);
+          drawForestWitchBubbles(layout);
           const glow=forestRemakeArt.windowGlow;
           if(glow?.naturalWidth){
             const pulse=forestWitchGlowStrength(elapsedSeconds);
             // A overlay ocupa o CANVAS TODO do 256, mesmo que a 261
             // tenha margens transparentes ou resolução ligeiramente diversa.
-            const fullX=layout.x-layout.ref.x*layout.scale;
-            const fullY=layout.y-layout.ref.y*layout.scale;
             ctx.save();ctx.globalCompositeOperation='lighter';
             ctx.globalAlpha=pulse;
-            ctx.drawImage(glow,Math.round(fullX),Math.round(fullY),
-              Math.round(layout.original.naturalWidth*layout.scale),
-              Math.round(layout.original.naturalHeight*layout.scale));
+            ctx.drawImage(glow,Math.round(fullX),Math.round(fullY),fullW,fullH);
             ctx.restore();
           }
         }

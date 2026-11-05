@@ -323,9 +323,11 @@ const witchMockRects={
  smokeCenter:{x:520,y:65,w:555,h:700},
  smokeRight:{x:530,y:190,w:760,h:570}
 };
-const witchDrawCalls=[],witchLayerStates=[];
+const witchDrawCalls=[],witchLayerStates=[],witchBubbleCircles=[],witchBubblePixels=[];
 const witchCtx={
- save(){},restore(){},
+ save(){},restore(){},beginPath(){},fill(){},stroke(){},
+ arc(x,y,r){witchBubbleCircles.push([x,y,r]);},
+ fillRect(...args){witchBubblePixels.push(args);},
  globalAlpha:1,globalCompositeOperation:'source-over',
  drawImage(...args){
   witchDrawCalls.push(args);
@@ -342,7 +344,7 @@ const witchRenderer=new Function('forestRemakeArt','forestSourceRect','ctx','cam
  'GAME_WIDTH','elapsedSeconds','FOREST_WITCH_HOUSE_X',
  'FOREST_WITCH_HOUSE_HEIGHT','forestDrawWholeAtGround','document','console',
  witchRendererSource+
- '\nreturn {forestWitchLayout,drawForestWitchHouse,drawForestWitchDecorations,forestWitchSmokeState,forestWitchGlowStrength};')(
+ '\nreturn {forestWitchLayout,drawForestWitchHouse,drawForestWitchDecorations,forestWitchSmokeState,forestWitchGlowStrength,forestWitchBubbleState};')(
  witchMockImages,key=>witchMockRects[key]||null,
  witchCtx,3550,800,1.97,3790,235,
  ()=>{witchDrawCalls.push(['fallback-original-house'])},
@@ -353,11 +355,14 @@ witchRenderer.drawForestWitchHouse();
 const houseCall=witchDrawCalls.find(call=>call[0]===witchMockClean);
 const smokeCalls=witchDrawCalls.filter(call=>Object.values(witchMockSmoke).includes(call[0]));
 const glowCall=witchDrawCalls.find(call=>call[0]===witchMockGlow);
-check('A casa limpa ocupa exatamente a mesma posição e tamanho da original',
+check('Casa 257 desenhada integralmente sem perder bordas ou alinhamento',
  oldWitchLayout.x===3790&&oldWitchLayout.y===145&&
  oldWitchLayout.w===Math.round(235*1310/1024)&&
- houseCall?.[5]===3790&&houseCall?.[6]===145&&
- houseCall?.[7]===oldWitchLayout.w&&houseCall?.[8]===235);
+ houseCall?.length===5&&
+ houseCall?.[1]===Math.round(3790-95*oldWitchLayout.scale)&&
+ houseCall?.[2]===145&&
+ houseCall?.[3]===Math.round(1536*oldWitchLayout.scale)&&
+ houseCall?.[4]===235);
 check('A fumaça de 1535px é desenhada por cima sem mover a casa',
  smokeCalls.length===2&&
  smokeCalls.some(call=>call[0]===witchMockSmoke.smokeLeft)&&
@@ -369,6 +374,17 @@ check('A iluminação ocupa a tela original da casa e não a bbox do brilho',
  glowCall?.[2]===145&&
  glowCall?.[3]===Math.round(1536*oldWitchLayout.scale)&&
  glowCall?.[4]===Math.round(1024*oldWitchLayout.scale));
+check('Bolhas do caldeirão aparecem dentro da área da casa',
+ witchBubbleCircles.length===5&&witchBubblePixels.length>=5&&
+ witchBubbleCircles.every(([x,y,r])=>
+  x>oldWitchLayout.x+oldWitchLayout.w*.68&&
+  x<oldWitchLayout.x+oldWitchLayout.w+10&&
+  y>oldWitchLayout.y&&y<380&&r>1));
+check('Bolhas sobem ao longo do tempo, sem novos PNGs',
+ witchRenderer.forestWitchBubbleState(.2).length===5&&
+ witchRenderer.forestWitchBubbleState(.2)[0].y<
+ witchRenderer.forestWitchBubbleState(0)[0].y&&
+ witchRenderer.forestWitchBubbleState(.2)[0].alpha>0);
 check('A casa original só funciona como fallback, sem fumaça duplicada',
  !witchDrawCalls.some(call=>call[0]==='fallback-original-house')&&
  mario.includes('if(!clean?.naturalWidth)')&&
