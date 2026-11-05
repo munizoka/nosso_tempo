@@ -51,8 +51,8 @@ new Function(gameScript); // sintaxe do motor da plataforma
 const forestRemakeSource=mario.match(/        const forestRemakePaths=\{[\s\S]*?\n        \};/)?.[0];
 check('Catálogo visual da nova Floresta Sombria está disponível',!!forestRemakeSource);
 const forestRemakeFiles=new Function(forestRemakeSource+'\nreturn forestRemakePaths;')();
-check('Sete imagens 250–256 existem com nomes exatos na raiz do repositório',
- Object.keys(forestRemakeFiles).length===7&&
+check('Quinze assets 250–264 são carregados com nomes exatos do GitHub',
+ Object.keys(forestRemakeFiles).length===15&&
  forestRemakeFiles.sky==='250 dark.png'&&
  forestRemakeFiles.mountains==='251.png'&&
  forestRemakeFiles.distantForest==='252.png'&&
@@ -60,10 +60,18 @@ check('Sete imagens 250–256 existem com nomes exatos na raiz do repositório',
  forestRemakeFiles.groundSoil==='254.png'&&
  forestRemakeFiles.ancestorTree==='255.png'&&
  forestRemakeFiles.witchHouse==='256 witchs house.png'&&
+ forestRemakeFiles.witchHouseClean==='257 no smoke.png'&&
+ forestRemakeFiles.smokeLeft==='258 smoke left.png'&&
+ forestRemakeFiles.smokeCenter==='259 mid smoke.png'&&
+ forestRemakeFiles.smokeRight==='260 smoke right.png'&&
+ forestRemakeFiles.windowGlow==='261 glow.png'&&
+ forestRemakeFiles.witchFence==='262 cerca.png'&&
+ forestRemakeFiles.witchMushrooms==='263 cogumelo.png'&&
+ forestRemakeFiles.witchPath==='264 caminho.png'&&
  Object.values(forestRemakeFiles).every(file=>
   fs.existsSync(path.join(root,file))&&fs.statSync(path.join(root,file)).size>1000));
 check('Fase 2 carrega sprites completos sem inferir spritesheets',
- mario.includes('function forestDetectAlphaBounds(img)')&&
+ mario.includes('function forestDetectAlphaBounds(img,minimumAlpha=16)')&&
  mario.includes('function forestDrawParallax(key,speed,width,bottomY,alpha=1)')&&
  mario.includes('ctx.drawImage(img,r.x,r.y,r.w,r.h,destX,y,width,height)')&&
  mario.includes('function forestDrawWholeAtGround(key,x,groundY,height,alpha=1)')&&
@@ -288,6 +296,91 @@ check('Terra interna 254 começa perto do topo e é coberta pela relva 253',
  groundDrawOps.some(o=>o.type==='image'&&o.args[0]===groundSoilMock&&
    o.args[6]===392)&&
  topOps.some(o=>o.args[6]===356&&o.args[8]===64));
+
+
+// A casa usa as COORDENADAS da imagem original 256. Os PNGs 257 e 261
+// NÃO recebem crop alfa independente; a fumaça é ancorada na chaminé.
+const witchRendererSource=mario.match(
+ /        function forestWitchLayout\(\)\{[\s\S]*?(?=        function drawForestScenery\(\))/)?.[0];
+check('As funções da casa animada são isoláveis para regressão',!!witchRendererSource);
+const witchMockOriginal={naturalWidth:1536,naturalHeight:1024};
+const witchMockClean={naturalWidth:1536,naturalHeight:1024};
+const witchMockGlow={naturalWidth:1536,naturalHeight:1024};
+const witchMockSmoke={
+ smokeLeft:{naturalWidth:1535,naturalHeight:1024},
+ smokeCenter:{naturalWidth:1536,naturalHeight:1024},
+ smokeRight:{naturalWidth:1536,naturalHeight:1024}
+};
+const witchMockImages={
+ witchHouse:witchMockOriginal,
+ witchHouseClean:witchMockClean,
+ windowGlow:witchMockGlow,
+ ...witchMockSmoke
+};
+const witchMockRects={
+ witchHouse:{x:95,y:0,w:1310,h:1024},
+ smokeLeft:{x:280,y:190,w:750,h:570},
+ smokeCenter:{x:520,y:65,w:555,h:700},
+ smokeRight:{x:530,y:190,w:760,h:570}
+};
+const witchDrawCalls=[];
+const witchCtx={
+ save(){},restore(){},
+ globalAlpha:1,globalCompositeOperation:'source-over',
+ drawImage(...args){witchDrawCalls.push(args)}
+};
+const witchMockEnvironment={
+ canvas:{getContext(){
+  return {drawImage(){},getImageData(){throw Error('Fallback smoke anchor in isolated test')}};
+ }}
+};
+const witchRenderer=new Function('forestRemakeArt','forestSourceRect','ctx','cameraX',
+ 'GAME_WIDTH','elapsedSeconds','FOREST_WITCH_HOUSE_X',
+ 'FOREST_WITCH_HOUSE_HEIGHT','forestDrawWholeAtGround','document',
+ witchRendererSource+
+ '\nreturn {forestWitchLayout,drawForestWitchHouse,drawForestWitchDecorations};')(
+ witchMockImages,key=>witchMockRects[key]||null,
+ witchCtx,3550,800,1.8,3790,235,
+ ()=>{witchDrawCalls.push(['fallback-original-house'])},
+ {createElement:()=>({width:0,height:0,getContext:witchMockEnvironment.canvas.getContext})});
+const oldWitchLayout=witchRenderer.forestWitchLayout();
+witchRenderer.drawForestWitchHouse();
+const houseCall=witchDrawCalls.find(call=>call[0]===witchMockClean);
+const smokeCalls=witchDrawCalls.filter(call=>Object.values(witchMockSmoke).includes(call[0]));
+const glowCall=witchDrawCalls.find(call=>call[0]===witchMockGlow);
+check('A casa limpa ocupa exatamente a mesma posição e tamanho da original',
+ oldWitchLayout.x===3790&&oldWitchLayout.y===145&&
+ oldWitchLayout.w===Math.round(235*1310/1024)&&
+ houseCall?.[5]===3790&&houseCall?.[6]===145&&
+ houseCall?.[7]===oldWitchLayout.w&&houseCall?.[8]===235);
+check('A fumaça de 1535px é desenhada por cima sem mover a casa',
+ smokeCalls.length===2&&
+ smokeCalls.some(call=>call[0]===witchMockSmoke.smokeLeft)&&
+ smokeCalls.every(call=>call.length===9&&
+  [call[5],call[6],call[7],call[8]].every(Number.isFinite)));
+check('A iluminação ocupa a tela original da casa e não a bbox do brilho',
+ glowCall?.length===5&&
+ glowCall?.[1]===Math.round(3790-95*oldWitchLayout.scale)&&
+ glowCall?.[2]===145&&
+ glowCall?.[3]===Math.round(1536*oldWitchLayout.scale)&&
+ glowCall?.[4]===Math.round(1024*oldWitchLayout.scale));
+check('A casa original só funciona como fallback, sem fumaça duplicada',
+ !witchDrawCalls.some(call=>call[0]==='fallback-original-house')&&
+ mario.includes('if(!clean?.naturalWidth)')&&
+ mario.includes("forestDrawWholeAtGround('witchHouse',"));
+check('Fumaça e brilho são carregados com proteção de margens e sobreposição',
+ mario.includes("forestDetectAlphaBounds(img,smoke?75:16)")&&
+ mario.includes("const smokeKeys=['smokeLeft','smokeCenter','smokeRight','smokeCenter'];")&&
+ mario.includes("ctx.globalCompositeOperation='screen'")&&
+ mario.includes("const pulse=Math.max(.06,Math.min(.40,"));
+check('Cercas, cogumelos e caminho ficam no chão, sem novas colisões',
+ mario.includes('function drawForestWitchDecorations()')&&
+ mario.includes("forestDrawWholeAtGround('witchFence'")&&
+ mario.includes("forestDrawWholeAtGround('witchMushrooms'")&&
+ mario.includes("forestDrawWholeAtGround('witchPath'")&&
+ mario.includes('drawForestWitchDecorations(); // acima do chão, antes de Gabriel')&&
+ !mario.includes("type:'witchFence'")&&
+ !mario.includes('function enterWitchHouse('));
 
 check('Inventário com dezoito espaços',mario.includes('inv-story-grid')&&mario.includes('inv-consumable-grid')&&mario.includes('for(let n=0;n<9;n++)'));
 check('Sprite 68 e categorias RPG',mario.includes('68.png')&&mario.includes('ITENS DE HISTÓRIA')&&mario.includes('CONSUMÍVEIS'));
