@@ -984,7 +984,7 @@ check('Camadas de parallax espelhadas para evitar juntas verticais bruscas',
 check('Moinho e árvores aparecem inteiros em proporção original e ancorados no chão',
  mario.includes('function valleyTrimStandalone(img)')&&
  mario.includes('opacity<16')&&
- mario.includes("const valleyWholeObjects=new Set(['windmill','bridge','rock','treeOak','treeCurved','fenceComplete','chestClosed','chestOpen'])")&&
+ mario.includes("const valleyWholeObjects=new Set(['windmill','bridge','rock','treeOak','treeCurved','fenceComplete','chestClosed','chestOpen','signRight','signLeft','signUp','signWarning'])")&&
  mario.includes('const width=Math.round(height*iw/ih)')&&
  mario.includes("valleyStandaloneAtFoot('windmill',obj.x,380,obj.h,.99)")&&
  !mario.includes("valleyAtlas('windmill'")&&
