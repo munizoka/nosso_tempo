@@ -3045,11 +3045,23 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           forestSmokeTipCache.set(key,out);
           return out;
         }
+        // Cada pose dura 0,5s. A transição ocupa apenas os últimos 0,08s,
+        // em vez de diluir o movimento durante quase 2s inteiros.
+        const FOREST_WITCH_SMOKE_INTERVAL=.5;
+        const FOREST_WITCH_SMOKE_FADE=.08;
+        function forestWitchSmokeState(seconds){
+          const steps=4;
+          const elapsed=Math.max(0,seconds||0);
+          const frame=Math.floor(elapsed/FOREST_WITCH_SMOKE_INTERVAL)%steps;
+          const phase=elapsed%FOREST_WITCH_SMOKE_INTERVAL;
+          const fadeStart=FOREST_WITCH_SMOKE_INTERVAL-FOREST_WITCH_SMOKE_FADE;
+          const blend=Math.max(0,Math.min(1,
+            (phase-fadeStart)/FOREST_WITCH_SMOKE_FADE));
+          return {frame,blend};
+        }
         function drawForestWitchSmoke(layout){
           const smokeKeys=['smokeLeft','smokeCenter','smokeRight','smokeCenter'];
-          const time=((elapsedSeconds||0)*.55)%smokeKeys.length;
-          const frame=Math.floor(time),blend=time-frame;
-          const eased=blend*blend*(3-2*blend);
+          const {frame,blend}=forestWitchSmokeState(elapsedSeconds);
           // Chaminé localizada em coordenadas do PNG original 256,
           // e NÃO no canto da arte recortada.
           const chimneyX=layout.x+(layout.original.naturalWidth*.299-layout.ref.x)*layout.scale;
@@ -3067,8 +3079,21 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
               Math.max(1,Math.round(r.w*scale)),Math.max(1,Math.round(r.h*scale)));
             ctx.restore();
           }
-          layer(smokeKeys[frame],.90*(1-eased));
-          layer(smokeKeys[(frame+1)%smokeKeys.length],.90*eased);
+          layer(smokeKeys[frame],.96*(1-blend));
+          if(blend>0)
+            layer(smokeKeys[(frame+1)%smokeKeys.length],.96*blend);
+        }
+        // Ciclo de iluminação propositalmente contrastante: períodos
+        // iluminados, breves quedas de energia e um piscar duplo mágico.
+        // A máscara 261 mantém o X/Y original; apenas a força muda.
+        function forestWitchGlowStrength(seconds){
+          const t=((seconds||0)%2.4+2.4)%2.4;
+          if(t<.55)return .94;
+          if(t<1.08)return .06;
+          if(t<1.22)return 1;
+          if(t<1.40)return .08;
+          if(t<2.06)return .90;
+          return .10;
         }
         function drawForestWitchHouse(){
           const layout=forestWitchLayout();
@@ -3091,14 +3116,12 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
             Math.round(layout.x),Math.round(layout.y),layout.w,layout.h);
           const glow=forestRemakeArt.windowGlow;
           if(glow?.naturalWidth){
-            const phase=elapsedSeconds||0;
-            const pulse=Math.max(.06,Math.min(.40,
-              .19+.12*Math.sin(phase*1.8)+.045*Math.sin(phase*7.6)));
+            const pulse=forestWitchGlowStrength(elapsedSeconds);
             // A overlay ocupa o CANVAS TODO do 256, mesmo que a 261
             // tenha margens transparentes ou resolução ligeiramente diversa.
             const fullX=layout.x-layout.ref.x*layout.scale;
             const fullY=layout.y-layout.ref.y*layout.scale;
-            ctx.save();ctx.globalCompositeOperation='screen';
+            ctx.save();ctx.globalCompositeOperation='lighter';
             ctx.globalAlpha=pulse;
             ctx.drawImage(glow,Math.round(fullX),Math.round(fullY),
               Math.round(layout.original.naturalWidth*layout.scale),
