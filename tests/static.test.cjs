@@ -74,7 +74,7 @@ check('Chão sombrio tem terra contínua e topo com repetição espelhada',
  mario.includes("const dirt=forestRemakeArt.groundSoil")&&
  mario.includes("const top=forestRemakeArt.groundTop")&&
  mario.includes("ctx.fillStyle='#251a2e'")&&
- mario.includes('ctx.translate(destX+w,0);ctx.scale(-1,1)'));
+ mario.includes('ctx.translate(destX+w+1,0);ctx.scale(-1,1)'));
 check('Casa da bruxa é cenário íntegro ancorado em y380 e não permite entrada ainda',
  mario.includes('const FOREST_WITCH_HOUSE_X=3790;')&&
  mario.includes('const FOREST_WITCH_HOUSE_HEIGHT=235;')&&
@@ -188,12 +188,14 @@ check('PNG das plataformas 49 e 50 recortado só nas margens transparentes',
  mario.includes('ctx.drawImage(img,r.x,r.y,r.w,r.h,x,y,w,h);')&&
  mario.includes("else if(b.type==='wood'||b.type==='magic')drawForestPlatform(b);")&&
  !mario.includes("drawObject(extras.wood,b.x,b.y,b.w,b.h)"));
-check('Grama 253 fica contínua sem microfrestas entre trechos',
- mario.includes("ctx.fillStyle='#356c55';")&&
- mario.includes('ctx.fillRect(b.x,b.y-7,b.w,15);')&&
- mario.includes('const destX=ix*w,y=b.y-7;')&&
- mario.includes('destX-1,y,w+2,h')&&
+check('Grama 253 cobre a borda sem faixa plana e mantém emendas globais',
+ mario.includes('const rimHeight=64,rimY=b.y-24;')&&
+ mario.includes('const grassSourceY=topRect.y+Math.round(topRect.h*.43);')&&
+ mario.includes('const grassSourceH=Math.max(1,Math.round(topRect.h*.12));')&&
+ mario.includes('destX-1,rimY,w+2,rimHeight')&&
  mario.includes('ctx.translate(destX+w+1,0);ctx.scale(-1,1);')&&
+ !mario.includes("ctx.fillStyle='#356c55';")&&
+ !mario.includes('ctx.fillRect(b.x,b.y-7,b.w,15);')&&
  !mario.includes('const first=Math.max(0,Math.floor((cameraX-b.x-w)/w));'));
 check('Moedas da Fase 2 sob plataformas seguem coletáveis',
  mario.includes('function updateLevelCoins()')&&
@@ -254,6 +256,38 @@ check('Sprites não carregados mostram piso provisório em vez de invisibilidade
   render({x:100,y:300,w:128,h:24,type:'wood'});
   return ctx.fills===2;
  })());
+
+
+// Executa o renderizador do chão isolado com Canvas simulado:
+// impede que a faixa verde lisa volte a aparecer por transparência.
+const forestGroundSource=mario.match(
+ /        function drawForestGround\(b\)\{[\s\S]*?(?=        function drawForestBackground\(\))/)?.[0];
+check('Renderizador de terreno da Floresta Sombria está disponível',!!forestGroundSource);
+const groundDrawOps=[];
+const groundContext={
+ fillStyle:'',save(){},restore(){},beginPath(){},rect(){},clip(){},
+ translate(){},scale(){},
+ fillRect(...args){groundDrawOps.push({type:'fill',color:this.fillStyle,args})},
+ drawImage(...args){groundDrawOps.push({type:'image',args})}
+};
+const groundTopMock={naturalWidth:512,naturalHeight:260};
+const groundSoilMock={naturalWidth:256,naturalHeight:256};
+const mockArt={groundTop:groundTopMock,groundSoil:groundSoilMock};
+const drawGround=new Function('forestRemakeArt','forestSourceRect','ctx','cameraX','GAME_WIDTH',
+ forestGroundSource+'\nreturn drawForestGround;')(
+ mockArt,key=>key==='groundTop'?
+ {x:0,y:0,w:512,h:260}:{x:0,y:0,w:256,h:256},
+ groundContext,0,800);
+drawGround({x:0,y:380,w:550,h:160,type:'forestGround'});
+const topOps=groundDrawOps.filter(o=>o.type==='image'&&o.args[0]===groundTopMock);
+check('Textura do chão cobre superfície e raízes sem barra verde chapada',
+ topOps.some(o=>o.args[6]===356&&o.args[8]===64)&&
+ topOps.some(o=>o.args[6]===371&&o.args[8]===22)&&
+ !groundDrawOps.some(o=>o.type==='fill'&&o.color==='#356c55'));
+check('Terra interna 254 começa perto do topo e é coberta pela relva 253',
+ groundDrawOps.some(o=>o.type==='image'&&o.args[0]===groundSoilMock&&
+   o.args[6]===392)&&
+ topOps.some(o=>o.args[6]===356&&o.args[8]===64));
 
 check('Inventário com dezoito espaços',mario.includes('inv-story-grid')&&mario.includes('inv-consumable-grid')&&mario.includes('for(let n=0;n<9;n++)'));
 check('Sprite 68 e categorias RPG',mario.includes('68.png')&&mario.includes('ITENS DE HISTÓRIA')&&mario.includes('CONSUMÍVEIS'));
@@ -919,7 +953,7 @@ check('Dois checkpoints e três baús entregam somente moedas',
 check('Câmera, respawn e saves seguem nova largura sem alterar esquema Firebase',
  mario.includes('level===1?VALLEY_END-GAME_WIDTH')&&
  mario.includes('level===1?VALLEY_END:level===2?FOREST_END:SKY_END')&&
- mario.includes('lv===1?VALLEY_END-40:3900')&&
+ mario.includes('lv===1?VALLEY_END-40:lv===2?FOREST_END-40:3900')&&
  mario.includes('player.x=level===1?(checkpointReached?checkpointX:50)')&&
  rules.includes('sgbValidSave(data,slotId)'));
 check('Fase 1 usa parallax, spritesheets recortados e plataforma unilateral',
@@ -950,7 +984,7 @@ check('Camadas de parallax espelhadas para evitar juntas verticais bruscas',
 check('Moinho e árvores aparecem inteiros em proporção original e ancorados no chão',
  mario.includes('function valleyTrimStandalone(img)')&&
  mario.includes('opacity<16')&&
- mario.includes("const valleyWholeObjects=new Set(['windmill','bridge','rock','treeOak','treeCurved','fenceComplete','chestClosed','chestOpen'])")&&
+ mario.includes("const valleyWholeObjects=new Set(['windmill','bridge','rock','treeOak','treeCurved','fenceComplete','chestClosed','chestOpen','signRight','signLeft','signUp','signWarning'])")&&
  mario.includes('const width=Math.round(height*iw/ih)')&&
  mario.includes("valleyStandaloneAtFoot('windmill',obj.x,380,obj.h,.99)")&&
  !mario.includes("valleyAtlas('windmill'")&&
