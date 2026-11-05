@@ -3218,6 +3218,73 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
             ctx.fillRect(gap.x+14,398,gap.w-28,GAME_HEIGHT-398);
           }
         }
+        // FASE 2 — ATMOSFERA VIVA: partículas Canvas, sem novos PNGs.
+        // Distribuição fixa para evitar recalcular partículas por frame.
+        const forestFireflies=forestTreeSpots.flatMap((tree,j)=>
+          Array.from({length:6},(_,i)=>({
+            x:tree.x-110+(i*43+j*29)%214,
+            y:145+(i*37+j*31)%160,
+            phase:i*1.9+j*.83,tone:(i+j)%3
+          })));
+        function forestFireflyVisual(fly,seconds,heroX){
+          const near=Math.max(0,1-Math.abs(fly.x-heroX)/115);
+          return {
+            x:fly.x+Math.sin(seconds*.9+fly.phase)*7+
+              (fly.x>=heroX?1:-1)*near*25,
+            y:fly.y+Math.sin(seconds*1.2+fly.phase*1.7)*5-near*4,
+            alpha:(.20+.48*(.5+.5*Math.sin(seconds*2.2+fly.phase*2)))*
+              (1-near*.25)
+          };
+        }
+        function drawForestFireflies(){
+          const heroX=player.x+player.w/2;
+          const colors=['#a5f2de','#e4ed91','#91c9fa'];
+          ctx.save();
+          for(const firefly of forestFireflies){
+            if(firefly.x<cameraX-55||firefly.x>cameraX+GAME_WIDTH+55)continue;
+            const glow=forestFireflyVisual(firefly,elapsedSeconds,heroX);
+            const x=Math.round(glow.x),y=Math.round(glow.y);
+            ctx.globalAlpha=glow.alpha*.19;
+            ctx.fillStyle=colors[firefly.tone];
+            ctx.fillRect(x-3,y-3,8,8);
+            ctx.globalAlpha=glow.alpha;
+            ctx.fillRect(x,y,2,2);
+          }
+          ctx.restore();
+        }
+        const forestMistPatches=forestGroundSegments.flatMap((ground,index)=>{
+          const count=Math.max(1,Math.ceil(ground.w/220));
+          return Array.from({length:count},(_,i)=>({
+            ground,x:ground.x+(i+.5)*ground.w/count,
+            radius:68+(i%3)*19,phase:index*1.7+i*1.9
+          }));
+        });
+        function forestMistVisual(patch,seconds){
+          return {
+            x:patch.x+Math.sin(seconds*.25+patch.phase)*28,
+            y:365+Math.sin(seconds*.39+patch.phase)*2,
+            alpha:.47+.23*Math.sin(seconds*.55+patch.phase)
+          };
+        }
+        function drawForestMist(){
+          // Recorte ao solo impede nuvens falsas sobre os buracos.
+          for(const patch of forestMistPatches){
+            if(patch.x<cameraX-patch.radius-40||
+              patch.x>cameraX+GAME_WIDTH+patch.radius+40)continue;
+            const drift=forestMistVisual(patch,elapsedSeconds);
+            ctx.save();ctx.beginPath();
+            ctx.rect(patch.ground.x,340,patch.ground.w,40);ctx.clip();
+            ctx.globalAlpha=drift.alpha;
+            ctx.fillStyle='rgba(110,163,182,.13)';
+            ctx.beginPath();
+            ctx.ellipse(drift.x,drift.y,patch.radius,13,0,0,Math.PI*2);
+            ctx.fill();
+            ctx.fillStyle='rgba(146,183,201,.10)';
+            ctx.beginPath();
+            ctx.ellipse(drift.x+16,drift.y-8,patch.radius*.65,8,0,0,Math.PI*2);
+            ctx.fill();ctx.restore();
+          }
+        }
         function drawForestGround(b){
           const dirt=forestRemakeArt.groundSoil,soil=forestSourceRect('groundSoil');
           const top=forestRemakeArt.groundTop,topRect=forestSourceRect('groundTop');
@@ -3956,10 +4023,12 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           ctx.save();ctx.translate(-Math.round(cameraX),0);
           drawForestPitDepths();
           drawForestScenery(); // cenário inteiro atrás do terreno e dos personagens
+          drawForestFireflies(); // pontos de luz entre as árvores
           for(const b of level2Blocks){
             if(b.type==='forestGround')drawForestGround(b);
             else if(b.type==='wood'||b.type==='magic')drawForestPlatform(b);
           }
+          drawForestMist(); // névoa sutil, recortada ao chão firme
           drawForestWitchDecorations(); // acima do chão, antes de Gabriel
           for(const x of FOREST_CHECKPOINTS){
             const lit=checkpointReached&&checkpointX>=x;
