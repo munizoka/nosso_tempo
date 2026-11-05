@@ -3045,18 +3045,20 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           forestSmokeTipCache.set(key,out);
           return out;
         }
-        // Cada pose dura 0,5s. A transição ocupa apenas os últimos 0,08s,
-        // em vez de diluir o movimento durante quase 2s inteiros.
+        // A pose muda a cada 0,5s, mas os 0,42s finais misturam
+        // gradualmente os quadros, sem saltos repentinos na chaminé.
         const FOREST_WITCH_SMOKE_INTERVAL=.5;
-        const FOREST_WITCH_SMOKE_FADE=.08;
+        const FOREST_WITCH_SMOKE_FADE=.42;
         function forestWitchSmokeState(seconds){
           const steps=4;
           const elapsed=Math.max(0,seconds||0);
           const frame=Math.floor(elapsed/FOREST_WITCH_SMOKE_INTERVAL)%steps;
           const phase=elapsed%FOREST_WITCH_SMOKE_INTERVAL;
           const fadeStart=FOREST_WITCH_SMOKE_INTERVAL-FOREST_WITCH_SMOKE_FADE;
-          const blend=Math.max(0,Math.min(1,
+          const linearBlend=Math.max(0,Math.min(1,
             (phase-fadeStart)/FOREST_WITCH_SMOKE_FADE));
+          // Smoothstep evita mudanças abruptas de velocidade no fade.
+          const blend=linearBlend*linearBlend*(3-2*linearBlend);
           return {frame,blend};
         }
         function drawForestWitchSmoke(layout){

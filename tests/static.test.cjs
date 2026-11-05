@@ -377,16 +377,19 @@ check('Fumaça e brilho são carregados com proteção de margens e sobreposiç�
  mario.includes("forestDetectAlphaBounds(img,smoke?75:16)")&&
  mario.includes("const smokeKeys=['smokeLeft','smokeCenter','smokeRight','smokeCenter'];")&&
  mario.includes("const FOREST_WITCH_SMOKE_INTERVAL=.5;")&&
- mario.includes("const FOREST_WITCH_SMOKE_FADE=.08;")&&
+ mario.includes("const FOREST_WITCH_SMOKE_FADE=.42;")&&
  mario.includes("ctx.globalCompositeOperation='lighter'")&&
  mario.includes("const pulse=forestWitchGlowStrength(elapsedSeconds);"));
 check('Fumaça troca de quadro a cada meio segundo sem saltar X/Y',
  [0,.5,1,1.5,2,2.5].map(t=>witchRenderer.forestWitchSmokeState(t).frame)
   .join(',')==='0,1,2,3,0,1'&&
- witchRenderer.forestWitchSmokeState(.2).blend===0&&
- witchRenderer.forestWitchSmokeState(.49).blend>.80&&
+ witchRenderer.forestWitchSmokeState(.04).blend===0&&
+ witchRenderer.forestWitchSmokeState(.2).blend>.15&&
+ witchRenderer.forestWitchSmokeState(.2).blend<.35&&
+ Math.abs(witchRenderer.forestWitchSmokeState(.29).blend-.5)<.01&&
+ witchRenderer.forestWitchSmokeState(.49).blend>.99&&
  witchRenderer.forestWitchSmokeState(.49).blend<1&&
- witchRenderer.forestWitchSmokeState(1.49).blend>.80);
+ witchRenderer.forestWitchSmokeState(1.49).blend>.99);
 check('Brilho da janela tem momentos fortes e fracos bem definidos',
  witchRenderer.forestWitchGlowStrength(.2)>.9&&
  witchRenderer.forestWitchGlowStrength(.7)<.1&&
