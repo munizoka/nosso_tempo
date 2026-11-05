@@ -323,11 +323,15 @@ const witchMockRects={
  smokeCenter:{x:520,y:65,w:555,h:700},
  smokeRight:{x:530,y:190,w:760,h:570}
 };
-const witchDrawCalls=[];
+const witchDrawCalls=[],witchLayerStates=[];
 const witchCtx={
  save(){},restore(){},
  globalAlpha:1,globalCompositeOperation:'source-over',
- drawImage(...args){witchDrawCalls.push(args)}
+ drawImage(...args){
+  witchDrawCalls.push(args);
+  witchLayerStates.push({src:args[0],alpha:this.globalAlpha,
+   composite:this.globalCompositeOperation});
+ }
 };
 const witchMockEnvironment={
  canvas:{getContext(){
@@ -338,9 +342,9 @@ const witchRenderer=new Function('forestRemakeArt','forestSourceRect','ctx','cam
  'GAME_WIDTH','elapsedSeconds','FOREST_WITCH_HOUSE_X',
  'FOREST_WITCH_HOUSE_HEIGHT','forestDrawWholeAtGround','document','console',
  witchRendererSource+
- '\nreturn {forestWitchLayout,drawForestWitchHouse,drawForestWitchDecorations};')(
+ '\nreturn {forestWitchLayout,drawForestWitchHouse,drawForestWitchDecorations,forestWitchSmokeState,forestWitchGlowStrength};')(
  witchMockImages,key=>witchMockRects[key]||null,
- witchCtx,3550,800,1.8,3790,235,
+ witchCtx,3550,800,1.97,3790,235,
  ()=>{witchDrawCalls.push(['fallback-original-house'])},
  {createElement:()=>({width:0,height:0,getContext:witchMockEnvironment.canvas.getContext})},
  {warn(){}});
@@ -372,8 +376,29 @@ check('A casa original só funciona como fallback, sem fumaça duplicada',
 check('Fumaça e brilho são carregados com proteção de margens e sobreposição',
  mario.includes("forestDetectAlphaBounds(img,smoke?75:16)")&&
  mario.includes("const smokeKeys=['smokeLeft','smokeCenter','smokeRight','smokeCenter'];")&&
- mario.includes("ctx.globalCompositeOperation='screen'")&&
- mario.includes("const pulse=Math.max(.06,Math.min(.40,"));
+ mario.includes("const FOREST_WITCH_SMOKE_INTERVAL=.5;")&&
+ mario.includes("const FOREST_WITCH_SMOKE_FADE=.08;")&&
+ mario.includes("ctx.globalCompositeOperation='lighter'")&&
+ mario.includes("const pulse=forestWitchGlowStrength(elapsedSeconds);"));
+check('Fumaça troca de quadro a cada meio segundo sem saltar X/Y',
+ [0,.5,1,1.5,2,2.5].map(t=>witchRenderer.forestWitchSmokeState(t).frame)
+  .join(',')==='0,1,2,3,0,1'&&
+ witchRenderer.forestWitchSmokeState(.2).blend===0&&
+ witchRenderer.forestWitchSmokeState(.49).blend>.80&&
+ witchRenderer.forestWitchSmokeState(.49).blend<1&&
+ witchRenderer.forestWitchSmokeState(1.49).blend>.80);
+check('Brilho da janela tem momentos fortes e fracos bem definidos',
+ witchRenderer.forestWitchGlowStrength(.2)>.9&&
+ witchRenderer.forestWitchGlowStrength(.7)<.1&&
+ witchRenderer.forestWitchGlowStrength(1.12)>.95&&
+ witchRenderer.forestWitchGlowStrength(1.28)<.1&&
+ witchRenderer.forestWitchGlowStrength(1.8)>.85&&
+ witchRenderer.forestWitchGlowStrength(2.24)<.15);
+check('Brilho aditivo continua preso ao mesmo X e Y da casa',
+ witchLayerStates.some(layer=>layer.src===witchMockGlow&&
+   layer.composite==='lighter'&&layer.alpha>.85)&&
+ glowCall?.[1]===Math.round(3790-95*oldWitchLayout.scale)&&
+ glowCall?.[3]===Math.round(1536*oldWitchLayout.scale));
 check('Cercas, cogumelos e caminho ficam no chão, sem novas colisões',
  mario.includes('function drawForestWitchDecorations()')&&
  mario.includes("forestDrawWholeAtGround('witchFence'")&&
