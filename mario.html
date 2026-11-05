@@ -3017,46 +3017,56 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
         function drawForestGround(b){
           const dirt=forestRemakeArt.groundSoil,soil=forestSourceRect('groundSoil');
           const top=forestRemakeArt.groundTop,topRect=forestSourceRect('groundTop');
-          // O preenchimento contínuo impede que o céu apareça entre os tiles.
-          ctx.save();ctx.beginPath();ctx.rect(b.x,b.y,b.w,b.h);ctx.clip();
+          // A base da colisão permanece em y=380. Preencher com terra
+          // desde perto da superfície, e não com barras de verde liso.
+          ctx.save();
+          ctx.beginPath();ctx.rect(b.x,b.y,b.w,b.h);ctx.clip();
           ctx.fillStyle='#251a2e';ctx.fillRect(b.x,b.y,b.w,b.h);
           const unit=64;
           const start=Math.max(0,Math.floor((cameraX-b.x-unit)/unit));
           const end=Math.min(Math.ceil(b.w/unit),Math.ceil((cameraX+GAME_WIDTH-b.x+unit)/unit));
           if(dirt&&soil)for(let ix=start;ix<=end;ix++){
             const x=b.x+ix*unit;
-            for(let y=b.y+26;y<b.y+b.h;y+=unit)
+            for(let y=b.y+12;y<b.y+b.h;y+=unit)
               ctx.drawImage(dirt,soil.x,soil.y,soil.w,soil.h,x,y,unit,unit);
           }
           ctx.restore();
-          // Topo contínuo: a repetição usa o X GLOBAL do mundo, não
-          // recomeça a cada ilha de chão. Evita deslocamentos de 1px.
-          // O preenchimento sólido por baixo cobre transparências nas bordas.
+
+          // O 253.png inclui a relva, raízes e terra. Ampliamos VERTICALMENTE
+          // (64px em vez de 43px) para que sua própria textura conecte
+          // a superfície ao solo: sem o retângulo verde #356c55.
+          const rimHeight=64,rimY=b.y-24;
           ctx.save();
-          ctx.beginPath();ctx.rect(b.x,b.y-7,b.w,50);ctx.clip();
-          ctx.fillStyle='#356c55';
-          ctx.fillRect(b.x,b.y-7,b.w,15);
-          ctx.fillStyle='#291e35';
-          ctx.fillRect(b.x,b.y+8,b.w,35);
+          ctx.beginPath();ctx.rect(b.x,rimY,b.w,rimHeight+4);ctx.clip();
           if(top&&topRect){
-            const h=43,w=Math.max(60,Math.round(h*topRect.w/topRect.h));
+            const w=Math.max(88,Math.round(rimHeight*topRect.w/topRect.h));
+            // Coordenada GLOBAL: não muda o padrão a cada ilha de terreno.
             const first=Math.floor((cameraX-w)/w);
             const last=Math.ceil((cameraX+GAME_WIDTH+w)/w);
+            // Uma faixa retirada DA PRÓPRIA TEXTURA preenche as áreas
+            // translúcidas da borda gramada, sem cor lisa.
+            const grassSourceY=topRect.y+Math.round(topRect.h*.43);
+            const grassSourceH=Math.max(1,Math.round(topRect.h*.12));
             for(let ix=first;ix<=last;ix++){
-              const destX=ix*w,y=b.y-7;
+              const destX=ix*w;
               if(destX+w<b.x||destX>b.x+b.w)continue;
-              // 1px de sobreposição em cada lateral para ocultar frestas
-              // subpixel criadas pelo escalonamento do sprite transparente.
-              if(ix%2===0)
+              if(ix%2===0){
+                ctx.drawImage(top,topRect.x,grassSourceY,topRect.w,grassSourceH,
+                  destX-1,b.y-9,w+2,22);
                 ctx.drawImage(top,topRect.x,topRect.y,topRect.w,topRect.h,
-                  destX-1,y,w+2,h);
-              else{
+                  destX-1,rimY,w+2,rimHeight);
+              }else{
                 ctx.save();ctx.translate(destX+w+1,0);ctx.scale(-1,1);
+                ctx.drawImage(top,topRect.x,grassSourceY,topRect.w,grassSourceH,
+                  0,b.y-9,w+2,22);
                 ctx.drawImage(top,topRect.x,topRect.y,topRect.w,topRect.h,
-                  0,y,w+2,h);
+                  0,rimY,w+2,rimHeight);
                 ctx.restore();
               }
             }
+          }else{
+            // Fallback discreto enquanto o 253.png carrega.
+            ctx.fillStyle='#263b35';ctx.fillRect(b.x,b.y-5,b.w,9);
           }
           ctx.restore();
         }
