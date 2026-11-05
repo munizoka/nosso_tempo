@@ -427,6 +427,43 @@ check('Cercas, cogumelos e caminho ficam no chão, sem novas colisões',
  !mario.includes("type:'witchFence'")&&
  !mario.includes('function enterWitchHouse('));
 
+
+const atmosphereSource=mario.match(
+ /        \/\/ FASE 2 — ATMOSFERA VIVA:[\s\S]*?(?=        function drawForestGround\(b\))/)?.[0];
+check('Atmosfera viva da Fase 2 isolável',!!atmosphereSource);
+const atmosphereDraws={rects:[],ellipses:[],clips:0};
+const atmosphereCtx={
+ save(){},restore(){},beginPath(){},clip(){atmosphereDraws.clips++},
+ rect(){},fill(){},
+ fillRect(...args){atmosphereDraws.rects.push(args)},
+ ellipse(...args){atmosphereDraws.ellipses.push(args)}
+};
+const atmosphereTrees=[{x:270,h:245},{x:960,h:220},{x:1850,h:270},
+ {x:2590,h:240},{x:4740,h:265},{x:5620,h:218},
+ {x:6460,h:260},{x:7320,h:235}];
+const atmosphereGround=[{x:0,w:610},{x:740,w:850},{x:1720,w:900}];
+const atmosphere=new Function('ctx','cameraX','GAME_WIDTH','elapsedSeconds',
+ 'player','forestTreeSpots','forestGroundSegments',
+ atmosphereSource+'\nreturn {forestFireflies,forestMistPatches,forestFireflyVisual,forestMistVisual,drawForestFireflies,drawForestMist};')(
+ atmosphereCtx,150,800,2,{x:265,w:32},
+ atmosphereTrees,atmosphereGround);
+check('Vaga-lumes em posições fixas reagem à proximidade do Gabriel',
+ atmosphere.forestFireflies.length===48&&
+ atmosphere.forestFireflyVisual(atmosphere.forestFireflies[0],2,270).x!==
+ atmosphere.forestFireflyVisual(atmosphere.forestFireflies[0],2,400).x);
+atmosphere.drawForestFireflies();atmosphere.drawForestMist();
+check('Apenas partículas próximas são desenhadas; névoa usa clip',
+ atmosphereDraws.rects.length>0&&atmosphereDraws.rects.length<100&&
+ atmosphereDraws.ellipses.length>0&&atmosphereDraws.clips>0);
+const forestDrawSource=mario.match(/        function drawLevelTwo\(\)\{[\s\S]*?(?=        \/\/ VISUAIS DA FASE 3)/)?.[0];
+check('Camadas ficam atrás do herói e não adicionam sprites',
+ !!forestDrawSource&&
+ forestDrawSource.indexOf('drawForestFireflies();')<
+ forestDrawSource.indexOf('drawForestMist();')&&
+ forestDrawSource.indexOf('drawForestMist();')<
+ forestDrawSource.indexOf('drawEnemies();drawHero();')&&
+ !/new Image\(/.test(atmosphereSource));
+
 check('Inventário com dezoito espaços',mario.includes('inv-story-grid')&&mario.includes('inv-consumable-grid')&&mario.includes('for(let n=0;n<9;n++)'));
 check('Sprite 68 e categorias RPG',mario.includes('68.png')&&mario.includes('ITENS DE HISTÓRIA')&&mario.includes('CONSUMÍVEIS'));
 check('Relógio virtual congela na pausa',mario.includes('if(!inventoryOpen&&!menuOpen){')&&mario.includes('gameNow+=dt*1000')&&mario.includes("if(!sceneReady||inventoryOpen||menuOpen||state==='menu')return"));
