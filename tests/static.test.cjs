@@ -953,7 +953,7 @@ check('Dois checkpoints e três baús entregam somente moedas',
 check('Câmera, respawn e saves seguem nova largura sem alterar esquema Firebase',
  mario.includes('level===1?VALLEY_END-GAME_WIDTH')&&
  mario.includes('level===1?VALLEY_END:level===2?FOREST_END:SKY_END')&&
- mario.includes('lv===1?VALLEY_END-40:3900')&&
+ mario.includes('lv===1?VALLEY_END-40:lv===2?FOREST_END-40:3900')&&
  mario.includes('player.x=level===1?(checkpointReached?checkpointX:50)')&&
  rules.includes('sgbValidSave(data,slotId)'));
 check('Fase 1 usa parallax, spritesheets recortados e plataforma unilateral',
