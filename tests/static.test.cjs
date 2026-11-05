@@ -336,13 +336,14 @@ const witchMockEnvironment={
 };
 const witchRenderer=new Function('forestRemakeArt','forestSourceRect','ctx','cameraX',
  'GAME_WIDTH','elapsedSeconds','FOREST_WITCH_HOUSE_X',
- 'FOREST_WITCH_HOUSE_HEIGHT','forestDrawWholeAtGround','document',
+ 'FOREST_WITCH_HOUSE_HEIGHT','forestDrawWholeAtGround','document','console',
  witchRendererSource+
  '\nreturn {forestWitchLayout,drawForestWitchHouse,drawForestWitchDecorations};')(
  witchMockImages,key=>witchMockRects[key]||null,
  witchCtx,3550,800,1.8,3790,235,
  ()=>{witchDrawCalls.push(['fallback-original-house'])},
- {createElement:()=>({width:0,height:0,getContext:witchMockEnvironment.canvas.getContext})});
+ {createElement:()=>({width:0,height:0,getContext:witchMockEnvironment.canvas.getContext})},
+ {warn(){}});
 const oldWitchLayout=witchRenderer.forestWitchLayout();
 witchRenderer.drawForestWitchHouse();
 const houseCall=witchDrawCalls.find(call=>call[0]===witchMockClean);
