@@ -602,6 +602,42 @@ check('IA e hitboxes dos corvos preservadas',
  mario.includes('bird.y=bird.baseY+Math.sin(t*2.5+bird.phase)*24;'));
 
 
+
+const nimboCore=mario.match(
+ /        \/\/ NIMBO — guardião invulnerável:[\s\S]*?(?=        function updateSkyBirds\(t\))/)?.[0];
+check('Nimbo possui IA isolada e sem colisão corporal',!!nimboCore);
+const nTest=new Function('SKY_END','player','isDashing','invulnerable','loseLife',
+ nimboCore+'\nreturn {freshSkyNimbo,advanceSkyNimbo,skyNimboBoltHits};')(
+ 3280,{x:200,w:32,y:325,h:55},()=>false,0,()=>{});
+const n=nTest.freshSkyNimbo(),hero={x:200,w:32,y:325,h:55};
+for(let k=0;k<54;k++)nTest.advanceSkyNimbo(n,.05,hero,true);
+check('Depois de ficar parado 2,65s, Nimbo inicia carga no topo',
+ n.mode==='charge'&&n.targetX===216&&n.y<40);
+const locked=n.targetX;
+for(let k=0;k<19;k++)nTest.advanceSkyNimbo(n,.05,
+ {x:320,w:32,y:325,h:55},false);
+check('Mira fica travada e raio pode ser evitado horizontalmente',
+ n.mode==='strike'&&n.targetX===locked&&
+ nTest.skyNimboBoltHits(hero,n)&&
+ !nTest.skyNimboBoltHits({x:270,w:32,y:325,h:55},n));
+for(let k=0;k<5;k++)nTest.advanceSkyNimbo(n,.05,hero,false);
+check('Raio dura menos de 0,3s e não acerta durante cooldown',
+ n.mode==='cooldown'&&!nTest.skyNimboBoltHits(hero,n));
+for(let k=0;k<44;k++)nTest.advanceSkyNimbo(n,.05,hero,false);
+check('Descanso devolve Nimbo ao estado de vigia',
+ n.mode==='idle'&&n.idleFor===0);
+const nimboArt=mario.match(
+ /        \/\/ NIMBO VISUAL — 271 a 275[\s\S]*?(?=        function drawSkyBirds\(\))/)?.[0];
+check('Sprites opcionais e alerta de impacto estão ligados',
+ !!nimboArt&&['271.png','272.png','273.png','274.png','275.png'].every(f=>mario.includes(f))&&
+ nimboArt.includes('Math.round(n.targetX)-16')&&
+ !/isColliding\(player,skyNimbo\)/.test(nimboCore));
+check('Nimbo atualiza só na Fase 3 e fica atrás do herói',
+ mario.includes("if(state==='playing')updateSkyNimbo(dt);")&&
+ mario.includes('drawSkyNimbo(); // Nimbo no alto da Fase 3')&&
+ mario.includes('skyBirds=freshSkyBirds();resetSkyNimbo();')&&
+ mario.includes('function resetSkyNimbo()'));
+
 check('Inventário com dezoito espaços',mario.includes('inv-story-grid')&&mario.includes('inv-consumable-grid')&&mario.includes('for(let n=0;n<9;n++)'));
 check('Sprite 68 e categorias RPG',mario.includes('68.png')&&mario.includes('ITENS DE HISTÓRIA')&&mario.includes('CONSUMÍVEIS'));
 check('Relógio virtual congela na pausa',mario.includes('if(!inventoryOpen&&!menuOpen){')&&mario.includes('gameNow+=dt*1000')&&mario.includes("if(!sceneReady||inventoryOpen||menuOpen||state==='menu')return"));
