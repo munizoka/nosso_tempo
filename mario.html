@@ -1974,6 +1974,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
             const node=mapLevels.find(x=>x.id===level)||mapLevels[0];
             mapHead.x=node.x;mapHead.y=node.y;
           }
+          if(level===3)resetSkyNimbo(); // acompanha posição salva no checkpoint
           renderInventory();setHUD();closeMainMenu();menuMessage('');
         }
 
@@ -2208,9 +2209,9 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           sgbParticles.length=0;fallenEnemies.length=0;lastDashDustAt=-1;
           // collectedPickups é do slot: reiniciar não pode duplicar moedas coletadas.
           enemies=(level===1?level1EnemyTemplate:level===2?level2EnemyTemplate:[]).map(e=>({...e}));
-          skyBirds=freshSkyBirds();resetSkyNimbo();
+          skyBirds=freshSkyBirds();
           for(const b of [...level2Blocks,...level3Blocks])if(b.moving){b.x=b.baseX;b.y=b.baseY;}
-          resetPosition();setHUD();
+          resetPosition();resetSkyNimbo();setHUD();
         }
         window.reiniciarFase=restartCurrentLevel;
         function loseLife(reason='enemy'){
@@ -2226,8 +2227,8 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           superPower.dashUntil=0;
           if(lives<=0){state='gameover';setHUD();if(activeSlot!==null)saveCurrentSlot(false);return;}
           enemies=(level===1?level1EnemyTemplate:level===2?level2EnemyTemplate:[]).map(e=>({...e}));
-          skyBirds=freshSkyBirds();resetSkyNimbo();sgbParticles.length=0;fallenEnemies.length=0;
-          resetPosition();invulnerable=1.5;setHUD();
+          skyBirds=freshSkyBirds();sgbParticles.length=0;fallenEnemies.length=0;
+          resetPosition();resetSkyNimbo();invulnerable=1.5;setHUD();
         }
         function startCutscene(){
           cancelGabrielAfk();
@@ -2245,9 +2246,10 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           if(state!=='title3')return;
           level=3;skyCheckpointReached=false;skyCheckpointX=0;
           skyAltarActivated=false;skyAltarActivatedAt=0;
-          skyBirds=freshSkyBirds();resetSkyNimbo();
+          skyBirds=freshSkyBirds();
           resetPosition();
           player.x=110;player.y=340;player.grounded=true;
+          resetSkyNimbo();
           beginSkyScene('skyIntro');setHUD();
         }
         function beginSkyScene(which){
