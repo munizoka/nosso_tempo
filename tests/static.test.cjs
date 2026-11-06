@@ -843,6 +843,71 @@ check('Novo piso altera apenas desenho e mantém blocos e colisões',
  !skyGroundPainter.includes("level3Blocks.push(")&&
  !skyGroundPainter.includes("player.y="));
 
+
+// Regressão de velocidade: os Hz da tela não podem mudar a física do jogo.
+const fixedEngine=mario.match(
+ /        \/\/ MOTOR DE TEMPO FIXO — a física funciona a 60 Hz[\s\S]*?(?=        setHUD\(\);\n        sgbStartSlideshow\(\);)/)?.[0];
+check('Motor usa passo fixo separado da frequência de desenho',!!fixedEngine);
+const fixedSimPart=fixedEngine.match(
+ /        \/\/ MOTOR DE TEMPO FIXO — a física funciona a 60 Hz[\s\S]*?(?=        function loop\(now\)\{)/)?.[0];
+check('Motor contém acumulador fixo independente do requestAnimationFrame',
+ !!fixedSimPart&&
+ mario.includes('const GAME_PHYSICS_STEP=1/60;')&&
+ mario.includes('const GAME_MAX_CATCHUP=.1;')&&
+ mario.includes('if(advanceGameSimulation(dt)>0)draw();')&&
+ !mario.includes('update(dt,gameNow);draw();'));
+const frameRates=[30,60,90,120,144,240];
+const fixedPhysicsAtRates=frameRates.map(fps=>{
+ let heroX=0,heroY=0,heroVy=-13,count=0;
+ const sandbox=new Function('update','gameNow',
+ fixedSimPart+'\nreturn {advanceGameSimulation,clock:()=>gameNow};')(
+ (step)=>{
+   count++;
+   heroX+=5.5;
+   heroVy=Math.min(heroVy+.6,16);
+   heroY+=heroVy;
+   assert.ok(Math.abs(step-1/60)<1e-10);
+ },0);
+ for(let i=0;i<fps;i++)sandbox.advanceGameSimulation(1/fps);
+ return {fps,count,heroX,heroY,clock:sandbox.clock()};
+});
+check('PC 120/144/240 Hz e celular 30/60 Hz simulam mesmos 60 ticks por segundo',
+ fixedPhysicsAtRates.every(r=>r.count===60)&&
+ fixedPhysicsAtRates.every(r=>r.heroX===fixedPhysicsAtRates[0].heroX)&&
+ fixedPhysicsAtRates.every(r=>r.heroY===fixedPhysicsAtRates[0].heroY)&&
+ fixedPhysicsAtRates.every(r=>Math.abs(r.clock-1000)<.001));
+let largeDeltaTicks=0;
+const bigFrame=new Function('update','gameNow',
+ fixedSimPart+'\nreturn advanceGameSimulation;')(
+ ()=>{largeDeltaTicks++;},0);
+bigFrame(5); // troca de aba de cinco segundos não vira 300 passos.
+check('Retorno após travamento longo limita a recuperação a 6 passos',
+ largeDeltaTicks===6);
+const fixedMock={ticks:0,draws:0};
+const testLoop=new Function('update','draw','requestAnimationFrame',
+ 'inventoryOpen','menuOpen','previousFrame','gameNow',
+ fixedEngine+ '\nreturn {loop, paused(v){inventoryOpen=v;},pending(){return gameFrameRemainder;}};')(
+ ()=>{fixedMock.ticks++},()=>{fixedMock.draws++},()=>{},
+ false,false,0,0);
+testLoop.loop(1000/120); // meio passo acumulado, sem redesenho
+check('Frame intermediário de monitor 120 Hz não acelera física nem desenho',
+ fixedMock.ticks===0&&fixedMock.draws===0&&testLoop.pending()>0);
+testLoop.paused(true);
+testLoop.loop(2000/120); // pausa limpa fração pendente
+testLoop.paused(false);
+testLoop.loop(3000/120);
+check('Inventário limpa acumulação e não cria salto ao retomar',
+ fixedMock.ticks===0&&testLoop.pending()>0);
+testLoop.loop(4000/120);
+check('Dois meios-frames após retomar executam um único passo',
+ fixedMock.ticks===1&&fixedMock.draws===1);
+check('Gravidade e velocidade original permanecem preservadas',
+ mario.includes('speed:5.5,jumpPower:-13,gravity:0.6')&&
+ mario.includes('player.x+=player.vx;')&&
+ mario.includes('player.vy=Math.min(player.vy+player.gravity,16);')&&
+ mario.includes('function updateEnemies()')&&
+ mario.includes('function updateSkyBirds(t)'));
+
 check('Inventário com dezoito espaços',mario.includes('inv-story-grid')&&mario.includes('inv-consumable-grid')&&mario.includes('for(let n=0;n<9;n++)'));
 check('Sprite 68 e categorias RPG',mario.includes('68.png')&&mario.includes('ITENS DE HISTÓRIA')&&mario.includes('CONSUMÍVEIS'));
 check('Relógio virtual congela na pausa',mario.includes('if(!inventoryOpen&&!menuOpen){')&&mario.includes('gameNow+=dt*1000')&&mario.includes("if(!sceneReady||inventoryOpen||menuOpen||state==='menu')return"));
