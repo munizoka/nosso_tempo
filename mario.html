@@ -1142,7 +1142,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           sky: '43.jpg', mountains: '44.png', trees: '45.png', giantTree: '46.png',
           forestGround: '47.png', dirt: '48.jpg', wood: '49.png', magic: '50.png',
           checkpointOff: '51.png', checkpointOn: '52.png', villain: '53.png', portal: '54.png', mapHead: '55.jpg',
-          totemOn: '56.png', totemOff: '57.png', skyTemple: '58.png', skyPanorama:'265.png', skyRuins:'266.png', skyTempleFacade:'267.png', skyObservatory:'276.png', skyObservatoryLegacy:'sky_observatory.svg', skyGround: '59.png', skyPlatform: '60.png', skyCrow: '61.png', skyCrowUp:'268.png', skyCrowMid:'269.png', skyCrowDown:'270.png', skyNimboIdle:'271.2.png', skyNimboCharge:'272.2.png', skyNimboFire:'273.png', skyNimboTired:'274.png', skyNimboBolt:'275.png', skyAltarOff: '62.png', skyAltarOn: '63.png', windShort: '64.png', windLong: '65.png', windUp: '66.png', villainDrink: '67.png',
+          totemOn: '56.png', totemOff: '57.png', skyTemple: '58.png', skyPanorama:'265.png', skyRuins:'266.png', skyTempleFacade:'267.png', skyObservatory:'276.png', skyObservatoryLegacy:'sky_observatory.svg', skyGround: '59.png', skyGroundTexture:'277.png', skyPlatform: '60.png', skyCrow: '61.png', skyCrowUp:'268.png', skyCrowMid:'269.png', skyCrowDown:'270.png', skyNimboIdle:'271.2.png', skyNimboCharge:'272.2.png', skyNimboFire:'273.png', skyNimboTired:'274.png', skyNimboBolt:'275.png', skyAltarOff: '62.png', skyAltarOn: '63.png', windShort: '64.png', windLong: '65.png', windUp: '66.png', villainDrink: '67.png',
           superHero:'78.png', burger:'79.png', heart:'80.png', dashHero:'81.png', dashSuper:'82.png', heartHit:'83.png',
           // Teste visual: sem o foreground 120 e sem a folha decorativa 124.
           // Arquivos permanecem no repositório; basta reativar aqui se necessário.
@@ -1412,6 +1412,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
                 extras[key]=sheet;
               }else extras[key]=(['sky','mountains','trees','skyTemple','skyPanorama',
                 'skyObservatoryLegacy','skyCrowUp','skyCrowMid','skyCrowDown',
+                'skyGroundTexture',
                 'skyNimboIdle','skyNimboCharge','skyNimboFire','skyNimboTired'].includes(key)?img:cropSprite(img));
             }catch(error){console.error('Falha ao processar '+path,error);}
           };
@@ -4402,20 +4403,47 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           // Três planos de nuvens com velocidades e profundidades próprias.
           drawSkyCloudParallax();
         }
+        // REMAKE FASE 3 — 277.png cobre a pedra, sem esticar por bloco.
+        // Mantém a cornija 59.png no topo e colisões idênticas às originais.
         function drawSkyGround(b){
+          if(b.x>cameraX+GAME_WIDTH+2||b.x+b.w<cameraX-2)return;
           ctx.save();ctx.beginPath();ctx.rect(b.x,b.y,b.w,b.h);ctx.clip();
           ctx.fillStyle='#94774e';ctx.fillRect(b.x,b.y,b.w,b.h);
-          for(let y=b.y+29;y<b.y+b.h;y+=28)for(let x=b.x;x<b.x+b.w;x+=56){
-            ctx.strokeStyle='rgba(70,53,44,.46)';ctx.lineWidth=2;
-            ctx.strokeRect(x+((Math.floor(y/28)%2)*23),y,52,24);
+          const stone=extras.skyGroundTexture;
+          if(stone?.width&&stone?.height){
+            // O topo do 277 pode conter ornamentação própria; seu corpo
+            // começa após essa faixa para não repetir cornijas na vertical.
+            const top=Math.min(stone.height-1,Math.floor(stone.height*.18));
+            const bodyH=stone.height-top;
+            const tileW=128;
+            const tileH=Math.max(16,Math.round(tileW*bodyH/stone.width));
+            const bodyY=b.y+28;
+            // A grade horizontal é ancorada no MUNDO, não em cada bloco.
+            // O clip corta trechos parciais sem comprimir os pixels.
+            const startX=Math.floor(b.x/tileW)*tileW;
+            for(let y=bodyY;y<b.y+b.h;y+=tileH){
+              const visibleH=Math.min(tileH,b.y+b.h-y);
+              const cropH=bodyH*visibleH/tileH;
+              for(let x=startX;x<b.x+b.w;x+=tileW){
+                if(x+tileW<cameraX-2||x>cameraX+GAME_WIDTH+2)continue;
+                ctx.drawImage(stone,0,top,stone.width,cropH,
+                  x,y,tileW,visibleH);
+              }
+            }
+          }else{
+            // Reserva durante carregamento/offline: piso clássico anterior.
+            for(let y=b.y+29;y<b.y+b.h;y+=28)
+              for(let x=b.x;x<b.x+b.w;x+=56){
+                ctx.strokeStyle='rgba(70,53,44,.46)';ctx.lineWidth=2;
+                ctx.strokeRect(x+((Math.floor(y/28)%2)*23),y,52,24);
+              }
           }
           ctx.fillStyle='#e1bf78';ctx.fillRect(b.x,b.y,b.w,6);
           if(extras.skyGround){
-            // A própria arte de 59.png possui proporção horizontal de cornija.
-            const image=extras.skyGround, tileW=104;
-            for(let x=b.x;x<b.x+b.w;x+=tileW){
+            // 59.png continua sendo a borda pisável, igual às plataformas.
+            const image=extras.skyGround,tileW=104;
+            for(let x=b.x;x<b.x+b.w;x+=tileW)
               drawObject(image,x,b.y,Math.min(tileW,b.x+b.w-x),28);
-            }
           }
           ctx.restore();
         }
