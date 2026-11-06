@@ -153,8 +153,8 @@ check('Fundo dos oito buracos não cria chão nem recebe árvores',
  forestWorld.forestGaps.every(g=>!forestWorld.forestTreeSpots.some(t=>
   t.x>=g.x&&t.x<=g.x+g.w)));
 check('Salvamento da Fase 2 aceita posições até 7760 sem afetar Fase 3',
- mario.includes('lv===1?VALLEY_END-40:lv===2?FOREST_END-40:3900')&&
- mario.includes('lv===1?VALLEY_END:lv===2?FOREST_END:3900')&&
+ mario.includes('lv===1?VALLEY_END-40:lv===2?FOREST_END-40:SKY_END-40')&&
+ mario.includes('lv===1?VALLEY_END:lv===2?FOREST_END:SKY_END')&&
  rules.includes('data.payload.player.x is number')&&
  rules.includes('data.payload.checkpoint.x is number'));
 check('Final da Fase 2 acompanha a largura nova, preservando medalhão e totem',
@@ -1404,7 +1404,7 @@ check('Dois checkpoints e três baús entregam somente moedas',
 check('Câmera, respawn e saves seguem nova largura sem alterar esquema Firebase',
  mario.includes('level===1?VALLEY_END-GAME_WIDTH')&&
  mario.includes('level===1?VALLEY_END:level===2?FOREST_END:SKY_END')&&
- mario.includes('lv===1?VALLEY_END-40:lv===2?FOREST_END-40:3900')&&
+ mario.includes('lv===1?VALLEY_END-40:lv===2?FOREST_END-40:SKY_END-40')&&
  mario.includes('player.x=level===1?(checkpointReached?checkpointX:50)')&&
  rules.includes('sgbValidSave(data,slotId)'));
 check('Fase 1 usa parallax, spritesheets recortados e plataforma unilateral',
