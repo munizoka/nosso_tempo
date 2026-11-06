@@ -4148,6 +4148,74 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
         }
 
         // VISUAIS DA FASE 3: 58.png a 63.png, sem alterações nos sprites das fases anteriores.
+        // REMAKE FASE 3 — atmosfera celestial em três planos (Canvas).
+        // Sem colisões, sem novos PNGs, com ritmo contínuo nas cinematics.
+        const skyCloudBands=[
+          {y:58,parallax:.075,speed:2.2,alpha:.11,color:'#d8eeff',offset:36},
+          {y:129,parallax:.18,speed:4.5,alpha:.18,color:'#e4d9ff',offset:130},
+          {y:218,parallax:.32,speed:7.2,alpha:.13,color:'#f9e8f8',offset:65}
+        ];
+        function skyCloudPose(band,index,seconds,camera){
+          const span=1830;
+          const x=((index*220+band.offset-camera*band.parallax-
+            seconds*band.speed)%span+span)%span-210;
+          return {
+            x:Math.round(x),
+            y:band.y+(index%3)*12,
+            width:90+(index%4)*18
+          };
+        }
+        function drawSkyCloudParallax(){
+          const seconds=gameNow/1000;
+          ctx.save();
+          for(const band of skyCloudBands){
+            ctx.fillStyle=band.color;
+            for(let i=0;i<9;i++){
+              const cloud=skyCloudPose(band,i,seconds,cameraX);
+              const x=cloud.x,y=cloud.y,w=cloud.width;
+              if(x+w<0||x>GAME_WIDTH)continue;
+              // Nuvens blocadas por degraus: silhueta 16-bit sem blur.
+              ctx.globalAlpha=band.alpha;
+              ctx.fillRect(x+19,y-11,w-48,7);
+              ctx.fillRect(x+8,y-5,w-20,12);
+              ctx.fillRect(x,y+3,w,9);
+              ctx.globalAlpha=band.alpha*.48;
+              ctx.fillRect(x+15,y+12,w-33,5);
+            }
+          }
+          ctx.restore();
+        }
+        const skyWindGlints=skyWindZones.flatMap((zone,z)=>
+          Array.from({length:7},(_,i)=>({zone,seed:z*7+i,phase:i*.61+z})));
+        function skyWindGlintPose(glint,seconds){
+          const zone=glint.zone;
+          const rising=zone.type==='up';
+          const span=rising?zone.h:zone.w;
+          const travel=((glint.seed*71+seconds*(rising?24:37))%span+span)%span;
+          return {
+            x:rising?zone.x+25+(glint.seed*43)%(zone.w-50):
+              zone.x+(zone.force>=0?travel:zone.w-travel),
+            y:rising?zone.y+zone.h-travel:
+              zone.y+27+(glint.seed*37)%(zone.h-54),
+            alpha:.12+.18*(.5+.5*Math.sin(seconds*2+glint.phase))
+          };
+        }
+        function drawSkyWindGlints(){
+          const seconds=gameNow/1000;
+          ctx.save();ctx.fillStyle='#dff8ff';
+          for(const glint of skyWindGlints){
+            const z=glint.zone;
+            if(z.x>cameraX+GAME_WIDTH+30||z.x+z.w<cameraX-30)continue;
+            const p=skyWindGlintPose(glint,seconds);
+            const x=Math.round(p.x),y=Math.round(p.y);
+            ctx.globalAlpha=p.alpha;
+            ctx.fillRect(x,y,2,2);
+            ctx.globalAlpha=p.alpha*.52;
+            if(z.type==='up')ctx.fillRect(x+1,y+4,1,5);
+            else ctx.fillRect(x-6,y+1,6,1);
+          }
+          ctx.restore();
+        }
         function drawSkyBackground(){
           if(extras.skyTemple)drawObject(extras.skyTemple,0,0,GAME_WIDTH,GAME_HEIGHT);
           else{
@@ -4155,14 +4223,8 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
             g.addColorStop(0,'#369bdc');g.addColorStop(.58,'#aea1ed');g.addColorStop(1,'#f2d9ec');
             ctx.fillStyle=g;ctx.fillRect(0,0,GAME_WIDTH,GAME_HEIGHT);
           }
-          // Camada discreta de nuvens se move lentamente, independentemente do cenário.
-          const drift=(elapsedSeconds*9)%950;
-          ctx.save();ctx.globalAlpha=.13;ctx.fillStyle='#fff';
-          for(let i=0;i<5;i++){
-            const cx=((i*210-drift+1100)%1080)-100;
-            ctx.fillRect(cx,100+(i%3)*36,86,8);ctx.fillRect(cx+17,94+(i%3)*36,53,19);
-          }
-          ctx.restore();
+          // Três planos de nuvens com velocidades e profundidades próprias.
+          drawSkyCloudParallax();
         }
         function drawSkyGround(b){
           ctx.save();ctx.beginPath();ctx.rect(b.x,b.y,b.w,b.h);ctx.clip();
@@ -4415,6 +4477,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           ctx.save();ctx.translate(quakeX,quakeY);
           drawSkyBackground();drawSkyWind();
           ctx.save();ctx.translate(-Math.round(cameraX),0);
+          drawSkyWindGlints(); // partículas discretas acompanham as zonas de vento
           for(const b of level3Blocks){
             if(b.type==='skyGround')drawSkyGround(b);
             else if(b.type==='skyPlatform'){
