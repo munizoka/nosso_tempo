@@ -1133,7 +1133,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           sky: '43.jpg', mountains: '44.png', trees: '45.png', giantTree: '46.png',
           forestGround: '47.png', dirt: '48.jpg', wood: '49.png', magic: '50.png',
           checkpointOff: '51.png', checkpointOn: '52.png', villain: '53.png', portal: '54.png', mapHead: '55.jpg',
-          totemOn: '56.png', totemOff: '57.png', skyTemple: '58.png', skyPanorama:'265.png', skyRuins:'266.png', skyTempleFacade:'267.png', skyGround: '59.png', skyPlatform: '60.png', skyCrow: '61.png', skyAltarOff: '62.png', skyAltarOn: '63.png', windShort: '64.png', windLong: '65.png', windUp: '66.png', villainDrink: '67.png',
+          totemOn: '56.png', totemOff: '57.png', skyTemple: '58.png', skyPanorama:'265.png', skyRuins:'266.png', skyTempleFacade:'267.png', skyGround: '59.png', skyPlatform: '60.png', skyCrow: '61.png', skyNimboIdle:'271.png', skyNimboCharge:'272.png', skyNimboFire:'273.png', skyNimboTired:'274.png', skyNimboBolt:'275.png', skyAltarOff: '62.png', skyAltarOn: '63.png', windShort: '64.png', windLong: '65.png', windUp: '66.png', villainDrink: '67.png',
           superHero:'78.png', burger:'79.png', heart:'80.png', dashHero:'81.png', dashSuper:'82.png', heartHit:'83.png',
           // Teste visual: sem o foreground 120 e sem a folha decorativa 124.
           // Arquivos permanecem no repositório; basta reativar aqui se necessário.
@@ -1974,6 +1974,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
             const node=mapLevels.find(x=>x.id===level)||mapLevels[0];
             mapHead.x=node.x;mapHead.y=node.y;
           }
+          if(level===3)resetSkyNimbo(); // acompanha posição salva no checkpoint
           renderInventory();setHUD();closeMainMenu();menuMessage('');
         }
 
@@ -2210,7 +2211,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           enemies=(level===1?level1EnemyTemplate:level===2?level2EnemyTemplate:[]).map(e=>({...e}));
           skyBirds=freshSkyBirds();
           for(const b of [...level2Blocks,...level3Blocks])if(b.moving){b.x=b.baseX;b.y=b.baseY;}
-          resetPosition();setHUD();
+          resetPosition();resetSkyNimbo();setHUD();
         }
         window.reiniciarFase=restartCurrentLevel;
         function loseLife(reason='enemy'){
@@ -2227,7 +2228,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           if(lives<=0){state='gameover';setHUD();if(activeSlot!==null)saveCurrentSlot(false);return;}
           enemies=(level===1?level1EnemyTemplate:level===2?level2EnemyTemplate:[]).map(e=>({...e}));
           skyBirds=freshSkyBirds();sgbParticles.length=0;fallenEnemies.length=0;
-          resetPosition();invulnerable=1.5;setHUD();
+          resetPosition();resetSkyNimbo();invulnerable=1.5;setHUD();
         }
         function startCutscene(){
           cancelGabrielAfk();
@@ -2248,6 +2249,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           skyBirds=freshSkyBirds();
           resetPosition();
           player.x=110;player.y=340;player.grounded=true;
+          resetSkyNimbo();
           beginSkyScene('skyIntro');setHUD();
         }
         function beginSkyScene(which){
@@ -2586,6 +2588,62 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
             }
           }
         }
+        // NIMBO — guardião invulnerável: somente a coluna de raio causa dano.
+        const SKY_NIMBO_IDLE_DELAY=2.65;
+        const SKY_NIMBO_CHARGE_TIME=.95;
+        const SKY_NIMBO_STRIKE_TIME=.24;
+        const SKY_NIMBO_COOLDOWN=2.15;
+        function freshSkyNimbo(){
+          const cx=player.x+player.w/2;
+          return {x:Math.max(38,Math.min(SKY_END-38,cx)),y:26,
+            mode:'idle',time:0,idleFor:0,targetX:cx,
+            hitDone:false,lastHeroX:null};
+        }
+        let skyNimbo=freshSkyNimbo();
+        function resetSkyNimbo(){skyNimbo=freshSkyNimbo();}
+        function advanceSkyNimbo(nimbo,seconds,hero,still){
+          const dt=Math.max(0,Math.min(seconds,.05));
+          const center=hero.x+hero.w/2;
+          const destination=nimbo.mode==='idle'?center:nimbo.targetX;
+          const distance=destination-nimbo.x;
+          nimbo.x+=Math.max(-240*dt,Math.min(240*dt,distance));
+          nimbo.x=Math.max(38,Math.min(SKY_END-38,nimbo.x));
+          if(nimbo.mode==='idle'){
+            nimbo.idleFor=still?nimbo.idleFor+dt:0;
+            if(nimbo.idleFor>=SKY_NIMBO_IDLE_DELAY&&Math.abs(nimbo.x-center)<45){
+              nimbo.targetX=Math.max(38,Math.min(SKY_END-38,center));
+              nimbo.mode='charge';nimbo.time=0;nimbo.hitDone=false;
+            }
+            return;
+          }
+          nimbo.time+=dt;
+          if(nimbo.mode==='charge'&&nimbo.time>=SKY_NIMBO_CHARGE_TIME){
+            nimbo.mode='strike';nimbo.time=0;
+          }else if(nimbo.mode==='strike'&&nimbo.time>=SKY_NIMBO_STRIKE_TIME){
+            nimbo.mode='cooldown';nimbo.time=0;nimbo.hitDone=false;
+          }else if(nimbo.mode==='cooldown'&&nimbo.time>=SKY_NIMBO_COOLDOWN){
+            nimbo.mode='idle';nimbo.time=0;nimbo.idleFor=0;
+          }
+        }
+        function skyNimboBoltHits(hero,nimbo){
+          return nimbo.mode==='strike'&&
+            hero.x<nimbo.targetX+17&&hero.x+hero.w>nimbo.targetX-17&&
+            hero.y<380&&hero.y+hero.h>89;
+        }
+        function updateSkyNimbo(dt){
+          // Movimento real, não input: pressionar direção contra a parede
+          // não impede a proteção anti-AFK. Vento suave ainda conta como parado.
+          const still=player.grounded&&!isDashing()&&
+            skyNimbo.lastHeroX!==null&&
+            Math.abs(player.x-skyNimbo.lastHeroX)<1.8;
+          skyNimbo.lastHeroX=player.x;
+          advanceSkyNimbo(skyNimbo,dt,player,still);
+          // Nimbo não participa de isColliding(): pulos e dash não o ferem.
+          if(!skyNimbo.hitDone&&skyNimboBoltHits(player,skyNimbo)){
+            skyNimbo.hitDone=true; // um único hit por descarga
+            if(invulnerable<=0)loseLife('enemy');
+          }
+        }
         function updateSkyBirds(t){
           for(const bird of skyBirds){
             if(!bird.alive)continue;
@@ -2751,8 +2809,10 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           updateLevelPickups();
           updateLevelCoins();
           if(level===1)updateValleyRewards();
-          if(level===3)updateSkyBirds(elapsedSeconds);
-          else updateEnemies();
+          if(level===3){
+            updateSkyBirds(elapsedSeconds);
+            if(state==='playing')updateSkyNimbo(dt);
+          }else updateEnemies();
           if(state!=='playing')return;
           if(level===1&&isColliding(player,princess)){startCutscene();return;}
           if(level===2 && player.grounded &&
@@ -4334,6 +4394,58 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
         }
         // 61.png original até os PNGs do ciclo de voo ficarem prontos.
         // Nenhuma asa de Canvas, rotação, distorção ou efeito de susto.
+        // NIMBO VISUAL — 271 a 275 são PNGs opcionais até o upload.
+        function drawSkyNimbo(){
+          if(state!=='playing'||level!==3)return;
+          const n=skyNimbo,clock=gameNow/1000;
+          const key=n.mode==='charge'?'skyNimboCharge':
+            n.mode==='strike'?'skyNimboFire':
+            n.mode==='cooldown'?'skyNimboTired':'skyNimboIdle';
+          const img=extras[key]||extras.skyNimboIdle;
+          const x=Math.round(n.x),y=Math.round(n.y+Math.sin(clock*2.2)*2);
+          if(x<cameraX-70||x>cameraX+GAME_WIDTH+70)return;
+          ctx.save();
+          // Sinal claro e posição TRAVADA, nunca segue Gabriel depois da mira.
+          if(n.mode==='charge'){
+            ctx.globalAlpha=.28+.15*Math.sin(clock*19);
+            ctx.fillStyle='#fff0a0';
+            ctx.fillRect(Math.round(n.targetX)-16,91,32,289);
+            ctx.globalAlpha=.60;ctx.fillStyle='#ffe171';
+            for(let tick=96;tick<380;tick+=20)
+              ctx.fillRect(Math.round(n.targetX)-2,tick,4,9);
+          }else if(n.mode==='strike'){
+            const bolt=extras.skyNimboBolt;
+            ctx.globalAlpha=.48;ctx.fillStyle='#ffe88c';
+            ctx.fillRect(Math.round(n.targetX)-21,86,42,294);
+            ctx.globalAlpha=1;
+            if(bolt)ctx.drawImage(bolt,Math.round(n.targetX)-22,86,44,294);
+            else{
+              // Raio retinho temporário até o 275.png chegar.
+              ctx.fillStyle='#fffefa';
+              ctx.fillRect(Math.round(n.targetX)-6,86,12,294);
+              ctx.fillStyle='#ffcb39';
+              ctx.fillRect(Math.round(n.targetX)-10,86,4,294);
+              ctx.fillRect(Math.round(n.targetX)+6,86,4,294);
+            }
+          }
+          if(img){
+            // Preserva o sprite 16-bit sem inclinação nem deformação.
+            const w=58,h=Math.min(55,Math.max(1,Math.round(w*img.height/img.width)));
+            ctx.globalAlpha=1;
+            ctx.drawImage(img,x-w/2,y,w,h);
+          }else{
+            // Placeholder provisório até o 271.png estar no GitHub.
+            ctx.globalAlpha=1;
+            ctx.fillStyle=n.mode==='charge'||n.mode==='strike'?'#ffdb55':'#b1a5f2';
+            ctx.fillRect(x-23,y+15,46,21);
+            ctx.fillRect(x-17,y+8,32,30);
+            ctx.fillStyle='#30264f';
+            ctx.fillRect(x-12,y+23,5,3);
+            ctx.fillRect(x+8,y+23,5,3);
+            ctx.fillStyle='#fff3a2';ctx.fillRect(x-4,y+1,9,5);
+          }
+          ctx.restore();
+        }
         function drawSkyBirds(){
           for(const bird of skyBirds){
             if(!bird.alive||bird.x+bird.w<cameraX-30||
@@ -4526,6 +4638,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           }
           const flag=skyCheckpointReached?extras.checkpointOn:extras.checkpointOff;
           if(flag)drawObject(flag,1657,310,40,70);
+          drawSkyNimbo(); // Nimbo no alto da Fase 3
           drawSkyBirds();drawSkyAltar();
           if(state==='skyIntro'||state==='skyOutro')drawSkyStoryActors();
           if(state==='skyOutro')drawSkyDrink();
