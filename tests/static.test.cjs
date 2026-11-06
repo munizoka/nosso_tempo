@@ -908,6 +908,114 @@ check('Gravidade e velocidade original permanecem preservadas',
  mario.includes('function updateEnemies()')&&
  mario.includes('function updateSkyBirds(t)'));
 
+
+// Prólogo de Vitoria: reutiliza saltos e falas, integra os novos sprites.
+const prologueAssetSource=mario.match(
+ /        const prologueBackgroundPaths=\{[\s\S]*?\n        \};/)?.[0];
+const prologuePoseSource=mario.match(
+ /        const vitoriaSpritePaths=\{[\s\S]*?\n        \};/)?.[0];
+check('Prólogo tem catálogos de cenários e sprites',!!prologueAssetSource&&!!prologuePoseSource);
+const castleImages=new Function(prologueAssetSource+'\nreturn prologueBackgroundPaths;')();
+const poses=new Function(prologuePoseSource+'\nreturn vitoriaSpritePaths;')();
+const castleNames=['281 quarto.png','278 salão real.png','279 biblioteca real.png',
+ '280 torre do relogio.png','282 patio.png','283 portão.png'];
+const poseNames=['284 confident.png','285 walk 1.png','286 walk 2.png',
+ '287 walk 3.png','288 cruzados.png','289 watch.png','290 surprised.png','291 marcha.png'];
+check('Seis cenários do castelo 278–283 presentes no repositório',
+ Object.keys(castleImages).length===6&&
+ castleNames.every(name=>Object.values(castleImages).includes(name)&&
+ fs.existsSync(path.join(root,name))&&fs.statSync(path.join(root,name)).size>1000));
+check('Novas poses 284–291 e saltos/falas anteriores da Vitoria',
+ poseNames.every(name=>Object.values(poses).includes(name)&&
+ fs.existsSync(path.join(root,name))&&fs.statSync(path.join(root,name)).size>1000)&&
+ poses.jumpRise==='176 vitoria jumping.png'&&
+ poses.jumpApex==='176 high.png'&&
+ poses.landing==='177 landing.png'&&
+ poses.talkOpen==='171 vitoria opened.png'&&
+ poses.talkClosed==='172 closed.png');
+const prologueCode=mario.match(
+ /        \/\/ PRÓLOGO JOGÁVEL —[\s\S]*?(?=        function drawHero\(\)\{)/)?.[0];
+check('Motor do prólogo pode ser testado isoladamente',!!prologueCode);
+const prologueMemory=new Map;
+const prologueKeys={left:false,right:false,up:false,down:false};
+let prologueRestartCount=0,prologueSavedStage=0;
+const prologueTest=new Function('localStorage','GAME_WIDTH','GAME_HEIGHT','keys',
+ 'activeSlot','setHUD','restartCurrentLevel','saveCurrentSlot','showItemToast',
+ 'drawSpriteOnFeet','drawStoryDialogue','storyLine','retroText','pixelText','drawObject',
+ 'extras','ctx','processedAssets','elapsedSeconds','state','level','cameraX','gameNow',
+ prologueCode+'\nreturn {'+
+ ' startPrologue,finishPrologueIntro,finishPrologueOutro,prologueInteract,'+
+ ' princessPlayer,PROLOGUE_ROOMS,PROLOGUE_FLOOR,PROLOGUE_PLATFORMS,'+
+ ' PROLOGUE_GATE_LIBRARY,PROLOGUE_GATE_CLOCK,'+
+ ' PROLOGUE_LEVER_LIBRARY,PROLOGUE_LEVER_CLOCK,'+
+ ' tick(dt){gameNow+=dt*1000;updatePrologue(dt,gameNow)},'+
+ ' state:()=>state, level:()=>level,'+
+ ' library:()=>prologueLibraryOpen, clock:()=>prologueClockOpen'+
+ '};')(
+ {getItem:k=>prologueMemory.get(k)||null,setItem:(k,v)=>prologueMemory.set(k,v)},
+ 800,450,prologueKeys,0,()=>{},()=>{prologueRestartCount++},
+ ()=>{prologueSavedStage++},()=>{},()=>{},()=>{},()=>{},()=>{},
+ ()=>{},()=>{}, {},{}, {vitoria:{}},0,'menu',1,0,0);
+check('Seis salas cobrem exatamente 7.500px em fase contínua',
+ prologueTest.PROLOGUE_ROOMS.length===6&&
+ prologueTest.PROLOGUE_ROOMS[0].start===0&&
+ prologueTest.PROLOGUE_ROOMS.at(-1).end===7500&&
+ prologueTest.PROLOGUE_ROOMS.every((r,i,all)=>i===0||r.start===all[i-1].end));
+prologueTest.startPrologue();prologueTest.finishPrologueIntro();
+prologueKeys.right=true;
+for(let i=0;i<60;i++)prologueTest.tick(1/60);
+prologueKeys.right=false;
+check('Vitoria anda a 60Hz sem acelerar',
+ prologueTest.state()==='prologuePlaying'&&
+ Math.abs(prologueTest.princessPlayer.x-(70+60*4.55))<.01);
+prologueTest.princessPlayer.x=prologueTest.PROLOGUE_GATE_LIBRARY-34;
+prologueTest.princessPlayer.y=312;prologueTest.princessPlayer.grounded=true;
+prologueKeys.right=true;
+for(let i=0;i<16;i++)prologueTest.tick(1/60);
+prologueKeys.right=false;
+check('Porta da biblioteca bloqueia passagem antes do enigma',
+ prologueTest.princessPlayer.x+prologueTest.princessPlayer.w<prologueTest.PROLOGUE_GATE_LIBRARY);
+prologueTest.princessPlayer.x=prologueTest.PROLOGUE_LEVER_LIBRARY.x-14;
+prologueTest.princessPlayer.y=312;prologueTest.princessPlayer.grounded=true;
+const libraryActive=prologueTest.prologueInteract();
+prologueTest.princessPlayer.x=prologueTest.PROLOGUE_LEVER_CLOCK.x-14;
+prologueTest.princessPlayer.y=prologueTest.PROLOGUE_LEVER_CLOCK.y-68;
+prologueTest.princessPlayer.grounded=true;
+const clockActive=prologueTest.prologueInteract();
+check('Alavancas da biblioteca e torre são acionáveis',
+ libraryActive&&clockActive&&prologueTest.library()&&prologueTest.clock());
+check('A torre contém plataformas móveis e dois vãos',
+ prologueTest.PROLOGUE_PLATFORMS.filter(p=>p.moving).length===2&&
+ prologueTest.PROLOGUE_FLOOR.length===3&&
+ prologueTest.PROLOGUE_FLOOR[0].x+prologueTest.PROLOGUE_FLOOR[0].w===4130&&
+ prologueTest.PROLOGUE_FLOOR[1].x===4290&&
+ prologueTest.PROLOGUE_FLOOR[2].x===4890);
+prologueTest.princessPlayer.x=7345;
+prologueTest.princessPlayer.y=312;prologueTest.princessPlayer.grounded=true;
+prologueTest.tick(1/60);
+check('Saída do castelo inicia cena de encerramento',
+ prologueTest.state()==='prologueOutro');
+prologueTest.finishPrologueOutro();
+check('Final passa controle para Gabriel sem alterar sequestro da Fase 1',
+ prologueTest.state()==='playing'&&prologueTest.level()===1&&
+ prologueRestartCount===1&&prologueSavedStage===1&&
+ mario.includes('if(level===1&&isColliding(player,princess)){startCutscene();return;}'));
+const finalPrologue=JSON.parse(
+ prologueMemory.get('super-gabriel-bros-prologo-local-v1'))[0];
+check('Conclusão do prólogo salva por slot, separada do Firestore',
+ finalPrologue.started&&finalPrologue.completed&&
+ finalPrologue.library&&finalPrologue.clock&&
+ mario.includes('saveCurrentSlot(false);startPrologue();closeMainMenu();')&&
+ mario.includes("if(prologueSlots[index]?.started&&!prologueSlots[index]?.completed)"));
+check('Mapa e testes oferecem acesso direto ao prólogo',
+ mario.includes("if(node.id==='prologue'){startPrologue({replay:true});return;}")&&
+ mario.includes("testMode==='prologo'")&&mario.includes("testMode==='prologo-final'"));
+check('Piada de trinta minutos, ciúme e surpresa mantidos',
+ prologueCode.includes('30 MINUTINHOS! HIHIHI!')&&
+ prologueCode.includes('OUTRA PRINCESA')&&
+ prologueCode.includes("pose='prologueSurprised'")&&
+ !prologueCode.includes('ESSE LOIRO'));
+
 check('Inventário com dezoito espaços',mario.includes('inv-story-grid')&&mario.includes('inv-consumable-grid')&&mario.includes('for(let n=0;n<9;n++)'));
 check('Sprite 68 e categorias RPG',mario.includes('68.png')&&mario.includes('ITENS DE HISTÓRIA')&&mario.includes('CONSUMÍVEIS'));
 check('Relógio virtual congela na pausa',mario.includes('if(!inventoryOpen&&!menuOpen){')&&mario.includes('gameNow+=GAME_PHYSICS_STEP*1000')&&mario.includes('gameFrameRemainder=0;')&&mario.includes("if(!sceneReady||inventoryOpen||menuOpen||state==='menu')return"));
