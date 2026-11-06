@@ -574,7 +574,9 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
         const MAP_BOUNDS={left:62,right:738,top:99,bottom:376};
         const mapHead={x:139,y:319,r:17,speed:150};
         const levelComplete={1:false,2:false,3:false};
-        const SKY_END=3280;
+        const SKY_END=6400;
+        const SKY_OBSERVATORY_X=3220;
+        const SKY_CHECKPOINTS=[1650,3170,4935];
         const SKY_ALTAR_X=SKY_END-170;
         const SKY_ALTAR_CHARGE_MS=1450;
         // A fuga do vilão pela passagem celestial acontece antes do drink cair.
@@ -672,7 +674,14 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           {level:3,x:985,y:327},
           {level:3,x:1645,y:327},
           {level:3,x:2450,y:327},
-          {level:3,x:2990,y:327}
+          {level:3,x:2990,y:327},
+          {level:3,x:3430,y:327},
+          {level:3,x:4110,y:327},
+          {level:3,x:4600,y:166},
+          {level:3,x:4910,y:327},
+          {level:3,x:5350,y:166},
+          {level:3,x:5660,y:327},
+          {level:3,x:6100,y:327}
         ].map(c=>({...c,w:28,h:28,id:'coin:'+c.level+':'+c.x+':'+c.y}));
         function updateLevelCoins(){
           for(const coin of COIN_PICKUPS){
@@ -1133,7 +1142,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           sky: '43.jpg', mountains: '44.png', trees: '45.png', giantTree: '46.png',
           forestGround: '47.png', dirt: '48.jpg', wood: '49.png', magic: '50.png',
           checkpointOff: '51.png', checkpointOn: '52.png', villain: '53.png', portal: '54.png', mapHead: '55.jpg',
-          totemOn: '56.png', totemOff: '57.png', skyTemple: '58.png', skyPanorama:'265.png', skyRuins:'266.png', skyTempleFacade:'267.png', skyGround: '59.png', skyPlatform: '60.png', skyCrow: '61.png', skyCrowUp:'268.png', skyCrowMid:'269.png', skyCrowDown:'270.png', skyNimboIdle:'271.2.png', skyNimboCharge:'272.2.png', skyNimboFire:'273.png', skyNimboTired:'274.png', skyNimboBolt:'275.png', skyAltarOff: '62.png', skyAltarOn: '63.png', windShort: '64.png', windLong: '65.png', windUp: '66.png', villainDrink: '67.png',
+          totemOn: '56.png', totemOff: '57.png', skyTemple: '58.png', skyPanorama:'265.png', skyRuins:'266.png', skyTempleFacade:'267.png', skyObservatory:'sky_observatory.svg', skyGround: '59.png', skyPlatform: '60.png', skyCrow: '61.png', skyCrowUp:'268.png', skyCrowMid:'269.png', skyCrowDown:'270.png', skyNimboIdle:'271.2.png', skyNimboCharge:'272.2.png', skyNimboFire:'273.png', skyNimboTired:'274.png', skyNimboBolt:'275.png', skyAltarOff: '62.png', skyAltarOn: '63.png', windShort: '64.png', windLong: '65.png', windUp: '66.png', villainDrink: '67.png',
           superHero:'78.png', burger:'79.png', heart:'80.png', dashHero:'81.png', dashSuper:'82.png', heartHit:'83.png',
           // Teste visual: sem o foreground 120 e sem a folha decorativa 124.
           // Arquivos permanecem no repositório; basta reativar aqui se necessário.
@@ -1379,6 +1388,13 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
                 else if(testMode==='final2'){showForestTitle();startForest();beginForestScene('forestOutro');}
                 else if(testMode==='intro3'){showSkyTitle();startSkyLevel();}
                 else if(testMode==='final3'){showSkyTitle();startSkyLevel();beginSkyScene('skyOutro');}
+                else if(testMode==='observatorio3'){
+                  showSkyTitle();startSkyLevel();finishSkyIntro();
+                  player.x=SKY_OBSERVATORY_X-140;player.y=340;
+                  player.vx=player.vy=0;player.grounded=true;
+                  cameraX=Math.max(0,Math.min(SKY_END-GAME_WIDTH,player.x-320));
+                  resetSkyNimbo();setHUD();
+                }
               }
             } catch(e){ console.error('Erro processando '+path,e); }
           };
@@ -1395,7 +1411,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
                 processedAssets.superHeroFrames=makeFrames(sheet,4);
                 extras[key]=sheet;
               }else extras[key]=(['sky','mountains','trees','skyTemple','skyPanorama',
-                'skyCrowUp','skyCrowMid','skyCrowDown',
+                'skyObservatory','skyCrowUp','skyCrowMid','skyCrowDown',
                 'skyNimboIdle','skyNimboCharge','skyNimboFire','skyNimboTired'].includes(key)?img:cropSprite(img));
             }catch(error){console.error('Falha ao processar '+path,error);}
           };
@@ -1726,7 +1742,11 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           {x:900,y:380,w:270,h:140,type:'skyGround'},
           {x:1570,y:380,w:300,h:140,type:'skyGround'},
           {x:2390,y:380,w:220,h:140,type:'skyGround'},
-          {x:2910,y:380,w:370,h:140,type:'skyGround'},
+          {x:2910,y:380,w:620,h:140,type:'skyGround'}, // observatório
+          {x:4020,y:380,w:340,h:140,type:'skyGround'},
+          {x:4780,y:380,w:310,h:140,type:'skyGround'},
+          {x:5580,y:380,w:240,h:140,type:'skyGround'},
+          {x:5960,y:380,w:440,h:140,type:'skyGround'},
 
           // Travessia 1: apenas duas plataformas, subindo 160 px.
           {x:485,y:295,w:140,h:22,type:'skyPlatform'},
@@ -1744,20 +1764,41 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
 
           // Travessia 4: duas plataformas até o altar.
           {x:2613,y:290,w:135,h:22,type:'skyPlatform'},
-          {x:2790,y:213,w:140,h:22,type:'skyPlatform'}
+          {x:2790,y:213,w:140,h:22,type:'skyPlatform'},
+          // Travessia 5: saída do Observatório por três plataformas.
+          {x:3545,y:300,w:140,h:22,type:'skyPlatform'},
+          {x:3725,y:215,w:140,h:22,type:'skyPlatform',moving:true,baseX:3725,baseY:215,travel:15,speed:.72},
+          {x:3900,y:285,w:135,h:22,type:'skyPlatform'},
+          // Travessia 6: subida sustentada por vento ascendente.
+          {x:4385,y:298,w:135,h:22,type:'skyPlatform'},
+          {x:4565,y:208,w:140,h:22,type:'skyPlatform',moving:true,baseX:4565,baseY:208,travel:15,speed:.8},
+          {x:4745,y:290,w:135,h:22,type:'skyPlatform'},
+          // Travessia 7: contra-vento e mais corvos.
+          {x:5110,y:296,w:135,h:22,type:'skyPlatform'},
+          {x:5290,y:215,w:145,h:22,type:'skyPlatform',moving:true,baseX:5290,baseY:215,travel:16,speed:.8},
+          {x:5470,y:293,w:135,h:22,type:'skyPlatform'},
+          // Plataforma extra antes da ilha do templo.
+          {x:5825,y:274,w:130,h:22,type:'skyPlatform'}
         ];
         // Ventos visualizados com 64.png/65.png/66.png atrás do personagem.
         const skyWindZones=[
           {type:'horizontal',x:520,y:140,w:360,h:245,force:1.05,asset:'windShort'},
           {type:'up',x:1200,y:150,w:290,h:240,lift:.19,asset:'windUp'},
           {type:'horizontal',x:1900,y:115,w:450,h:275,force:-1.2,asset:'windLong'},
-          {type:'up',x:2640,y:145,w:280,h:245,lift:.19,asset:'windUp'}
+          {type:'up',x:2640,y:145,w:280,h:245,lift:.19,asset:'windUp'},
+          {type:'horizontal',x:3550,y:140,w:420,h:245,force:.78,asset:'windShort'},
+          {type:'up',x:4400,y:135,w:320,h:255,lift:.18,asset:'windUp'},
+          {type:'horizontal',x:5120,y:145,w:420,h:245,force:-.9,asset:'windLong'},
+          {type:'up',x:5770,y:142,w:220,h:248,lift:.16,asset:'windUp'}
         ];
         const skyBirdTemplate=[
           {x:900,y:218,baseX:900,baseY:218,vx:-1.45,w:38,h:34,phase:.3,range:90,alive:true},
           {x:1505,y:234,baseX:1505,baseY:234,vx:1.6,w:38,h:34,phase:1.8,range:110,alive:true},
           {x:2020,y:207,baseX:2020,baseY:207,vx:-1.75,w:38,h:34,phase:3.0,range:130,alive:true},
-          {x:2530,y:217,baseX:2530,baseY:217,vx:1.8,w:38,h:34,phase:2.1,range:135,alive:true}
+          {x:2530,y:217,baseX:2530,baseY:217,vx:1.8,w:38,h:34,phase:2.1,range:135,alive:true},
+          {x:3750,y:238,baseX:3750,baseY:238,vx:-1.55,w:38,h:34,phase:2.5,range:105,alive:true},
+          {x:4610,y:216,baseX:4610,baseY:216,vx:1.65,w:38,h:34,phase:.9,range:110,alive:true},
+          {x:5400,y:225,baseX:5400,baseY:225,vx:-1.7,w:38,h:34,phase:1.4,range:110,alive:true}
         ];
         function freshSkyBirds(){return skyBirdTemplate.map(b=>({...b}));}
         let enemies=level1EnemyTemplate.map(e=>({...e}));
@@ -1867,9 +1908,9 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
             lives:Math.floor(clamp(data.lives,1,99,5)),
             elapsedSeconds:clamp(data.elapsedSeconds,0,999999,0),
             superRemaining:clamp(data.superRemaining,0,SUPER_DURATION,0),
-            player:{x:clamp(data.player?.x,0,lv===1?VALLEY_END-40:lv===2?FOREST_END-40:3900,50),y:clamp(data.player?.y,-100,390,100),direction:data.player?.direction===-1?-1:1},
-            checkpoint:{reached:data.checkpoint?.reached===true,x:clamp(data.checkpoint?.x,0,lv===1?VALLEY_END:lv===2?FOREST_END:3900,0)},
-            skyCheckpoint:{reached:data.skyCheckpoint?.reached===true,x:clamp(data.skyCheckpoint?.x,0,3900,0)},
+            player:{x:clamp(data.player?.x,0,lv===1?VALLEY_END-40:lv===2?FOREST_END-40:SKY_END-40,50),y:clamp(data.player?.y,-100,390,100),direction:data.player?.direction===-1?-1:1},
+            checkpoint:{reached:data.checkpoint?.reached===true,x:clamp(data.checkpoint?.x,0,lv===1?VALLEY_END:lv===2?FOREST_END:SKY_END,0)},
+            skyCheckpoint:{reached:data.skyCheckpoint?.reached===true,x:clamp(data.skyCheckpoint?.x,0,SKY_END,0)},
             levelComplete:completed,inventory:{version:2,story,consumables},
             collectedPickups:Array.isArray(data.collectedPickups)?data.collectedPickups.filter(x=>typeof x==='string'&&x.length<=64).slice(0,100):[],
             inventoryUnlocked:data.inventoryUnlocked===true||story.includes('drink')||lv===3,
@@ -2792,9 +2833,15 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           }else{
             superRunClock=0;superLandingUntil=0;superWasAirborne=false;
           }
-          if(level===3&&!skyCheckpointReached&&player.x+player.w>1650&&player.x<1720&&player.y+player.h>330){
-            skyCheckpointReached=true;skyCheckpointX=1650;score+=250;setHUD();
-            emitPixelBurst(1675,347,['#a5f3fc','#e4c5ff','#fffde1'],18,130);checkpointChime();
+          if(level===3&&player.grounded&&player.y+player.h>=355){
+            for(const x of SKY_CHECKPOINTS){
+              if(x<=skyCheckpointX||player.x+player.w<=x-8||
+                 player.x>=x+44)continue;
+              skyCheckpointReached=true;skyCheckpointX=x;score+=250;setHUD();
+              emitPixelBurst(x+20,347,['#a5f3fc','#e4c5ff','#fffde1'],18,130);
+              checkpointChime();
+              if(activeSlot!==null)saveCurrentSlot(false);
+            }
           }
           if(level===2){
             for(const x of FOREST_CHECKPOINTS){
@@ -4307,6 +4354,29 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           if(r.x>cameraX+GAME_WIDTH+80||r.x+r.w<cameraX-80)return;
           ctx.drawImage(art,r.x,r.y,r.w,r.h);
         }
+        // MARCO CENTRAL — pavilhão com astrolábio, sem novas colisões.
+        function drawSkyObservatory(){
+          const w=520,h=310,x=Math.round(SKY_OBSERVATORY_X-w/2),y=70;
+          if(x>cameraX+GAME_WIDTH+80||x+w<cameraX-80)return;
+          const pulse=.5+.5*Math.sin(gameNow/770);
+          ctx.save();
+          ctx.globalAlpha=.10+.08*pulse;ctx.fillStyle='#8ce5ee';
+          ctx.beginPath();ctx.ellipse(SKY_OBSERVATORY_X,263,
+            47+4*pulse,41+4*pulse,0,0,Math.PI*2);ctx.fill();
+          ctx.globalAlpha=1;
+          if(extras.skyObservatory)
+            ctx.drawImage(extras.skyObservatory,x,y,w,h);
+          else{
+            ctx.fillStyle='#eadfc9';
+            for(const p of [105,175,345,415])ctx.fillRect(x+p,y+139,20,143);
+            ctx.fillStyle='#e6be70';ctx.fillRect(x+67,y+126,386,21);
+            ctx.strokeStyle='#e8b45e';ctx.lineWidth=6;
+            ctx.beginPath();ctx.ellipse(SKY_OBSERVATORY_X,263,73,54,0,0,Math.PI*2);ctx.stroke();
+            ctx.fillStyle='#58def3';ctx.beginPath();
+            ctx.arc(SKY_OBSERVATORY_X,263,23,0,Math.PI*2);ctx.fill();
+          }
+          ctx.restore();
+        }
         function drawSkyBackground(){
           if(extras.skyPanorama)drawObject(extras.skyPanorama,0,0,GAME_WIDTH,GAME_HEIGHT);
           else if(extras.skyTemple)drawObject(extras.skyTemple,0,0,GAME_WIDTH,GAME_HEIGHT);
@@ -4684,6 +4754,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           ctx.save();ctx.translate(-Math.round(cameraX),0);
           drawSkyWindGlints(); // partículas discretas acompanham as zonas de vento
           drawSkyTempleFacade(); // 267 atrás do altar e dos personagens
+          drawSkyObservatory(); // marco central atrás do Gabriel
           for(const b of level3Blocks){
             if(b.type==='skyGround')drawSkyGround(b);
             else if(b.type==='skyPlatform'){
@@ -4691,8 +4762,11 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
               else {ctx.fillStyle='#d9bf87';ctx.fillRect(b.x,b.y,b.w,b.h);}
             }
           }
-          const flag=skyCheckpointReached?extras.checkpointOn:extras.checkpointOff;
-          if(flag)drawObject(flag,1657,310,40,70);
+          for(const x of SKY_CHECKPOINTS){
+            if(x<cameraX-70||x>cameraX+GAME_WIDTH+70)continue;
+            const flag=x<=skyCheckpointX?extras.checkpointOn:extras.checkpointOff;
+            if(flag)drawObject(flag,x+7,310,40,70);
+          }
           drawSkyNimbo(); // Nimbo no alto da Fase 3
           drawSkyBirds();drawSkyAltar();
           if(state==='skyIntro'||state==='skyOutro')drawSkyStoryActors();
