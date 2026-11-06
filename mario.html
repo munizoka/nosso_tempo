@@ -4028,9 +4028,9 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           {x:2825,y:308,w:150,h:18},{x:3060,y:285,w:140,h:18},
           {x:3280,y:302,w:155,h:18},
           {x:3950,y:303,w:145,h:18},
-          {x:4140,y:326,w:135,h:18},{x:4268,y:280,w:130,h:18},
+          {x:4140,y:326,w:135,h:18},{x:4268,y:280,w:130,h:18,moving:true,baseX:4268,travel:22,speed:.75},
           {x:4475,y:285,w:145,h:18},{x:4660,y:325,w:120,h:18},
-          {x:4780,y:303,w:150,h:18},{x:5230,y:305,w:155,h:18},
+          {x:4780,y:303,w:150,h:18,moving:true,baseX:4780,travel:20,speed:.65},{x:5230,y:305,w:155,h:18},
           {x:5700,y:298,w:150,h:18},{x:6140,y:295,w:145,h:18},
           {x:6830,y:315,w:150,h:18}
         ];
@@ -4078,6 +4078,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           walkClock:0,idleClock:0
         };
         let prologueCheckpoint=60,prologueLibraryOpen=false,prologueClockOpen=false;
+        let prologueReactUntil=0;
         let prologueSceneStart=0,prologueSceneSeconds=0,prologueBanter=null;
         let prologueBanterUntil=0,prologueSpoken=new Set(),prologueAutosave=0;
         function isPrologueState(){
@@ -4105,7 +4106,9 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           princessPlayer.walkClock=0;princessPlayer.idleClock=0;
           prologueSpoken=new Set(PROLOGUE_BANTER.filter(d=>d.at<=princessPlayer.x).map(d=>d.at));
           prologueBanter=null;prologueBanterUntil=0;prologueAutosave=0;
+          prologueReactUntil=0;
           prologueSceneSeconds=0;prologueSceneStart=gameNow;
+          for(const p of PROLOGUE_PLATFORMS)if(p.moving)p.x=p.baseX;
           cameraX=Math.max(0,Math.min(PROLOGUE_END-GAME_WIDTH,princessPlayer.x-240));
           keys.left=keys.right=keys.up=keys.down=false;
           if(!saved||replay)savePrologueProgress(false);
@@ -4176,6 +4179,14 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           v.vx*=v.speed;
           if(v.vx!==0)v.direction=v.vx>0?1:-1;
           if(keys.up&&v.grounded){v.vy=v.jumpPower;v.grounded=false;}
+          // Plataformas móveis levam Vitoria sem alterar a física original.
+          for(const p of PROLOGUE_PLATFORMS){
+            if(!p.moving)continue;
+            const old=p.x;
+            p.x=p.baseX+Math.sin(elapsedSeconds*p.speed)*p.travel;
+            if(v.grounded&&Math.abs(v.y+v.h-p.y)<3&&
+               v.x+v.w>old&&v.x<old+p.w)v.x+=p.x-old;
+          }
           const oldX=v.x;
           v.x=Math.max(0,Math.min(PROLOGUE_END-v.w,v.x+v.vx));
           if(!prologueLibraryOpen&&oldX+v.w<=PROLOGUE_GATE_LIBRARY&&
@@ -4220,7 +4231,9 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           for(const line of PROLOGUE_BANTER){
             if(v.x>=line.at&&!prologueSpoken.has(line.at)){
               prologueSpoken.add(line.at);prologueBanter=line;
-              prologueBanterUntil=gameNow+3300;break;
+              prologueBanterUntil=gameNow+3300;
+              if(line.at===5180)prologueReactUntil=gameNow+1800;
+              break;
             }
           }
           v.walkClock=v.vx?v.walkClock+dt:0;
@@ -4321,6 +4334,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           const v=princessPlayer;
           let pose='prologueIdle';
           if(!v.grounded)pose=v.vy<-4?'jumpRise':v.vy<=3?'jumpApex':'landing';
+          else if(gameNow<prologueReactUntil)pose='prologueSurprised';
           else if(v.vx!==0){
             const step=Math.floor(v.walkClock/.11)%4;
             pose=step===0?'prologueWalk1':step===1?'prologueWalk2':
