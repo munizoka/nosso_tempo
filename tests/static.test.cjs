@@ -580,7 +580,7 @@ check('Parallax visível e templo centralizado, com base no chão',
  facade.y>=0&&facade.y+facade.h===380&&
  Math.abs(facade.x+facade.w/2-3110)<=.5);
 const crowRender=mario.match(
- /        \/\/ 61.png original até os PNGs[\s\S]*?(?=        \/\/ Posições compartilhadas pela câmera)/)?.[0];
+ /        \/\/ FASE 3 — SPRITES CELESTIAIS:[\s\S]*?(?=        \/\/ Posições compartilhadas pela câmera)/)?.[0];
 check('Asas procedurais e deformações dos corvos foram removidas',
  !!crowRender&&!mario.includes('function skyBirdFlightPose(')&&
  !mario.includes('function drawSkyBirdWings(')&&
@@ -588,11 +588,13 @@ check('Asas procedurais e deformações dos corvos foram removidas',
 const crowOps=[];
 const c={save(){},restore(){},translate(){},scale(){},fillRect(){}};
 const renderCrow=new Function('skyBirds','ctx','extras','cameraX','GAME_WIDTH','drawObject',
+ 'gameNow','player','forestDetectAlphaBounds','console',
  crowRender+'\nreturn drawSkyBirds;')(
- [{x:100,y:200,w:38,h:34,vx:-1.5,alive:true},
- {x:300,y:200,w:38,h:34,vx:1.5,alive:true},
- {x:1600,y:200,w:38,h:34,vx:1.5,alive:true}],
- c,{skyCrow:{width:38,height:34}},0,800,(...args)=>crowOps.push(args));
+ [{x:100,y:200,w:38,h:34,vx:-1.5,alive:true,phase:0},
+ {x:300,y:200,w:38,h:34,vx:1.5,alive:true,phase:1},
+ {x:1600,y:200,w:38,h:34,vx:1.5,alive:true,phase:2}],
+ c,{skyCrow:{width:38,height:34}},0,800,(...args)=>crowOps.push(args),
+ 1000,{x:150,w:32},()=>({x:0,y:0,w:10,h:10}),{warn(){}});
 renderCrow();
 check('Somente corvos visíveis desenhados com o sprite 61',
  crowOps.length===2&&crowOps.every(a=>a[0].width===38));
@@ -639,6 +641,51 @@ check('Nimbo atualiza só na Fase 3 e fica atrás do herói',
  mario.includes('resetPosition();resetSkyNimbo();invulnerable=1.5;')&&
  mario.includes('if(level===3)resetSkyNimbo(); // acompanha posição salva no checkpoint')&&
  mario.includes('function resetSkyNimbo()'));
+
+// Quadros dos corvos com recorte comum para não deslocar o corpo.
+check('Artes 268-270 estão presentes no repositório',
+ ['268.png','269.png','270.png'].every(name=>
+ fs.existsSync(path.join(root,name))&&fs.statSync(path.join(root,name)).size>1000));
+check('Três quadros do corvo registrados para voo 16-bit',
+ mario.includes("skyCrowUp:'268.png'")&&
+ mario.includes("skyCrowMid:'269.png'")&&
+ mario.includes("skyCrowDown:'270.png'")&&
+ mario.includes("const SKY_CROW_FRAME_KEYS=['skyCrowUp','skyCrowMid','skyCrowDown'];")&&
+ !mario.includes('function drawSkyBirdWings('));
+const skyFramesSource=mario.match(
+ /        \/\/ FASE 3 — SPRITES CELESTIAIS:[\s\S]*?(?=        \/\/ NIMBO VISUAL —)/)?.[0];
+check('Alinhamento de poses pode ser testado isoladamente',!!skyFramesSource);
+const mockFrames={
+ skyCrowUp:{naturalWidth:1254,naturalHeight:1254,key:'up'},
+ skyCrowMid:{naturalWidth:1254,naturalHeight:1254,key:'mid'},
+ skyCrowDown:{naturalWidth:1254,naturalHeight:1254,key:'down'}
+};
+const mockBounds={
+ up:{x:130,y:150,w:930,h:780},
+ mid:{x:105,y:190,w:960,h:690},
+ down:{x:145,y:230,w:900,h:820}
+};
+let frameScans=0;
+const skyFrameTest=new Function('extras','forestDetectAlphaBounds','console',
+ skyFramesSource+
+ '\nreturn {skySharedSpriteBounds,skyCrowFrameKey,SKY_CROW_FRAME_KEYS};')(
+ mockFrames,img=>{frameScans++;return mockBounds[img.key]},{warn(){}});
+const rect=skyFrameTest.skySharedSpriteBounds(skyFrameTest.SKY_CROW_FRAME_KEYS);
+skyFrameTest.skySharedSpriteBounds(skyFrameTest.SKY_CROW_FRAME_KEYS);
+check('Recorte alfa de 268-270 compartilhado e calculado uma única vez',
+ rect.x===105&&rect.y===150&&rect.w===960&&rect.h===900&&frameScans===3);
+check('Ciclo real de voo sobe, abre, desce e abre',
+ [0,.15,.30,.45,.60].map(s=>
+ skyFrameTest.skyCrowFrameKey(s,{x:100,w:38,phase:0},700)).join(',')===
+ 'skyCrowUp,skyCrowMid,skyCrowDown,skyCrowMid,skyCrowUp');
+check('Batidas aumentam discretamente perto do herói',
+ skyFrameTest.skyCrowFrameKey(.12,{x:100,w:38,phase:0},119)==='skyCrowMid'&&
+ skyFrameTest.skyCrowFrameKey(.12,{x:100,w:38,phase:0},700)==='skyCrowUp');
+check('Nimbo 271-274 mantém o mesmo enquadramento nas mudanças de estado',
+ mario.includes('skySharedSpriteBounds(SKY_NIMBO_POSE_KEYS)')&&
+ mario.includes('const scale=Math.min(60/source.w,55/source.h);')&&
+ mario.includes('ctx.drawImage(img,source.x,source.y,source.w,source.h,'));
+
 
 check('Inventário com dezoito espaços',mario.includes('inv-story-grid')&&mario.includes('inv-consumable-grid')&&mario.includes('for(let n=0;n<9;n++)'));
 check('Sprite 68 e categorias RPG',mario.includes('68.png')&&mario.includes('ITENS DE HISTÓRIA')&&mario.includes('CONSUMÍVEIS'));
