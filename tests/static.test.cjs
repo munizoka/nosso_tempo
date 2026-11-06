@@ -631,9 +631,18 @@ check('Descanso devolve Nimbo ao estado de vigia',
 const nimboArt=mario.match(
  /        \/\/ NIMBO VISUAL — 271 a 275[\s\S]*?(?=        function drawSkyBirds\(\))/)?.[0];
 check('Sprites opcionais e alerta de impacto estão ligados',
- !!nimboArt&&['271.png','272.png','273.png','274.png','275.png'].every(f=>mario.includes(f))&&
+ !!nimboArt&&['271.2.png','272.2.png','273.png','274.png','275.png'].every(f=>mario.includes(f))&&
  nimboArt.includes('Math.round(n.targetX)-16')&&
  !/isColliding\(player,skyNimbo\)/.test(nimboCore));
+check('Nimbo vigia com imagens 271.2 e 272.2 sem perder outras poses',
+ mario.includes("skyNimboIdle:'271.2.png'")&&
+ mario.includes("skyNimboCharge:'272.2.png'")&&
+ mario.includes("skyNimboFire:'273.png'")&&
+ mario.includes("skyNimboTired:'274.png'")&&
+ mario.includes("skyNimboBolt:'275.png'")&&
+ ['271.2.png','272.2.png'].every(file=>
+  fs.existsSync(path.join(root,file))&&
+  fs.statSync(path.join(root,file)).size>1000));
 check('Nimbo atualiza só na Fase 3 e fica atrás do herói',
  mario.includes("if(state==='playing')updateSkyNimbo(dt);")&&
  mario.includes('drawSkyNimbo(); // Nimbo no alto da Fase 3')&&
