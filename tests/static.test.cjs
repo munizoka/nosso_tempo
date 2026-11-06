@@ -216,7 +216,8 @@ check('Moedas da Fase 2 sob plataformas seguem coletáveis',
 // produzidos por cropSprite(). Uma simples busca de strings não teria
 // detectado o bug que deixou TODAS as plataformas invisíveis.
 const forestPlatformRenderer=mario.match(
- /        const forestPlatformVisualCache=new Map\(\);[\s\S]*?(?=        function drawForestScenery\(\))/)?.[0];
+ // Isolar SOMENTE o renderizador: funções da casa e plantas pertencem a outros testes.
+ /        const forestPlatformVisualCache=new Map\(\);[\s\S]*?(?=        function forestWitchLayout\(\))/)?.[0];
 check('Renderizador da plataforma da Fase 2 existe',!!forestPlatformRenderer);
 function testForestPlatformDraw(sourceType){
  const calls=[],ctx={
@@ -300,8 +301,14 @@ check('Terra interna 254 começa perto do topo e é coberta pela relva 253',
 
 // A casa usa as COORDENADAS da imagem original 256. Os PNGs 257 e 261
 // NÃO recebem crop alfa independente; a fumaça é ancorada na chaminé.
-const witchRendererSource=mario.match(
- /        function forestWitchLayout\(\)\{[\s\S]*?(?=        function drawForestScenery\(\))/)?.[0];
+// Capturar somente as funções da casa e sua decoração; a vegetação
+// possui dependências próprias que são testadas em outro bloco abaixo.
+const witchCoreSource=mario.match(
+ /        function forestWitchLayout\(\)\{[\s\S]*?(?=        \/\/ FASE 2 — REATIVIDADE MÁGICA:)/)?.[0];
+const witchDecorationsSource=mario.match(
+ /        function drawForestWitchDecorations\(\)\{[\s\S]*?(?=        function drawForestScenery\(\))/)?.[0];
+const witchRendererSource=witchCoreSource&&witchDecorationsSource
+ ? witchCoreSource+'\n'+witchDecorationsSource : null;
 check('As funções da casa animada são isoláveis para regressão',!!witchRendererSource);
 const witchMockOriginal={naturalWidth:1536,naturalHeight:1024};
 const witchMockClean={naturalWidth:1536,naturalHeight:1024};
