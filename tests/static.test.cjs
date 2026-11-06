@@ -778,6 +778,71 @@ check('PNG 276 usa cropSprite e SVG anterior continua como reserva',
  mario.includes("'skyObservatoryLegacy','skyCrowUp'")&&
  !mario.includes("'skyObservatory','skyCrowUp'"));
 
+
+const skyGroundPainter=mario.match(
+ /        \/\/ REMAKE FASE 3 — 277\.png[\s\S]*?(?=        function drawSkyWind\(\))/)?.[0];
+check('Renderizador do novo chão celestial é isolável',!!skyGroundPainter);
+const groundCalls={tiles:[],cornices:[],rects:[],clips:0,strokes:0};
+const groundCtx={
+ save(){},restore(){},beginPath(){},clip(){groundCalls.clips++},
+ rect(...a){groundCalls.rects.push(a)},
+ fillRect(){},strokeRect(){groundCalls.strokes++},
+ drawImage(...a){groundCalls.tiles.push(a)}
+};
+const texture277={width:256,height:128};
+const cornice59={width:104,height:28};
+const groundDraw=new Function('ctx','extras','cameraX','GAME_WIDTH','drawObject',
+ skyGroundPainter+'\nreturn drawSkyGround;')(
+ groundCtx,{skyGroundTexture:texture277,skyGround:cornice59},
+ 0,800,(...a)=>groundCalls.cornices.push(a));
+groundDraw({x:0,y:380,w:470,h:140,type:'skyGround'});
+check('277 repete sem comprimir a textura no fim dos blocos',
+ groundCalls.tiles.length>=8&&
+ groundCalls.tiles.every(a=>a[0]===texture277&&a[3]===256&&
+ a[5]%128===0&&a[7]===128)&&
+ groundCalls.clips===1);
+check('Cornija original 59 é preservada e desenhada sobre a pedra',
+ groundCalls.cornices.length===5&&
+ groundCalls.cornices.every(x=>x[0]===cornice59&&x[4]===28)&&
+ mario.includes("skyGroundTexture:'277.png'")&&
+ mario.includes("skyGround: '59.png'"));
+const tileCount=groundCalls.tiles.length;
+groundDraw({x:2000,y:380,w:300,h:140,type:'skyGround'});
+check('Não renderiza piso fora da câmera',
+ groundCalls.tiles.length===tileCount);
+const partialCalls=[];
+const partialCtx={
+ save(){},restore(){},beginPath(){},rect(){},clip(){},
+ fillRect(){},strokeRect(){},drawImage(...a){partialCalls.push(a)}
+};
+const partialGround=new Function('ctx','extras','cameraX','GAME_WIDTH','drawObject',
+ skyGroundPainter+'\nreturn drawSkyGround;')(
+ partialCtx,{skyGroundTexture:texture277},850,800,()=>{});
+partialGround({x:900,y:380,w:270,h:140,type:'skyGround'});
+check('Blocos desalinhados usam grade global com recorte nas bordas',
+ partialCalls.length>0&&
+ partialCalls.some(a=>a[5]<900&&a[5]+a[7]>900)&&
+ partialCalls.every(a=>a[7]===128&&a[5]%128===0));
+const backup={strokes:0};
+const backupCtx={
+ save(){},restore(){},beginPath(){},rect(){},clip(){},
+ fillRect(){},strokeRect(){backup.strokes++}
+};
+const backupGround=new Function('ctx','extras','cameraX','GAME_WIDTH','drawObject',
+ skyGroundPainter+'\nreturn drawSkyGround;')(
+ backupCtx,{},0,800,()=>{});
+backupGround({x:0,y:380,w:470,h:140,type:'skyGround'});
+check('Chão antigo permanece disponível se 277 não carregar',
+ backup.strokes>0&&
+ mario.includes("'skyGroundTexture',")&&
+ fs.existsSync(path.join(root,'277.png'))&&
+ fs.statSync(path.join(root,'277.png')).size>1000);
+check('Novo piso altera apenas desenho e mantém blocos e colisões',
+ mario.includes("const SKY_END=6400;")&&
+ mario.includes("function activeBlocks(){")&&
+ !skyGroundPainter.includes("level3Blocks.push(")&&
+ !skyGroundPainter.includes("player.y="));
+
 check('Inventário com dezoito espaços',mario.includes('inv-story-grid')&&mario.includes('inv-consumable-grid')&&mario.includes('for(let n=0;n<9;n++)'));
 check('Sprite 68 e categorias RPG',mario.includes('68.png')&&mario.includes('ITENS DE HISTÓRIA')&&mario.includes('CONSUMÍVEIS'));
 check('Relógio virtual congela na pausa',mario.includes('if(!inventoryOpen&&!menuOpen){')&&mario.includes('gameNow+=dt*1000')&&mario.includes("if(!sceneReady||inventoryOpen||menuOpen||state==='menu')return"));
