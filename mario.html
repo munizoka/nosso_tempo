@@ -900,7 +900,8 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           {id:1,name:'PRIMEIRA AVENTURA',x:139,y:319,open:true,color:'#ff6158'},
           {id:2,name:'FLORESTA MISTERIOSA',x:340,y:236,open:true,color:'#fab53c'},
           {id:3,name:'TEMPLO DOS VENTOS',x:674,y:163,open:true,color:'#91dafa'},
-          {id:'shop',name:'CANO BURGER',x:363,y:338,open:true,color:'#ff923b'}
+          {id:'shop',name:'CANO BURGER',x:363,y:338,open:true,color:'#ff923b'},
+          {id:'prologue',name:'UMA PRINCESA NADA COMPORTADA',x:203,y:344,open:true,color:'#f6a5c9'}
         ];
         let mapTip='MOVA A CABEÇA E ESCOLHA UMA FASE';
         function mapClosest() {
@@ -911,6 +912,8 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
         function returnToMap() {
           cancelGabrielAfk();
           if(state==='shop'){shopPanelOpen=false;document.getElementById('cano-shop-panel').hidden=true;mapHead.x=mapLevels[3].x;mapHead.y=mapLevels[3].y;}
+          if(isPrologueState())savePrologueProgress(false);
+          if(isPrologueState())level=1;
           state='map';keys.left=keys.right=keys.up=keys.down=false;
           superPower.until=superPower.dashUntil=superPower.cooldownUntil=0; // Fase encerrada.
           superRunClock=0;superLandingUntil=0;superWasAirborne=false;
@@ -924,6 +927,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           if(!node){mapTip='APROXIME-SE DE UMA FASE';return;}
           if(!node.open){mapTip='FASE BLOQUEADA!';return;}
           if(node.id==='shop'){enterCanoShop();return;}
+          if(node.id==='prologue'){startPrologue({replay:true});return;}
           level=node.id;
           state='playing';
           restartCurrentLevel();
@@ -1050,7 +1054,8 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
               if(chosen===n){ctx.strokeStyle='#fff7ce';ctx.lineWidth=3;ctx.strokeRect(n.x-20,n.y-25,40,47);}
               continue;
             }
-            const complete=!!levelComplete[n.id];
+            const complete=n.id==='prologue'?
+              !!prologueSlots[activeSlot]?.completed:!!levelComplete[n.id];
             ctx.fillStyle='#29242b';ctx.fillRect(n.x-13,n.y-8,28,18);
             ctx.fillStyle=complete?'#f8c545':n.color;ctx.fillRect(n.x-10,n.y-10,22,15);
             ctx.fillStyle='#fff8c6';ctx.fillRect(n.x-5,n.y-7,10,5);
@@ -1066,7 +1071,9 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           if(chosen){
             if(chosen.open){
               const status=chosen.id!=='shop'&&levelComplete[chosen.id]?' • CONCLUÍDA':'';
-              footerText=chosen.id==='shop'?'🍔 CANO BURGER • LOJA • ENTER / A':('FASE '+chosen.id+' • '+chosen.name+status+' • ENTER / A');
+              footerText=chosen.id==='shop'?'🍔 CANO BURGER • LOJA • ENTER / A':
+                chosen.id==='prologue'?'PRÓLOGO • VITORIA NO CASTELO • ENTER / A':
+                ('FASE '+chosen.id+' • '+chosen.name+status+' • ENTER / A');
             } else footerText='FASE 3 • EM BREVE';
           }
           retroText(footerText,400,432,8,'#fff8cf');
@@ -1102,7 +1109,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
         function setHUD() {
           HUD.score.textContent = `SCORE: ${score}`;
           if(HUD.coins && HUD.coins.textContent!=='🪙 '+coins)HUD.coins.textContent='🪙 '+coins;
-          if (HUD.level) HUD.level.textContent = state==='shop'?'CANO BURGER':('FASE: '+level);
+          if (HUD.level) HUD.level.textContent = isPrologueState()?'PRÓLOGO':(state==='shop'?'CANO BURGER':('FASE: '+level));
           const showDamage=elapsedSeconds<damagedHeartUntil;
           const signature=[lives,gameLives(),showDamage?damagedHeartIndex:-1].join(':');
           if(HUD.lives&&signature!==lastHeartSignature){
@@ -1251,6 +1258,11 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
         const vitoriaSpritePaths={
           idle:'166 vitoria idle.png',
           walk1:'199 vitoria walk 1.png',walkMid:'200 vitoria mid.png',walk2:'201 vitoria walk 2.png',
+          prologueIdle:'284 confident.png',
+          prologueWalk1:'285 walk 1.png',prologueWalk2:'286 walk 2.png',
+          prologueWalk3:'287 walk 3.png',prologueCrossed:'288 cruzados.png',
+          prologueWatch:'289 watch.png',prologueSurprised:'290 surprised.png',
+          prologueMarch:'291 marcha.png',
           lookUp:'169 vitoria up.png',lookDown:'170 vitoria down.png',
           talkOpen:'171 vitoria opened.png',talkClosed:'172 closed.png',
           surprised:'173 vitoria surprised.png',happy:'174 viroria happy.png',
@@ -1267,6 +1279,21 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
             catch(error){console.warn('Falha ao processar pose da Vitoria:',path,error);}
           };
           image.onerror=()=>console.warn('Imagem da Vitoria indisponível:',path);
+          image.src=encodeURI(path);
+        }
+
+        // PRÓLOGO — seis ambientes completos e oito novas poses da Vitoria.
+        // Os saltos e as bocas abertas/fechadas continuam usando 171–177.
+        const prologueBackgroundPaths={
+          bedroom:'281 quarto.png',hall:'278 salão real.png',
+          library:'279 biblioteca real.png',clock:'280 torre do relogio.png',
+          courtyard:'282 patio.png',gate:'283 portão.png'
+        };
+        const prologueArt={};
+        for(const [place,path] of Object.entries(prologueBackgroundPaths)){
+          const image=new Image();
+          image.onload=()=>{prologueArt[place]=image;};
+          image.onerror=()=>console.warn('Cenário do prólogo indisponível:',path);
           image.src=encodeURI(path);
         }
 
@@ -1388,6 +1415,11 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
                 else if(testMode==='final2'){showForestTitle();startForest();beginForestScene('forestOutro');}
                 else if(testMode==='intro3'){showSkyTitle();startSkyLevel();}
                 else if(testMode==='final3'){showSkyTitle();startSkyLevel();beginSkyScene('skyOutro');}
+                else if(testMode==='prologo'||testMode==='prologo-final'){
+                  startPrologue();
+                  if(testMode==='prologo-final'){finishPrologueIntro();
+                    princessPlayer.x=PROLOGUE_END-260;cameraX=PROLOGUE_END-GAME_WIDTH;}
+                }
                 else if(testMode==='observatorio3'){
                   showSkyTitle();startSkyLevel();finishSkyIntro();
                   player.x=SKY_OBSERVATORY_X-140;player.y=340;
@@ -1970,6 +2002,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
         }
         function saveCurrentSlot(notify=true){
           if(activeSlot===null)return false;
+          if(isPrologueState())savePrologueProgress(false);
           slotTable[activeSlot]=makeSaveSnapshot();
           const ok=writeSlotTable();
           if(notify)menuMessage(ok?'Espaço '+(activeSlot+1)+' salvo com sucesso.':'Erro ao salvar.');
@@ -1990,7 +2023,8 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           if(index<0||index>2)return;
           if(slotTable[index]&&!window.confirm('Substituir o save do espaço '+(index+1)+'?'))return;
           activeSlot=index;clearForNewCampaign();
-          saveCurrentSlot(false);closeMainMenu();menuMessage('');
+          prologueSlots[index]=null; // Substituir slot também reinicia o prólogo.
+          saveCurrentSlot(false);startPrologue();closeMainMenu();menuMessage('');
         }
         function loadCampaign(index){
           const data=sanitiseSave(slotTable[index]);
@@ -2020,6 +2054,8 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           }
           if(level===3)resetSkyNimbo(); // acompanha posição salva no checkpoint
           renderInventory();setHUD();closeMainMenu();menuMessage('');
+          if(prologueSlots[index]?.started&&!prologueSlots[index]?.completed)
+            startPrologue({resume:true});
         }
 
 
@@ -2034,7 +2070,9 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
             head.textContent='ESPAÇO '+(i+1)+(save?.legacy?' • LEGADO':'');
             button.appendChild(head);
             const meta=document.createElement('span');meta.className='sgb-slot-meta';
-            meta.textContent=save?'Fase '+save.level+' • '+save.difficulty.toUpperCase()+' • '+new Date(save.savedAt).toLocaleDateString('pt-BR'):
+            const prologuePending=prologueSlots[i]?.started&&!prologueSlots[i]?.completed;
+            meta.textContent=save?(prologuePending?'PRÓLOGO • VITORIA NO CASTELO':'FASE '+save.level)+
+              ' • '+save.difficulty.toUpperCase()+' • '+new Date(save.savedAt).toLocaleDateString('pt-BR'):
               'VAZIO • NOVA AVENTURA';
             button.appendChild(meta);
             button.disabled=slotMode==='load'&&!save;
@@ -2210,8 +2248,13 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
             if(!found.some(Boolean))return menuMessage('Ainda não há saves nesta conta.');
             if(!window.confirm('Baixar os saves e substituir os espaços locais correspondentes?'))return;
             try{localStorage.setItem(GAME_SAVE_KEY+'-backup-'+Date.now(),JSON.stringify(slotTable));}catch(e){}
-            found.forEach((save,i)=>{if(save)slotTable[i]=save;});
+            found.forEach((save,i)=>{
+              if(save){slotTable[i]=save;prologueSlots[i]=null;}
+            });
             if(!writeSlotTable())throw new Error('Armazenamento local indisponível.');
+            // Download sobrescreve campanhas antigas: limpa também seus
+            // checkpoints locais para não misturar o prólogo de outro slot.
+            try{localStorage.setItem(PROLOGUE_SAVE_KEY,JSON.stringify(prologueSlots));}catch(e){}
             // Não deixar uma partida ativa antiga sobrescrever a cópia recebida.
             activeSlot=null;state='menu';inventoryOpen=false;
             inventory.story.splice(0);
@@ -2257,7 +2300,10 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           for(const b of [...level2Blocks,...level3Blocks])if(b.moving){b.x=b.baseX;b.y=b.baseY;}
           resetPosition();resetSkyNimbo();setHUD();
         }
-        window.reiniciarFase=restartCurrentLevel;
+        window.reiniciarFase=function(){
+          if(isPrologueState())startPrologue({replay:true});
+          else restartCurrentLevel();
+        };
         function loseLife(reason='enemy'){
           cancelGabrielAfk();
           if(state!=='playing')return;
@@ -2394,6 +2440,8 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           if(state==='skyIntro'){finishSkyIntro();return true;}
           if(state==='skyAltarCharge'){beginSkyScene('skyOutro');return true;}
           if(state==='skyOutro'){finishSkyOutro();return true;}
+          if(state==='prologueIntro'){finishPrologueIntro();return true;}
+          if(state==='prologueOutro'){finishPrologueOutro();return true;}
           return false;
         }
 
@@ -2427,6 +2475,13 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           if(state==='title2'&&(e.code==='Enter'||e.code==='Space'||e.code==='ArrowUp')){startForest();return;}
           if(state==='title3'&&(e.code==='Enter'||e.code==='Space'||e.code==='ArrowUp')){startSkyLevel();return;}
           if(['Enter','Space','ArrowUp'].includes(e.code)&&skipStoryScene())return;
+          if(state==='prologuePlaying'){
+            if(e.code==='KeyE'&&!e.repeat){prologueInteract();return;}
+            if(e.code==='ArrowLeft'||e.code==='KeyA')keys.left=true;
+            if(e.code==='ArrowRight'||e.code==='KeyD')keys.right=true;
+            if(e.code==='Space'||e.code==='ArrowUp'||e.code==='KeyW')keys.up=true;
+            return;
+          }
           if(state!=='playing')return;
           if(e.code==='KeyT'&&!e.repeat){activateSuperFromBurger();return;}
           if(e.code==='KeyX'&&!e.repeat){trySuperDash();return;}
@@ -2464,7 +2519,8 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
             if(state==='title2'&&key==='up'){startForest();return;}
             if(state==='title3'&&key==='up'){startSkyLevel();return;}
             if(id==='btn-jump'&&skipStoryScene())return;
-            if(state!=='playing')return;
+            if(state==='prologuePlaying'&&id==='btn-jump'&&prologueInteract())return;
+            if(state!=='playing'&&state!=='prologuePlaying')return;
             keys[key]=true;
           };
           const release=e=>{e.preventDefault();keys[key]=false;};
@@ -2712,6 +2768,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           document.body.classList.toggle('sgb-shop-mode',state==='shop');
           if(!sceneReady||inventoryOpen||menuOpen||state==='menu')return;
           updateToast();
+          if(isPrologueState()){updatePrologue(dt,now);return;}
           if(state==='map'){updateMap(dt);return;}
           if(state==='shop'){updateCanoShop(dt);return;}
           if(state==='cutscene'){
@@ -3952,6 +4009,397 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           const image=processedAssets.vitoria[name]||
             processedAssets.vitoria.idle||processedAssets.princess;
           drawSpriteOnFeet(image,centerX,footY,height,facing);
+        }
+
+        // PRÓLOGO JOGÁVEL — a princesa atravessa UM castelo de 7.500px.
+        // Motor próprio: não interfere nas físicas nem nos estados das fases 1–3.
+        const PROLOGUE_END=7500;
+        const PROLOGUE_GATE_LIBRARY=3720,PROLOGUE_GATE_CLOCK=5030;
+        const PROLOGUE_LEVER_LIBRARY={x:3290,y:380};
+        const PROLOGUE_LEVER_CLOCK={x:4560,y:285};
+        const PROLOGUE_CHECKPOINTS=[1120,2600,3970,5280,6480];
+        const PROLOGUE_ROOMS=[
+          {start:0,end:1280,asset:'bedroom',name:'APOSENTOS DA VITORIA',shade:'#a96c93'},
+          {start:1280,end:2580,asset:'hall',name:'SALÃO REAL',shade:'#a16f52'},
+          {start:2580,end:3820,asset:'library',name:'BIBLIOTECA',shade:'#756079'},
+          {start:3820,end:5140,asset:'clock',name:'TORRE DO RELÓGIO',shade:'#6a6681'},
+          {start:5140,end:6420,asset:'courtyard',name:'PÁTIO INTERNO',shade:'#77908a'},
+          {start:6420,end:7500,asset:'gate',name:'GRANDE PORTÃO',shade:'#b09c7f'}
+        ];
+        const PROLOGUE_FLOOR=[
+          {x:0,w:4130},{x:4290,w:430},{x:4890,w:2610}
+        ].map(b=>({...b,y:380,h:120}));
+        // Plataformas unidirecionais; a torre tem dois vãos de travessia.
+        const PROLOGUE_PLATFORMS=[
+          {x:540,y:302,w:160,h:18},{x:995,y:314,w:130,h:18},
+          {x:1570,y:295,w:145,h:18},{x:2025,y:278,w:135,h:18},
+          {x:2825,y:308,w:150,h:18},{x:3060,y:285,w:140,h:18},
+          {x:3280,y:302,w:155,h:18},
+          {x:3950,y:303,w:145,h:18},
+          {x:4140,y:326,w:135,h:18},{x:4268,y:280,w:130,h:18,moving:true,baseX:4268,travel:22,speed:.75},
+          {x:4475,y:285,w:145,h:18},{x:4660,y:325,w:120,h:18},
+          {x:4780,y:303,w:150,h:18,moving:true,baseX:4780,travel:20,speed:.65},{x:5230,y:305,w:155,h:18},
+          {x:5700,y:298,w:150,h:18},{x:6140,y:295,w:145,h:18},
+          {x:6830,y:315,w:150,h:18}
+        ];
+        const PROLOGUE_LINES_INTRO=[
+          {from:0,to:3,speaker:'VITORIA',message:'IH, O GABRIEL JÁ DEVE ESTAR CHEGANDO...',pose:'prologueWatch'},
+          {from:3,to:5.8,speaker:'VITORIA',message:'JÁ SEI! VOU FALAR QUE JÁ ESTOU INDO...',pose:'thinking'},
+          {from:5.8,to:9.2,speaker:'VITORIA',message:'E DEMORAR MAIS 30 MINUTINHOS! HIHIHI!',pose:'happy'},
+          {from:9.2,to:12.3,speaker:'VITORIA',message:'MAS SE ELE ME FIZER ESPERAR CINCO MINUTOS...',pose:'prologueCrossed'},
+          {from:12.3,to:15,speaker:'VITORIA',message:'É BOM QUE TENHA UMA EXPLICAÇÃO!',pose:'prologueCrossed'},
+          {from:15,to:18.5,speaker:'VITORIA',message:'AH, QUER SABER? VOU EU MESMA ATÉ O PORTÃO!',pose:'talk'}
+        ];
+        const PROLOGUE_LINES_OUTRO=[
+          {from:0,to:2.9,speaker:'VITORIA',message:'ATÉ QUE ENFIM SAÍ DESSE CASTELO!',pose:'talk'},
+          {from:2.9,to:5.9,speaker:'VITORIA',message:'AGORA SÓ FALTA O SENHOR GABRIEL APARECER...',pose:'prologueWatch'},
+          {from:5.9,to:8.7,speaker:'VITORIA',message:'SE ELE ESTIVER OLHANDO PRA OUTRA PRINCESA, EU...',pose:'prologueCrossed'},
+          {from:8.7,to:11.8,speaker:'VITORIA',message:'AI... TOMARA QUE CHEGUE LOGO. TÔ COM SAUDADE.',pose:'happy'},
+          {from:11.8,to:15,speaker:'VITORIA',message:'MAS NÃO VOU FALAR ISSO PRA ELE!',pose:'prologueCrossed'}
+        ];
+        const PROLOGUE_BANTER=[
+          {at:1360,speaker:'GUARDA',message:'PRINCESA, A FAMÍLIA REAL PEDIU QUE FICASSE NOS APOSENTOS!'},
+          {at:1550,speaker:'VITORIA',message:'ENTÃO AVISA QUE EU SAÍ PRA TOMAR UM AR. MUITO AR!'},
+          {at:2670,speaker:'VITORIA',message:'UMA BIBLIOTECA GIGANTE... ONDE ESTÁ A PASSAGEM SECRETA?'},
+          {at:3890,speaker:'VITORIA',message:'ENGRENAGENS, ESCADAS... ESSE CASTELO NÃO TEM ELEVADOR?!'},
+          {at:5180,speaker:'VITORIA',message:'VI UM BRILHO VIOLETA NO CÉU... QUE ESTRANHO.'},
+          {at:6080,speaker:'VITORIA',message:'AI, GABRIEL, ANDA LOGO... NÃO É QUE EU ESTEJA COM SAUDADE!'}
+        ];
+        const PROLOGUE_SAVE_KEY='super-gabriel-bros-prologo-local-v1';
+        function readPrologueSlots(){
+          try{
+            const raw=JSON.parse(localStorage.getItem(PROLOGUE_SAVE_KEY)||'null');
+            if(Array.isArray(raw))return [0,1,2].map(i=>{
+              const s=raw[i];if(!s||s.started!==true)return null;
+              return {started:true,completed:s.completed===true,
+                x:Number.isFinite(s.x)?Math.max(60,Math.min(PROLOGUE_END-90,s.x)):70,
+                checkpoint:PROLOGUE_CHECKPOINTS.includes(s.checkpoint)?s.checkpoint:60,
+                library:s.library===true,clock:s.clock===true};
+            });
+          }catch(e){}
+          return [null,null,null];
+        }
+        const prologueSlots=readPrologueSlots();
+        const princessPlayer={
+          x:70,y:312,w:29,h:68,vx:0,vy:0,speed:4.55,
+          gravity:.62,jumpPower:-12.7,grounded:true,direction:1,
+          walkClock:0,idleClock:0
+        };
+        let prologueCheckpoint=60,prologueLibraryOpen=false,prologueClockOpen=false;
+        let prologueReactUntil=0;
+        let prologueSceneStart=0,prologueSceneSeconds=0,prologueBanter=null;
+        let prologueBanterUntil=0,prologueSpoken=new Set(),prologueAutosave=0;
+        function isPrologueState(){
+          return state==='prologueIntro'||state==='prologuePlaying'||state==='prologueOutro';
+        }
+        function savePrologueProgress(completed=false){
+          if(activeSlot===null)return;
+          prologueSlots[activeSlot]={
+            started:true,completed,
+            x:Math.round(princessPlayer.x),checkpoint:prologueCheckpoint,
+            library:prologueLibraryOpen,clock:prologueClockOpen
+          };
+          try{localStorage.setItem(PROLOGUE_SAVE_KEY,JSON.stringify(prologueSlots));}catch(e){}
+        }
+        function startPrologue({resume=false,replay=false}={}){
+          // Uma campanha NOVA começa no prólogo; saves legados sem registro
+          // continuam na fase que já tinham, sem forçar replay.
+          const saved=resume&&activeSlot!==null?prologueSlots[activeSlot]:null;
+          level=0;state=saved?'prologuePlaying':'prologueIntro';
+          prologueCheckpoint=saved?.checkpoint??60;
+          prologueLibraryOpen=!!saved?.library;prologueClockOpen=!!saved?.clock;
+          const requestedX=saved?.x??70;
+          // Saves capturados sobre vãos/plataformas não reaparecem no vazio.
+          const safeSpawn=PROLOGUE_FLOOR.some(b=>
+            requestedX>=b.x+2&&requestedX+princessPlayer.w<=b.x+b.w-2);
+          princessPlayer.x=safeSpawn?requestedX:prologueCheckpoint;
+          if(!saved)princessPlayer.x=70;
+          princessPlayer.y=312;princessPlayer.vx=princessPlayer.vy=0;
+          princessPlayer.grounded=true;princessPlayer.direction=1;
+          princessPlayer.walkClock=0;princessPlayer.idleClock=0;
+          prologueSpoken=new Set(PROLOGUE_BANTER.filter(d=>d.at<=princessPlayer.x).map(d=>d.at));
+          prologueBanter=null;prologueBanterUntil=0;prologueAutosave=0;
+          prologueReactUntil=0;
+          prologueSceneSeconds=0;prologueSceneStart=gameNow;
+          for(const p of PROLOGUE_PLATFORMS)if(p.moving)p.x=p.baseX;
+          cameraX=Math.max(0,Math.min(PROLOGUE_END-GAME_WIDTH,princessPlayer.x-240));
+          keys.left=keys.right=keys.up=keys.down=false;
+          if(!saved||replay)savePrologueProgress(false);
+          setHUD();
+        }
+        function finishPrologueIntro(){
+          if(state!=='prologueIntro')return;
+          state='prologuePlaying';prologueSceneSeconds=0;
+          keys.left=keys.right=keys.up=keys.down=false;
+          setHUD();
+          savePrologueProgress(false);
+        }
+        function beginPrologueOutro(){
+          if(state!=='prologuePlaying')return;
+          princessPlayer.x=PROLOGUE_END-130;princessPlayer.y=312;
+          princessPlayer.vx=princessPlayer.vy=0;princessPlayer.grounded=true;
+          prologueSceneStart=gameNow;prologueSceneSeconds=0;
+          state='prologueOutro';keys.left=keys.right=keys.up=keys.down=false;
+          cameraX=PROLOGUE_END-GAME_WIDTH;
+          setHUD();
+        }
+        function finishPrologueOutro(){
+          if(state!=='prologueOutro')return;
+          savePrologueProgress(true);
+          // Vitoria fica ao lado da fachada do castelo existente na Fase 1;
+          // Gabriel assume no começo do Vale, sem alterar o sequestro original.
+          level=1;state='playing';
+          restartCurrentLevel();
+          if(activeSlot!==null)saveCurrentSlot(false);
+          showItemToast('PRÓLOGO CONCLUÍDO! ENCONTRE VITORIA NO CASTELO!');
+        }
+        function prologueNearLever(lever){
+          return Math.abs(princessPlayer.x+princessPlayer.w/2-lever.x)<60&&
+            Math.abs(princessPlayer.y+princessPlayer.h-lever.y)<62;
+        }
+        function prologueInteract(){
+          if(state!=='prologuePlaying')return false;
+          if(!prologueLibraryOpen&&prologueNearLever(PROLOGUE_LEVER_LIBRARY)){
+            prologueLibraryOpen=true;savePrologueProgress(false);
+            prologueBanter={speaker:'VITORIA',message:'ACHEI! UMA ALAVANCA ESCONDIDA ENTRE OS LIVROS!'};
+            prologueBanterUntil=gameNow+3500;return true;
+          }
+          if(!prologueClockOpen&&prologueNearLever(PROLOGUE_LEVER_CLOCK)){
+            prologueClockOpen=true;savePrologueProgress(false);
+            prologueBanter={speaker:'VITORIA',message:'PRONTINHO! A TORRE DO RELÓGIO NÃO VAI ME PRENDER!'};
+            prologueBanterUntil=gameNow+3500;return true;
+          }
+          return false;
+        }
+        function prologueCollision(a,b){
+          return a.x<b.x+b.w&&a.x+a.w>b.x&&a.y<b.y+b.h&&a.y+a.h>b.y;
+        }
+        function updatePrologue(dt,now){
+          if(state==='prologueIntro'){
+            prologueSceneSeconds=(now-prologueSceneStart)/1000;
+            if(prologueSceneSeconds>=18.5)finishPrologueIntro();
+            return;
+          }
+          if(state==='prologueOutro'){
+            prologueSceneSeconds=(now-prologueSceneStart)/1000;
+            if(prologueSceneSeconds>=15.8)finishPrologueOutro();
+            return;
+          }
+          if(state!=='prologuePlaying')return;
+          elapsedSeconds+=dt;
+          const v=princessPlayer;
+          v.vx=(keys.right?1:0)-(keys.left?1:0);
+          v.vx*=v.speed;
+          if(v.vx!==0)v.direction=v.vx>0?1:-1;
+          if(keys.up&&v.grounded){v.vy=v.jumpPower;v.grounded=false;}
+          // Plataformas móveis levam Vitoria sem alterar a física original.
+          for(const p of PROLOGUE_PLATFORMS){
+            if(!p.moving)continue;
+            const old=p.x;
+            p.x=p.baseX+Math.sin(elapsedSeconds*p.speed)*p.travel;
+            if(v.grounded&&Math.abs(v.y+v.h-p.y)<3&&
+               v.x+v.w>old&&v.x<old+p.w)v.x+=p.x-old;
+          }
+          const oldX=v.x;
+          v.x=Math.max(0,Math.min(PROLOGUE_END-v.w,v.x+v.vx));
+          if(!prologueLibraryOpen&&oldX+v.w<=PROLOGUE_GATE_LIBRARY&&
+             v.x+v.w>PROLOGUE_GATE_LIBRARY){
+            v.x=PROLOGUE_GATE_LIBRARY-v.w-1;
+            if(!prologueBanter||gameNow>=prologueBanterUntil){
+              prologueBanter={speaker:'VITORIA',message:'ESSA PORTA ESTÁ TRANCADA! ONDE FICA A ALAVANCA?'};
+              prologueBanterUntil=gameNow+2700;
+            }
+          }
+          if(!prologueClockOpen&&oldX+v.w<=PROLOGUE_GATE_CLOCK&&
+             v.x+v.w>PROLOGUE_GATE_CLOCK){
+            v.x=PROLOGUE_GATE_CLOCK-v.w-1;
+            if(!prologueBanter||gameNow>=prologueBanterUntil){
+              prologueBanter={speaker:'VITORIA',message:'OUTRA PORTA?! PRECISO ATIVAR O RELÓGIO!'};
+              prologueBanterUntil=gameNow+2700;
+            }
+          }
+          const oldFoot=v.y+v.h;
+          v.vy=Math.min(15,v.vy+v.gravity);
+          v.y+=v.vy;v.grounded=false;
+          for(const b of [...PROLOGUE_FLOOR,...PROLOGUE_PLATFORMS]){
+            if(v.vy>=0&&oldFoot<=b.y+4&&v.y+v.h>=b.y&&
+              v.x+v.w>b.x&&v.x<b.x+b.w){
+              v.y=b.y-v.h;v.vy=0;v.grounded=true;break;
+            }
+          }
+          if(v.y>GAME_HEIGHT+90){
+            v.x=prologueCheckpoint;v.y=312;v.vx=v.vy=0;
+            v.grounded=true;
+            prologueBanter={speaker:'VITORIA',message:'AFF! VOU TER QUE TENTAR DE NOVO!'};
+            prologueBanterUntil=gameNow+2200;
+          }
+          if(v.grounded){
+            for(const p of PROLOGUE_CHECKPOINTS){
+              if(p<=prologueCheckpoint||v.x<p)continue;
+              prologueCheckpoint=p;
+              savePrologueProgress(false);
+              showItemToast('CHECKPOINT DO PRÓLOGO!');
+            }
+          }
+          for(const line of PROLOGUE_BANTER){
+            if(v.x>=line.at&&!prologueSpoken.has(line.at)){
+              prologueSpoken.add(line.at);prologueBanter=line;
+              prologueBanterUntil=gameNow+3300;
+              if(line.at===5180)prologueReactUntil=gameNow+1800;
+              break;
+            }
+          }
+          v.walkClock=v.vx?v.walkClock+dt:0;
+          v.idleClock=v.vx||!v.grounded?0:v.idleClock+dt;
+          cameraX=Math.max(0,Math.min(PROLOGUE_END-GAME_WIDTH,v.x-GAME_WIDTH*.38));
+          prologueAutosave+=dt;
+          if(prologueAutosave>=8){prologueAutosave=0;savePrologueProgress(false);}
+          if(v.x>=PROLOGUE_END-155&&v.grounded)beginPrologueOutro();
+          setHUD();
+        }
+        function prologueRoomAt(x){
+          return PROLOGUE_ROOMS.find(r=>x>=r.start&&x<r.end)||PROLOGUE_ROOMS.at(-1);
+        }
+        function drawPrologueRooms(){
+          ctx.fillStyle='#8e7397';ctx.fillRect(0,0,GAME_WIDTH,GAME_HEIGHT);
+          for(const room of PROLOGUE_ROOMS){
+            if(room.end<cameraX-10||room.start>cameraX+GAME_WIDTH+10)continue;
+            ctx.save();ctx.beginPath();
+            ctx.rect(room.start-cameraX,0,room.end-room.start,GAME_HEIGHT);ctx.clip();
+            const art=prologueArt[room.asset];
+            if(art?.width&&art?.height){
+              // Painéis em escala de jogo, repetidos por ambiente sem alongar.
+              const tileW=800;
+              const start=Math.floor((cameraX-room.start)/tileW)*tileW;
+              for(let x=room.start+start;x<room.end;x+=tileW){
+                if(x+tileW<cameraX||x>cameraX+GAME_WIDTH)continue;
+                ctx.drawImage(art,Math.round(x-cameraX),0,tileW,GAME_HEIGHT);
+              }
+            }else{
+              ctx.fillStyle=room.shade;
+              ctx.fillRect(room.start-cameraX,0,room.end-room.start,GAME_HEIGHT);
+              ctx.fillStyle='rgba(255,237,190,.25)';
+              for(let x=room.start;x<room.end;x+=160)
+                ctx.fillRect(x-cameraX+30,80,54,205);
+            }
+            // Lajes divisórias escondem a transição entre os ambientes.
+            ctx.fillStyle='#e9cf99';ctx.fillRect(room.start-cameraX,0,10,GAME_HEIGHT);
+            ctx.fillStyle='#80516a';ctx.fillRect(room.start-cameraX+10,0,4,GAME_HEIGHT);
+            ctx.restore();
+          }
+        }
+        function drawPrologueGround(){
+          for(const b of PROLOGUE_FLOOR){
+            if(b.x>cameraX+GAME_WIDTH||b.x+b.w<cameraX)continue;
+            ctx.save();ctx.beginPath();ctx.rect(b.x-cameraX,b.y,b.w,b.h);ctx.clip();
+            ctx.fillStyle='#766078';ctx.fillRect(b.x-cameraX,b.y,b.w,b.h);
+            for(let y=b.y+19;y<b.y+b.h;y+=24)
+              for(let x=Math.floor(b.x/72)*72;x<b.x+b.w;x+=72){
+                const offset=Math.floor(y/24)%2?36:0;
+                ctx.fillStyle='#ab8a85';
+                ctx.fillRect(x-cameraX+offset+2,y,68,20);
+                ctx.fillStyle='#d0b0a3';ctx.fillRect(x-cameraX+offset+4,y+2,62,3);
+              }
+            ctx.fillStyle='#f0cf97';ctx.fillRect(b.x-cameraX,b.y,b.w,8);
+            ctx.fillStyle='#b68c78';ctx.fillRect(b.x-cameraX,b.y+8,b.w,5);
+            ctx.restore();
+          }
+          for(const p of PROLOGUE_PLATFORMS){
+            if(p.x>cameraX+GAME_WIDTH||p.x+p.w<cameraX)continue;
+            const x=p.x-cameraX;
+            ctx.fillStyle='#785569';ctx.fillRect(x+3,p.y+4,p.w,p.h);
+            ctx.fillStyle='#f5d99e';ctx.fillRect(x,p.y,p.w,6);
+            ctx.fillStyle='#ba8d89';ctx.fillRect(x,p.y+6,p.w,9);
+            ctx.fillStyle='#755879';ctx.fillRect(x+7,p.y+15,p.w-14,4);
+            for(let i=14;i<p.w-10;i+=30){
+              ctx.fillStyle='#f3d99c';ctx.fillRect(x+i,p.y+9,4,4);
+            }
+          }
+        }
+        function drawPrologueGate(x,open){
+          if(x<cameraX-70||x>cameraX+GAME_WIDTH+70)return;
+          const sx=Math.round(x-cameraX);
+          ctx.fillStyle='#503956';ctx.fillRect(sx-8,175,27,205);
+          ctx.fillStyle='#e2c389';ctx.fillRect(sx-13,175,37,14);
+          if(open){
+            ctx.fillStyle='#b4e4cf';ctx.fillRect(sx,218,5,150);
+          }else{
+            ctx.fillStyle='#bc975f';ctx.fillRect(sx,207,14,173);
+            ctx.fillStyle='#5d3f51';
+            for(let y=222;y<368;y+=26)ctx.fillRect(sx+2,y,11,7);
+            ctx.fillStyle='#f9d983';ctx.fillRect(sx+3,272,8,10);
+          }
+        }
+        function drawPrologueLever(lever,on){
+          if(lever.x<cameraX-60||lever.x>cameraX+GAME_WIDTH+60)return;
+          const x=Math.round(lever.x-cameraX),y=lever.y;
+          ctx.fillStyle='#5e3e59';ctx.fillRect(x-14,y-28,28,28);
+          ctx.fillStyle=on?'#6cdbbd':'#fbd17a';
+          ctx.fillRect(x-9,y-23,18,15);
+          ctx.fillStyle='#fff4ce';ctx.fillRect(x-3,y-37,6,21);
+          ctx.fillStyle=on?'#8cf5e3':'#e9a9a6';
+          ctx.fillRect(x-9,y-40,18,7);
+          if(!on&&prologueNearLever(lever)){
+            retroText('E / A',x,y-48,8,'#ffe6a8');
+          }
+        }
+        function drawPrologueVitoria(){
+          const v=princessPlayer;
+          let pose='prologueIdle';
+          if(!v.grounded)pose=v.vy<-4?'jumpRise':v.vy<=3?'jumpApex':'landing';
+          else if(gameNow<prologueReactUntil)pose='prologueSurprised';
+          else if(v.vx!==0){
+            const step=Math.floor(v.walkClock/.11)%4;
+            pose=step===0?'prologueWalk1':step===1?'prologueWalk2':
+              step===2?'prologueWalk3':'prologueMarch';
+          }else if(v.idleClock>5)pose='prologueWatch';
+          const art=processedAssets.vitoria[pose]||processedAssets.vitoria.idle||
+            processedAssets.princess;
+          drawSpriteOnFeet(art,v.x-cameraX+v.w/2,v.y+v.h,68,v.direction);
+        }
+        function drawPrologue(){
+          drawPrologueRooms();
+          drawPrologueGround();
+          drawPrologueGate(PROLOGUE_GATE_LIBRARY,prologueLibraryOpen);
+          drawPrologueGate(PROLOGUE_GATE_CLOCK,prologueClockOpen);
+          drawPrologueLever(PROLOGUE_LEVER_LIBRARY,prologueLibraryOpen);
+          drawPrologueLever(PROLOGUE_LEVER_CLOCK,prologueClockOpen);
+          for(const p of PROLOGUE_CHECKPOINTS){
+            if(p<cameraX-60||p>cameraX+GAME_WIDTH+60)continue;
+            const flag=p<=prologueCheckpoint?extras.checkpointOn:extras.checkpointOff;
+            if(flag)drawObject(flag,p-cameraX,314,36,66);
+          }
+          if(state==='prologueIntro'||state==='prologueOutro'){
+            const outro=state==='prologueOutro';
+            const lines=outro?PROLOGUE_LINES_OUTRO:PROLOGUE_LINES_INTRO;
+            const current=storyLine(prologueSceneSeconds,lines);
+            const pose=current?.pose==='talk'?
+              (Math.floor(prologueSceneSeconds*6)%2===0?'talkOpen':'talkClosed'):
+              (current?.pose??'prologueIdle');
+            const sprite=processedAssets.vitoria[pose]||processedAssets.vitoria.idle||
+              processedAssets.princess;
+            drawSpriteOnFeet(sprite,
+              outro?PROLOGUE_END-130-cameraX:295,380,68,1);
+            if(current)drawStoryDialogue(current.speaker,current.message,'#ffbdd9');
+            if(!outro&&prologueSceneSeconds<1.3)
+              retroText('PRÓLOGO • UMA PRINCESA NADA COMPORTADA',400,260,9,'#fff4d0');
+            if(outro&&prologueSceneSeconds>14){
+              const fade=Math.min(1,(prologueSceneSeconds-14)/1.8);
+              ctx.fillStyle='rgba(12,6,21,'+fade+')';
+              ctx.fillRect(0,0,GAME_WIDTH,GAME_HEIGHT);
+            }
+            pixelText('ENTER OU BOTÃO A: PULAR CENA',GAME_HEIGHT-17,7,'#fff2d3');
+            return;
+          }
+          drawPrologueVitoria();
+          const room=prologueRoomAt(princessPlayer.x);
+          ctx.fillStyle='rgba(24,12,34,.60)';ctx.fillRect(202,52,396,24);
+          retroText(room.name,400,69,9,'#fff1d6');
+          if(prologueBanter&&gameNow<prologueBanterUntil)
+            drawStoryDialogue(prologueBanter.speaker,prologueBanter.message,'#ffbbda');
+          if(princessPlayer.x>PROLOGUE_END-350){
+            retroText('SAÍDA DO CASTELO',400,304,9,'#fff4ca');
+          }
         }
 
         function drawHero(){
@@ -5283,6 +5731,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           if(state==='menu'){ctx.fillStyle='#0f1432';ctx.fillRect(0,0,GAME_WIDTH,GAME_HEIGHT);return;}
           if(state==='map'){drawMap();return;}
           if(state==='shop'){drawCanoShop();return;}
+          if(isPrologueState()){drawPrologue();return;}
           if(level===1)drawLevelOne();else if(level===2)drawLevelTwo();else drawLevelThree();
           if(state==='playing'){drawLevelCoins();drawLevelPickups();drawCombatFxWorld();}
           if(state==='title2')overlay('FASE 2','A FLORESTA MISTERIOSA','ENTER OU BOTÃO A PARA COMEÇAR');
