@@ -702,10 +702,13 @@ check('Fase 3 de 6400 px preserva altar no extremo',
  mario.includes('const SKY_END=6400;')&&
  mario.includes('const SKY_ALTAR_X=SKY_END-170;')&&
  mario.includes('const SKY_OBSERVATORY_X=3220;'));
-check('Observatório tem arte SVG isolada e fallback de desenho',
+check('Observatório usa PNG 276 e mantém SVG como fallback',
+ fs.existsSync(path.join(root,'276.png'))&&
+ fs.statSync(path.join(root,'276.png')).size>1000&&
  fs.existsSync(path.join(root,'sky_observatory.svg'))&&
  fs.readFileSync(path.join(root,'sky_observatory.svg'),'utf8').includes('<svg')&&
- mario.includes("skyObservatory:'sky_observatory.svg'")&&
+ mario.includes("skyObservatory:'276.png'")&&
+ mario.includes("skyObservatoryLegacy:'sky_observatory.svg'")&&
  mario.includes('drawSkyObservatory(); // marco central atrás do Gabriel'));
 const extendedSkyData=mario.match(
  /        const level3Blocks=\[[\s\S]*?(?=        function freshSkyBirds\(\))/)?.[0];
@@ -738,6 +741,42 @@ check('Atalho observatorio3 abre o marco sem introdução',
  mario.includes('player.x=SKY_OBSERVATORY_X-140;')&&
  mario.includes('resetSkyNimbo();setHUD();'));
 
+
+
+const observatoryRenderer=mario.match(
+ /        \/\/ MARCO CENTRAL — Observatório 276\.png,[\s\S]*?(?=        function drawSkyBackground\(\))/)?.[0];
+check('Novo renderizador do Observatório é isolável',!!observatoryRenderer);
+const observatoryDraws=[];
+const observatoryCtx={
+ save(){},restore(){},drawImage(...args){observatoryDraws.push(args)},
+ imageSmoothingEnabled:true
+};
+const observatoryArt={width:900,height:440};
+const obs=new Function('ctx','extras','SKY_OBSERVATORY_X','cameraX','GAME_WIDTH','gameNow',
+ observatoryRenderer+'\nreturn {skyObservatoryLayout,drawSkyObservatory};')(
+ observatoryCtx,{skyObservatory:observatoryArt},
+ 3220,2760,800,5000);
+const broad=obs.skyObservatoryLayout(observatoryArt);
+const tall=obs.skyObservatoryLayout({width:320,height:800});
+obs.drawSkyObservatory();
+check('Arte 276 é centralizada no observatório, sem distorções',
+ broad.x+broad.w/2===3220&&broad.y+broad.h===380&&
+ broad.w<=520&&broad.h<=310&&
+ Math.abs(broad.w/broad.h-900/440)<.02&&
+ tall.y+tall.h===380&&tall.w<=520&&tall.h<=310&&
+ Math.abs(tall.w/tall.h-320/800)<.02);
+check('PNG usa pixels nítidos e desenho atrás de Gabriel',
+ observatoryDraws.length===1&&observatoryDraws[0][0]===observatoryArt&&
+ observatoryDraws[0][1]===broad.x&&observatoryDraws[0][2]===broad.y&&
+ observatoryCtx.imageSmoothingEnabled===false&&
+ mario.indexOf('drawSkyObservatory(); // marco central atrás do Gabriel')<
+ mario.indexOf('drawHero();',mario.indexOf('function drawLevelThree(){')));
+check('PNG 276 usa cropSprite e SVG anterior continua como reserva',
+ mario.includes("skyObservatory:'276.png'")&&
+ mario.includes("skyObservatoryLegacy:'sky_observatory.svg'")&&
+ mario.includes("else extras[key]=cropSprite(img);")===false&&
+ mario.includes("'skyObservatoryLegacy','skyCrowUp'")&&
+ !mario.includes("'skyObservatory','skyCrowUp'"));
 
 check('Inventário com dezoito espaços',mario.includes('inv-story-grid')&&mario.includes('inv-consumable-grid')&&mario.includes('for(let n=0;n<9;n++)'));
 check('Sprite 68 e categorias RPG',mario.includes('68.png')&&mario.includes('ITENS DE HISTÓRIA')&&mario.includes('CONSUMÍVEIS'));
