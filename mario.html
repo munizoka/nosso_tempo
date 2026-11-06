@@ -1133,7 +1133,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           sky: '43.jpg', mountains: '44.png', trees: '45.png', giantTree: '46.png',
           forestGround: '47.png', dirt: '48.jpg', wood: '49.png', magic: '50.png',
           checkpointOff: '51.png', checkpointOn: '52.png', villain: '53.png', portal: '54.png', mapHead: '55.jpg',
-          totemOn: '56.png', totemOff: '57.png', skyTemple: '58.png', skyPanorama:'265.png', skyRuins:'266.png', skyTempleFacade:'267.png', skyGround: '59.png', skyPlatform: '60.png', skyCrow: '61.png', skyNimboIdle:'271.png', skyNimboCharge:'272.png', skyNimboFire:'273.png', skyNimboTired:'274.png', skyNimboBolt:'275.png', skyAltarOff: '62.png', skyAltarOn: '63.png', windShort: '64.png', windLong: '65.png', windUp: '66.png', villainDrink: '67.png',
+          totemOn: '56.png', totemOff: '57.png', skyTemple: '58.png', skyPanorama:'265.png', skyRuins:'266.png', skyTempleFacade:'267.png', skyGround: '59.png', skyPlatform: '60.png', skyCrow: '61.png', skyCrowUp:'268.png', skyCrowMid:'269.png', skyCrowDown:'270.png', skyNimboIdle:'271.png', skyNimboCharge:'272.png', skyNimboFire:'273.png', skyNimboTired:'274.png', skyNimboBolt:'275.png', skyAltarOff: '62.png', skyAltarOn: '63.png', windShort: '64.png', windLong: '65.png', windUp: '66.png', villainDrink: '67.png',
           superHero:'78.png', burger:'79.png', heart:'80.png', dashHero:'81.png', dashSuper:'82.png', heartHit:'83.png',
           // Teste visual: sem o foreground 120 e sem a folha decorativa 124.
           // Arquivos permanecem no repositório; basta reativar aqui se necessário.
@@ -1394,7 +1394,9 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
                 const sheet=cropSprite(img);
                 processedAssets.superHeroFrames=makeFrames(sheet,4);
                 extras[key]=sheet;
-              }else extras[key]=(['sky','mountains','trees','skyTemple','skyPanorama'].includes(key)?img:cropSprite(img));
+              }else extras[key]=(['sky','mountains','trees','skyTemple','skyPanorama',
+                'skyCrowUp','skyCrowMid','skyCrowDown',
+                'skyNimboIdle','skyNimboCharge','skyNimboFire','skyNimboTired'].includes(key)?img:cropSprite(img));
             }catch(error){console.error('Falha ao processar '+path,error);}
           };
           img.onerror=()=>{ if(key!=='dirt')console.warn('Não foi possível carregar '+path); };
@@ -4392,9 +4394,51 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           else{ctx.fillStyle='#c4a05e';ctx.fillRect(x-22,foot-70,44,70);ctx.fillStyle=skyAltarActivated?'#80f4ff':'#536577';ctx.fillRect(x-13,foot-106,26,37);}
           ctx.shadowBlur=0;ctx.restore();
         }
-        // 61.png original até os PNGs do ciclo de voo ficarem prontos.
-        // Nenhuma asa de Canvas, rotação, distorção ou efeito de susto.
-        // NIMBO VISUAL — 271 a 275 são PNGs opcionais até o upload.
+        // FASE 3 — SPRITES CELESTIAIS: os frames 1254x1254 usam
+        // o mesmo recorte alfa; o corpo não salta durante as animações.
+        const SKY_CROW_FRAME_KEYS=['skyCrowUp','skyCrowMid','skyCrowDown'];
+        const SKY_NIMBO_POSE_KEYS=[
+          'skyNimboIdle','skyNimboCharge','skyNimboFire','skyNimboTired'
+        ];
+        const skyFrameCache=new Map(),skySingleBoundsCache=new WeakMap();
+        function skySharedSpriteBounds(keys){
+          const images=keys.map(key=>extras[key]);
+          if(images.some(img=>!img?.naturalWidth||!img?.naturalHeight))return null;
+          if(images.some(img=>img.naturalWidth!==images[0].naturalWidth||
+            img.naturalHeight!==images[0].naturalHeight))return null;
+          const key=keys.join('|'),cached=skyFrameCache.get(key);
+          if(cached&&images.every((img,i)=>img===cached.images[i]))return cached.rect;
+          try{
+            let left=Infinity,top=Infinity,right=-Infinity,bottom=-Infinity;
+            for(const img of images){
+              const r=forestDetectAlphaBounds(img,24);
+              left=Math.min(left,r.x);top=Math.min(top,r.y);
+              right=Math.max(right,r.x+r.w);bottom=Math.max(bottom,r.y+r.h);
+            }
+            const rect={x:left,y:top,w:right-left,h:bottom-top};
+            skyFrameCache.set(key,{images,rect});
+            return rect;
+          }catch(error){
+            console.warn('Frames celestiais: recorte comum indisponível',error);
+            return null;
+          }
+        }
+        function skySingleSpriteBounds(img){
+          const cached=skySingleBoundsCache.get(img);
+          if(cached)return cached;
+          let rect;
+          try{rect=forestDetectAlphaBounds(img,24);}
+          catch(error){rect={x:0,y:0,w:img.naturalWidth,h:img.naturalHeight};}
+          skySingleBoundsCache.set(img,rect);
+          return rect;
+        }
+        function skyCrowFrameKey(seconds,bird,heroCenter){
+          const close=Math.abs(bird.x+bird.w/2-heroCenter)<140;
+          const duration=close?.105:.145;
+          const frame=Math.floor((seconds+bird.phase*.29)/duration)%4;
+          return ['skyCrowUp','skyCrowMid','skyCrowDown','skyCrowMid'][frame];
+        }
+        // NIMBO VISUAL — 271 a 275 agora presentes; fallback quando offline.
         function drawSkyNimbo(){
           if(state!=='playing'||level!==3)return;
           const n=skyNimbo,clock=gameNow/1000;
@@ -4429,10 +4473,14 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
             }
           }
           if(img){
-            // Preserva o sprite 16-bit sem inclinação nem deformação.
-            const w=58,h=Math.min(55,Math.max(1,Math.round(w*img.height/img.width)));
+            const source=skySharedSpriteBounds(SKY_NIMBO_POSE_KEYS)||
+              skySingleSpriteBounds(img);
+            const scale=Math.min(60/source.w,55/source.h);
+            const w=Math.max(1,Math.round(source.w*scale));
+            const h=Math.max(1,Math.round(source.h*scale));
             ctx.globalAlpha=1;
-            ctx.drawImage(img,x-w/2,y,w,h);
+            ctx.drawImage(img,source.x,source.y,source.w,source.h,
+              Math.round(x-w/2),Math.round(y+(55-h)/2),w,h);
           }else{
             // Placeholder provisório até o 271.png estar no GitHub.
             ctx.globalAlpha=1;
@@ -4447,17 +4495,24 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           ctx.restore();
         }
         function drawSkyBirds(){
+          const seconds=gameNow/1000,heroCenter=player.x+player.w/2;
+          // Esperar os 3 PNGs evita um ciclo incompleto durante o carregamento.
+          const common=skySharedSpriteBounds(SKY_CROW_FRAME_KEYS);
           for(const bird of skyBirds){
             if(!bird.alive||bird.x+bird.w<cameraX-30||
               bird.x>cameraX+GAME_WIDTH+30)continue;
+            const img=common?extras[skyCrowFrameKey(seconds,bird,heroCenter)]:
+              extras.skyCrow;
             ctx.save();
+            let x=bird.x;
             if(bird.vx>0){
-              ctx.translate(bird.x+bird.w,0);ctx.scale(-1,1);
-              if(extras.skyCrow)drawObject(extras.skyCrow,0,bird.y,bird.w,bird.h);
-              else{ctx.fillStyle='#332548';ctx.fillRect(0,bird.y,bird.w,bird.h);}
-            }else if(extras.skyCrow)
-              drawObject(extras.skyCrow,bird.x,bird.y,bird.w,bird.h);
-            else{ctx.fillStyle='#332548';ctx.fillRect(bird.x,bird.y,bird.w,bird.h);}
+              ctx.translate(bird.x+bird.w,0);ctx.scale(-1,1);x=0;
+            }
+            if(img&&common)
+              ctx.drawImage(img,common.x,common.y,common.w,common.h,
+                Math.round(x),Math.round(bird.y),bird.w,bird.h);
+            else if(img)drawObject(img,x,bird.y,bird.w,bird.h);
+            else{ctx.fillStyle='#332548';ctx.fillRect(x,bird.y,bird.w,bird.h);}
             ctx.restore();
           }
         }
