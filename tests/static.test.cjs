@@ -153,8 +153,8 @@ check('Fundo dos oito buracos não cria chão nem recebe árvores',
  forestWorld.forestGaps.every(g=>!forestWorld.forestTreeSpots.some(t=>
   t.x>=g.x&&t.x<=g.x+g.w)));
 check('Salvamento da Fase 2 aceita posições até 7760 sem afetar Fase 3',
- mario.includes('lv===1?VALLEY_END-40:lv===2?FOREST_END-40:3900')&&
- mario.includes('lv===1?VALLEY_END:lv===2?FOREST_END:3900')&&
+ mario.includes('lv===1?VALLEY_END-40:lv===2?FOREST_END-40:SKY_END-40')&&
+ mario.includes('lv===1?VALLEY_END:lv===2?FOREST_END:SKY_END')&&
  rules.includes('data.payload.player.x is number')&&
  rules.includes('data.payload.checkpoint.x is number'));
 check('Final da Fase 2 acompanha a largura nova, preservando medalhão e totem',
@@ -572,13 +572,13 @@ const skyArt=new Function('extras','ctx','cameraX','GAME_WIDTH',
  'gameNow','SKY_END','SKY_ALTAR_X',skyArtSource+
  '\nreturn {drawSkyRuinsParallax,skyTempleFacadeLayout,drawSkyTempleFacade};')(
  {skyRuins:{width:1000,height:450},skyTempleFacade:{width:800,height:780}},
- mockArtCtx,2480,800,7000,3280,3110);
+ mockArtCtx,5600,800,7000,6400,6230);
 skyArt.drawSkyRuinsParallax();skyArt.drawSkyTempleFacade();
 const facade=skyArt.skyTempleFacadeLayout({width:800,height:780});
-check('Parallax visível e templo centralizado, com base no chão',
- skyArtCalls.length>=2&&facade.x+facade.w<=3280&&
+check('Parallax visível e templo centralizado no novo extremo',
+ skyArtCalls.length>=2&&facade.x+facade.w<=6400&&
  facade.y>=0&&facade.y+facade.h===380&&
- Math.abs(facade.x+facade.w/2-3110)<=.5);
+ Math.abs(facade.x+facade.w/2-6230)<=.5);
 const crowRender=mario.match(
  /        \/\/ FASE 3 — SPRITES CELESTIAIS:[\s\S]*?(?=        \/\/ Posições compartilhadas pela câmera)/)?.[0];
 check('Asas procedurais e deformações dos corvos foram removidas',
@@ -696,6 +696,49 @@ check('Nimbo 271-274 mantém o mesmo enquadramento nas mudanças de estado',
  mario.includes('ctx.drawImage(img,source.x,source.y,source.w,source.h,'));
 
 
+
+// Fase 3: expansão integral, marco e checkpoints sem novos sistemas RPG.
+check('Fase 3 de 6400 px preserva altar no extremo',
+ mario.includes('const SKY_END=6400;')&&
+ mario.includes('const SKY_ALTAR_X=SKY_END-170;')&&
+ mario.includes('const SKY_OBSERVATORY_X=3220;'));
+check('Observatório tem arte SVG isolada e fallback de desenho',
+ fs.existsSync(path.join(root,'sky_observatory.svg'))&&
+ fs.readFileSync(path.join(root,'sky_observatory.svg'),'utf8').includes('<svg')&&
+ mario.includes("skyObservatory:'sky_observatory.svg'")&&
+ mario.includes('drawSkyObservatory(); // marco central atrás do Gabriel'));
+const extendedSkyData=mario.match(
+ /        const level3Blocks=\[[\s\S]*?(?=        function freshSkyBirds\(\))/)?.[0];
+check('Geometria das travessias extraível',!!extendedSkyData);
+const extendedSky=new Function(extendedSkyData+
+ '\nreturn {level3Blocks,skyWindZones,skyBirdTemplate};')();
+const grounds=extendedSky.level3Blocks.filter(x=>x.type==='skyGround')
+ .sort((a,b)=>a.x-b.x);
+const newPlatforms=extendedSky.level3Blocks.filter(x=>
+ x.type==='skyPlatform'&&x.x>=3280);
+check('Observatório fica sobre terra firme e último bloco termina em 6400',
+ grounds.length===9&&grounds.some(x=>x.x<=3220&&x.x+x.w>=3470)&&
+ grounds[grounds.length-1].x+grounds[grounds.length-1].w===6400);
+check('Mapa ganha dez plataformas, quatro ventos e três corvos',
+ newPlatforms.length===10&&extendedSky.skyWindZones.length===8&&
+ extendedSky.skyBirdTemplate.length===7);
+check('Plataformas adicionais possuem saltos progressivos',
+ newPlatforms.every((b,i)=>b.y>=200&&b.y<=310&&b.w>=110&&
+ (i===0||b.x>newPlatforms[i-1].x))&&newPlatforms.some(b=>b.moving));
+check('Três checkpoints de céu persistem no save',
+ mario.includes('const SKY_CHECKPOINTS=[1650,3170,4935];')&&
+ mario.includes('skyCheckpointReached=true;skyCheckpointX=x;score+=250;setHUD();')&&
+ mario.includes('const flag=x<=skyCheckpointX?extras.checkpointOn:extras.checkpointOff;')&&
+ mario.includes('x:clamp(data.skyCheckpoint?.x,0,SKY_END,0)'));
+check('Sistema de saves permite x além do antigo limite de 3900',
+ mario.includes('lv===2?FOREST_END-40:SKY_END-40,50)')&&
+ mario.includes('lv===2?FOREST_END:SKY_END,0)'));
+check('Atalho observatorio3 abre o marco sem introdução',
+ mario.includes("else if(testMode==='observatorio3')")&&
+ mario.includes('player.x=SKY_OBSERVATORY_X-140;')&&
+ mario.includes('resetSkyNimbo();setHUD();'));
+
+
 check('Inventário com dezoito espaços',mario.includes('inv-story-grid')&&mario.includes('inv-consumable-grid')&&mario.includes('for(let n=0;n<9;n++)'));
 check('Sprite 68 e categorias RPG',mario.includes('68.png')&&mario.includes('ITENS DE HISTÓRIA')&&mario.includes('CONSUMÍVEIS'));
 check('Relógio virtual congela na pausa',mario.includes('if(!inventoryOpen&&!menuOpen){')&&mario.includes('gameNow+=dt*1000')&&mario.includes("if(!sceneReady||inventoryOpen||menuOpen||state==='menu')return"));
@@ -790,7 +833,8 @@ check('Sprites e particulas de inimigos derrotados',mario.includes('fallenEnemie
 check('Efeitos das moedas e checkpoints',mario.includes('drawCombatFxWorld()')&&
  mario.includes('function checkpointChime()')&&
  mario.includes("['#fff6ad','#ffe376','#eea534']")&&
- mario.includes('skyCheckpointReached=true;skyCheckpointX=1650;score+=250;setHUD();'));
+ mario.includes('skyCheckpointReached=true;skyCheckpointX=x;score+=250;setHUD();')&&
+ mario.includes('const SKY_CHECKPOINTS=[1650,3170,4935];'));
 const spotSource=mario.match(/        function enemyCanSpotHero\(enemy,terrain\)\{[\s\S]*?\n        \}/)?.[0];
 check('Deteccao de inimigos extraivel para regressao',!!spotSource);
 function spotWithPlayer(player){
@@ -1360,7 +1404,7 @@ check('Dois checkpoints e três baús entregam somente moedas',
 check('Câmera, respawn e saves seguem nova largura sem alterar esquema Firebase',
  mario.includes('level===1?VALLEY_END-GAME_WIDTH')&&
  mario.includes('level===1?VALLEY_END:level===2?FOREST_END:SKY_END')&&
- mario.includes('lv===1?VALLEY_END-40:lv===2?FOREST_END-40:3900')&&
+ mario.includes('lv===1?VALLEY_END-40:lv===2?FOREST_END-40:SKY_END-40')&&
  mario.includes('player.x=level===1?(checkpointReached?checkpointX:50)')&&
  rules.includes('sgbValidSave(data,slotId)'));
 check('Fase 1 usa parallax, spritesheets recortados e plataforma unilateral',
