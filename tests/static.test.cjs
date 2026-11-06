@@ -508,6 +508,44 @@ check('Camadas ficam atrás do herói e não adicionam sprites',
  forestDrawSource.indexOf('drawEnemies();drawHero();')&&
  !/new Image\(/.test(atmosphereSource));
 
+
+const skyAtmosphereSource=mario.match(
+ /        \/\/ REMAKE FASE 3 — atmosfera celestial[\s\S]*?(?=        function drawSkyBackground\(\))/)?.[0];
+check('Remake celestial carrega funções isoláveis',!!skyAtmosphereSource);
+const skyAtmosphereCalls={rects:0};
+const skyAtmosphereCtx={
+ save(){},restore(){},
+ fillRect(){skyAtmosphereCalls.rects++}
+};
+const skyAtmosphereWind=[
+ {type:'horizontal',x:520,y:140,w:360,h:245,force:1.05},
+ {type:'up',x:1200,y:150,w:290,h:240,lift:.19}
+];
+const skyAtmosphere=new Function('ctx','GAME_WIDTH','gameNow','cameraX','skyWindZones',
+ skyAtmosphereSource+'\nreturn {skyCloudBands,skyCloudPose,drawSkyCloudParallax,skyWindGlints,skyWindGlintPose,drawSkyWindGlints};')(
+ skyAtmosphereCtx,800,3000,600,skyAtmosphereWind);
+check('Nuvens usam três profundidades e parallax de câmera',
+ skyAtmosphere.skyCloudBands.length===3&&
+ skyAtmosphere.skyCloudPose(skyAtmosphere.skyCloudBands[0],1,3,0).x!==
+ skyAtmosphere.skyCloudPose(skyAtmosphere.skyCloudBands[0],1,3,600).x);
+check('Partículas acompanham horizontal e verticalmente as zonas de vento',
+ skyAtmosphere.skyWindGlints.length===14&&
+ skyAtmosphere.skyWindGlintPose(skyAtmosphere.skyWindGlints[0],3).x!==
+ skyAtmosphere.skyWindGlintPose(skyAtmosphere.skyWindGlints[0],4).x&&
+ skyAtmosphere.skyWindGlintPose(skyAtmosphere.skyWindGlints[7],3).y!==
+ skyAtmosphere.skyWindGlintPose(skyAtmosphere.skyWindGlints[7],4).y);
+skyAtmosphere.drawSkyCloudParallax();skyAtmosphere.drawSkyWindGlints();
+check('Efeitos em Canvas possuem quantidade fixa e culling',skyAtmosphereCalls.rects>4&&
+ skyAtmosphereCalls.rects<150);
+const skyRenderSource=mario.match(/        function drawLevelThree\(\)\{[\s\S]*?(?=        function drawCanoShop\(\))/)?.[0]||
+ mario.match(/        function drawLevelThree\(\)\{[\s\S]*?(?=        function \w+\(\)\{)/)?.[0];
+check('Atmosfera é renderizada antes do terreno e dos personagens',
+ !!skyRenderSource&&
+ skyRenderSource.includes('drawSkyWindGlints();')&&
+ skyRenderSource.indexOf('drawSkyWindGlints();')<
+ skyRenderSource.indexOf('for(const b of level3Blocks)')&&
+ !/new Image\(/.test(skyAtmosphereSource));
+
 check('Inventário com dezoito espaços',mario.includes('inv-story-grid')&&mario.includes('inv-consumable-grid')&&mario.includes('for(let n=0;n<9;n++)'));
 check('Sprite 68 e categorias RPG',mario.includes('68.png')&&mario.includes('ITENS DE HISTÓRIA')&&mario.includes('CONSUMÍVEIS'));
 check('Relógio virtual congela na pausa',mario.includes('if(!inventoryOpen&&!menuOpen){')&&mario.includes('gameNow+=dt*1000')&&mario.includes("if(!sceneReady||inventoryOpen||menuOpen||state==='menu')return"));
