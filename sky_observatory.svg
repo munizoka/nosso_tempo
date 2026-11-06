@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="520" height="310" viewBox="0 0 520 310" shape-rendering="crispEdges">
+<defs><linearGradient id="gold" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#fff3ba"/><stop offset=".55" stop-color="#e9bc68"/><stop offset="1" stop-color="#99634f"/></linearGradient><radialGradient id="gem"><stop stop-color="#fff"/><stop offset=".2" stop-color="#dcffff"/><stop offset=".7" stop-color="#48d8f1"/><stop offset="1" stop-color="#187eae"/></radialGradient><radialGradient id="aura"><stop stop-color="#93efff" stop-opacity=".35"/><stop offset="1" stop-color="#93efff" stop-opacity="0"/></radialGradient></defs>
+<!-- Edificação aberta, sem plano de fundo: adequada ao sky parallax. -->
+<ellipse cx="260" cy="186" rx="107" ry="97" fill="url(#aura)"/>
+<!-- Meias-cúpulas quebradas -->
+<path d="M64 145 L82 106 L111 83 L153 57 L196 47 L206 61 L162 79 L125 101 L108 140Z" fill="#61506d" stroke="#33293f" stroke-width="5"/>
+<path d="M77 132 Q112 69 184 54" fill="none" stroke="#f9d781" stroke-width="10"/>
+<path d="M319 53 L352 59 L388 80 L425 106 L455 145 L422 142 L400 111 L365 88 L328 69Z" fill="#62536c" stroke="#362944" stroke-width="5"/>
+<path d="M337 61 Q409 87 442 135" fill="none" stroke="#efd18a" stroke-width="11"/>
+<!-- Telhado e frontão -->
+<rect x="42" y="126" width="435" height="28" fill="#655166"/>
+<rect x="46" y="128" width="427" height="10" fill="url(#gold)"/>
+<rect x="46" y="139" width="427" height="9" fill="#e6d0a7"/>
+<rect x="48" y="130" width="8" height="3" fill="#ffe1a2"/><rect x="64" y="130" width="8" height="3" fill="#69d4d2"/><rect x="80" y="130" width="8" height="3" fill="#ffe1a2"/><rect x="96" y="130" width="8" height="3" fill="#69d4d2"/><rect x="112" y="130" width="8" height="3" fill="#ffe1a2"/><rect x="128" y="130" width="8" height="3" fill="#69d4d2"/><rect x="144" y="130" width="8" height="3" fill="#ffe1a2"/><rect x="160" y="130" width="8" height="3" fill="#69d4d2"/><rect x="176" y="130" width="8" height="3" fill="#ffe1a2"/><rect x="192" y="130" width="8" height="3" fill="#69d4d2"/><rect x="208" y="130" width="8" height="3" fill="#ffe1a2"/><rect x="224" y="130" width="8" height="3" fill="#69d4d2"/><rect x="240" y="130" width="8" height="3" fill="#ffe1a2"/><rect x="256" y="130" width="8" height="3" fill="#69d4d2"/><rect x="272" y="130" width="8" height="3" fill="#ffe1a2"/><rect x="288" y="130" width="8" height="3" fill="#69d4d2"/><rect x="304" y="130" width="8" height="3" fill="#ffe1a2"/><rect x="320" y="130" width="8" height="3" fill="#69d4d2"/><rect x="336" y="130" width="8" height="3" fill="#ffe1a2"/><rect x="352" y="130" width="8" height="3" fill="#69d4d2"/><rect x="368" y="130" width="8" height="3" fill="#ffe1a2"/><rect x="384" y="130" width="8" height="3" fill="#69d4d2"/><rect x="400" y="130" width="8" height="3" fill="#ffe1a2"/><rect x="416" y="130" width="8" height="3" fill="#69d4d2"/><rect x="432" y="130" width="8" height="3" fill="#ffe1a2"/><rect x="448" y="130" width="8" height="3" fill="#69d4d2"/><rect x="464" y="130" width="8" height="3" fill="#ffe1a2"/>
+<path d="M193 118 L260 64 L329 118Z" fill="#5b4b67" stroke="#604965" stroke-width="6"/>
+<path d="M208 117 L260 80 L315 117Z" fill="#f1dfbd" stroke="#c99e62" stroke-width="4"/>
+<path d="M235 103 L260 85 L285 103 L260 120Z" fill="#c18a40"/>
+<path d="M242 103 L260 91 L278 103 L260 113Z" fill="#59dcef"/>
+<path d="M251 103 L260 97 L268 103 L260 109Z" fill="#f9ffff"/>
+<!-- Arcadas e colunas -->
+<path d="M116 267 L116 191 Q116 154 154 154 Q193 154 193 191 L193 266" fill="none" stroke="#5d4b67" stroke-width="13"/>
+<path d="M121 265 L121 191 Q121 159 154 159 Q188 159 188 191 L188 265" fill="none" stroke="#ffebc0" stroke-width="5"/>
+<path d="M327 265 L327 191 Q327 154 364 154 Q402 154 402 191 L402 265" fill="none" stroke="#5d4b67" stroke-width="13"/>
+<path d="M332 265 L332 191 Q332 159 364 159 Q397 159 397 191 L397 265" fill="none" stroke="#ffebc0" stroke-width="5"/>
+<g transform="translate(96,0)"><rect x="-14" y="143" width="31" height="132" fill="#58495f"/><rect x="-10" y="146" width="24" height="127" fill="#ece1d2"/><rect x="-7" y="150" width="4" height="116" fill="#fff4d6"/><rect x="9" y="150" width="5" height="116" fill="#a598a0"/><rect x="-18" y="136" width="39" height="13" fill="#e4bc6d" stroke="#6d4a4c" stroke-width="3"/><rect x="-18" y="268" width="41" height="10" fill="#e7be76" stroke="#79585a" stroke-width="3"/><rect x="-3" y="140" width="6" height="4" fill="#41d8dc"/></g><g transform="translate(163,0)"><rect x="-14" y="143" width="31" height="132" fill="#58495f"/><rect x="-10" y="146" width="24" height="127" fill="#ece1d2"/><rect x="-7" y="150" width="4" height="116" fill="#fff4d6"/><rect x="9" y="150" width="5" height="116" fill="#a598a0"/><rect x="-18" y="136" width="39" height="13" fill="#e4bc6d" stroke="#6d4a4c" stroke-width="3"/><rect x="-18" y="268" width="41" height="10" fill="#e7be76" stroke="#79585a" stroke-width="3"/><rect x="-3" y="140" width="6" height="4" fill="#41d8dc"/></g><g transform="translate(336,0)"><rect x="-14" y="143" width="31" height="132" fill="#58495f"/><rect x="-10" y="146" width="24" height="127" fill="#ece1d2"/><rect x="-7" y="150" width="4" height="116" fill="#fff4d6"/><rect x="9" y="150" width="5" height="116" fill="#a598a0"/><rect x="-18" y="136" width="39" height="13" fill="#e4bc6d" stroke="#6d4a4c" stroke-width="3"/><rect x="-18" y="268" width="41" height="10" fill="#e7be76" stroke="#79585a" stroke-width="3"/><rect x="-3" y="140" width="6" height="4" fill="#41d8dc"/></g><g transform="translate(404,0)"><rect x="-14" y="143" width="31" height="132" fill="#58495f"/><rect x="-10" y="146" width="24" height="127" fill="#ece1d2"/><rect x="-7" y="150" width="4" height="116" fill="#fff4d6"/><rect x="9" y="150" width="5" height="116" fill="#a598a0"/><rect x="-18" y="136" width="39" height="13" fill="#e4bc6d" stroke="#6d4a4c" stroke-width="3"/><rect x="-18" y="268" width="41" height="10" fill="#e7be76" stroke="#79585a" stroke-width="3"/><rect x="-3" y="140" width="6" height="4" fill="#41d8dc"/></g>
+<!-- Estandartes de vento -->
+<path d="M125 153 L154 153 L154 224 L140 213 L125 224Z" fill="#176874" stroke="#e4bb74" stroke-width="3"/>
+<path d="M129 157 L150 157 L150 211 L140 203 L129 211Z" fill="#31abae"/>
+<path d="M370 153 L400 153 L400 224 L385 213 L370 224Z" fill="#176874" stroke="#e4bb74" stroke-width="3"/>
+<path d="M374 157 L396 157 L396 211 L385 203 L374 211Z" fill="#31abae"/>
+<path d="M136 183 L145 177 L141 186 L148 190 L135 195 L143 198 M380 183 L389 177 L386 186 L392 190 L380 195 L388 198" stroke="#c7ffef" stroke-width="3" fill="none"/>
+<!-- Astrolábio central em anéis, cristal turquesa -->
+<ellipse cx="260" cy="193" rx="78" ry="60" fill="none" stroke="#604762" stroke-width="13"/>
+<ellipse cx="260" cy="193" rx="78" ry="60" fill="none" stroke="#f4c879" stroke-width="7"/>
+<ellipse cx="260" cy="193" rx="44" ry="74" fill="none" stroke="#c69856" stroke-width="7"/>
+<ellipse cx="260" cy="193" rx="74" ry="25" fill="none" stroke="#f8dc93" stroke-width="6" transform="rotate(-25 260 193)"/>
+<circle cx="260" cy="193" r="35" fill="#655179" stroke="#ffdc83" stroke-width="7"/>
+<circle cx="260" cy="193" r="26" fill="url(#gem)"/>
+<path d="M260 168 L281 191 L260 215 L239 191Z" fill="#d8ffff" opacity=".62"/>
+<path d="M253 183 L260 177 L265 185 L257 192Z" fill="#fff" opacity=".7"/>
+<!-- Pedestal, passarela decorativa e pequenos azulejos -->
+<path d="M45 272 L474 272 L484 285 L484 302 L36 302 L36 284Z" fill="#756379"/>
+<rect x="42" y="270" width="438" height="11" fill="url(#gold)"/>
+<rect x="46" y="284" width="430" height="8" fill="#d1bea8"/>
+<rect x="50" y="286" width="7" height="4" fill="#fce3aa"/><rect x="66" y="286" width="7" height="4" fill="#48ccca"/><rect x="82" y="286" width="7" height="4" fill="#fce3aa"/><rect x="98" y="286" width="7" height="4" fill="#48ccca"/><rect x="114" y="286" width="7" height="4" fill="#fce3aa"/><rect x="130" y="286" width="7" height="4" fill="#48ccca"/><rect x="146" y="286" width="7" height="4" fill="#fce3aa"/><rect x="162" y="286" width="7" height="4" fill="#48ccca"/><rect x="178" y="286" width="7" height="4" fill="#fce3aa"/><rect x="194" y="286" width="7" height="4" fill="#48ccca"/><rect x="210" y="286" width="7" height="4" fill="#fce3aa"/><rect x="226" y="286" width="7" height="4" fill="#48ccca"/><rect x="242" y="286" width="7" height="4" fill="#fce3aa"/><rect x="258" y="286" width="7" height="4" fill="#48ccca"/><rect x="274" y="286" width="7" height="4" fill="#fce3aa"/><rect x="290" y="286" width="7" height="4" fill="#48ccca"/><rect x="306" y="286" width="7" height="4" fill="#fce3aa"/><rect x="322" y="286" width="7" height="4" fill="#48ccca"/><rect x="338" y="286" width="7" height="4" fill="#fce3aa"/><rect x="354" y="286" width="7" height="4" fill="#48ccca"/><rect x="370" y="286" width="7" height="4" fill="#fce3aa"/><rect x="386" y="286" width="7" height="4" fill="#48ccca"/><rect x="402" y="286" width="7" height="4" fill="#fce3aa"/><rect x="418" y="286" width="7" height="4" fill="#48ccca"/><rect x="434" y="286" width="7" height="4" fill="#fce3aa"/><rect x="450" y="286" width="7" height="4" fill="#48ccca"/>
+<rect x="41" y="294" width="439" height="12" fill="#87758a"/>
+<!-- Ruínas laterais e plantas -->
+<rect x="51" y="237" width="34" height="39" fill="#ddd0c1" stroke="#71576a" stroke-width="4"/>
+<rect x="436" y="238" width="34" height="38" fill="#ddd0c1" stroke="#71576a" stroke-width="4"/>
+<rect x="47" y="227" width="40" height="11" fill="#f6d493"/><rect x="432" y="228" width="42" height="11" fill="#f6d493"/>
+<path d="M68 219 L80 230 L68 249 L56 230Z M451 219 L463 230 L451 249 L439 230Z" fill="#45cadd" stroke="#e7c47b" stroke-width="4"/>
+<g transform="translate(75 273)"><path d="M0 14 L-12 -2 L-5 -5 L3 10 L15 0 L19 5 L4 16 Z" fill="#86be81"/><rect x="-9" y="-3" width="3" height="3" fill="#ebd6ff"/></g><g transform="translate(116 273)"><path d="M0 14 L-12 -2 L-5 -5 L3 10 L15 0 L19 5 L4 16 Z" fill="#60aa73"/><rect x="-9" y="-3" width="3" height="3" fill="#ebd6ff"/></g><g transform="translate(143 273)"><path d="M0 14 L-12 -2 L-5 -5 L3 10 L15 0 L19 5 L4 16 Z" fill="#86be81"/><rect x="-9" y="-3" width="3" height="3" fill="#ebd6ff"/></g><g transform="translate(380 273)"><path d="M0 14 L-12 -2 L-5 -5 L3 10 L15 0 L19 5 L4 16 Z" fill="#60aa73"/><rect x="-9" y="-3" width="3" height="3" fill="#ebd6ff"/></g><g transform="translate(414 273)"><path d="M0 14 L-12 -2 L-5 -5 L3 10 L15 0 L19 5 L4 16 Z" fill="#86be81"/><rect x="-9" y="-3" width="3" height="3" fill="#ebd6ff"/></g><g transform="translate(456 273)"><path d="M0 14 L-12 -2 L-5 -5 L3 10 L15 0 L19 5 L4 16 Z" fill="#60aa73"/><rect x="-9" y="-3" width="3" height="3" fill="#ebd6ff"/></g>
+</svg>
