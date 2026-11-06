@@ -1054,7 +1054,8 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
               if(chosen===n){ctx.strokeStyle='#fff7ce';ctx.lineWidth=3;ctx.strokeRect(n.x-20,n.y-25,40,47);}
               continue;
             }
-            const complete=!!levelComplete[n.id];
+            const complete=n.id==='prologue'?
+              !!prologueSlots[activeSlot]?.completed:!!levelComplete[n.id];
             ctx.fillStyle='#29242b';ctx.fillRect(n.x-13,n.y-8,28,18);
             ctx.fillStyle=complete?'#f8c545':n.color;ctx.fillRect(n.x-10,n.y-10,22,15);
             ctx.fillStyle='#fff8c6';ctx.fillRect(n.x-5,n.y-7,10,5);
@@ -4047,10 +4048,10 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           {from:5.8,to:9.2,speaker:'VITORIA',message:'E DEMORAR MAIS 30 MINUTINHOS! HIHIHI!',pose:'happy'},
           {from:9.2,to:12.3,speaker:'VITORIA',message:'MAS SE ELE ME FIZER ESPERAR CINCO MINUTOS...',pose:'prologueCrossed'},
           {from:12.3,to:15,speaker:'VITORIA',message:'É BOM QUE TENHA UMA EXPLICAÇÃO!',pose:'prologueCrossed'},
-          {from:15,to:18.5,speaker:'VITORIA',message:'AH, QUER SABER? VOU EU MESMA ATÉ O PORTÃO!',pose:'prologueIdle'}
+          {from:15,to:18.5,speaker:'VITORIA',message:'AH, QUER SABER? VOU EU MESMA ATÉ O PORTÃO!',pose:'talk'}
         ];
         const PROLOGUE_LINES_OUTRO=[
-          {from:0,to:2.9,speaker:'VITORIA',message:'ATÉ QUE ENFIM SAÍ DESSE CASTELO!',pose:'prologueIdle'},
+          {from:0,to:2.9,speaker:'VITORIA',message:'ATÉ QUE ENFIM SAÍ DESSE CASTELO!',pose:'talk'},
           {from:2.9,to:5.9,speaker:'VITORIA',message:'AGORA SÓ FALTA O SENHOR GABRIEL APARECER...',pose:'prologueWatch'},
           {from:5.9,to:8.7,speaker:'VITORIA',message:'SE ELE ESTIVER OLHANDO PRA OUTRA PRINCESA, EU...',pose:'prologueCrossed'},
           {from:8.7,to:11.8,speaker:'VITORIA',message:'AI... TOMARA QUE CHEGUE LOGO. TÔ COM SAUDADE.',pose:'happy'},
@@ -4372,7 +4373,9 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
             const outro=state==='prologueOutro';
             const lines=outro?PROLOGUE_LINES_OUTRO:PROLOGUE_LINES_INTRO;
             const current=storyLine(prologueSceneSeconds,lines);
-            const pose=current?.pose??'prologueIdle';
+            const pose=current?.pose==='talk'?
+              (Math.floor(prologueSceneSeconds*6)%2===0?'talkOpen':'talkClosed'):
+              (current?.pose??'prologueIdle');
             const sprite=processedAssets.vitoria[pose]||processedAssets.vitoria.idle||
               processedAssets.princess;
             drawSpriteOnFeet(sprite,
