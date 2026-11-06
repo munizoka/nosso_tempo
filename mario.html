@@ -4301,14 +4301,86 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           else{ctx.fillStyle='#c4a05e';ctx.fillRect(x-22,foot-70,44,70);ctx.fillStyle=skyAltarActivated?'#80f4ff':'#536577';ctx.fillRect(x-13,foot-106,26,37);}
           ctx.shadowBlur=0;ctx.restore();
         }
+        // FASE 3 — CORVOS VIVOS: somente render, sem alterar hitboxes/IA.
+        // O 61.png continua sendo o corpo, com asas e expressões em Canvas.
+        function skyBirdFlightPose(bird,seconds,heroX,heroY){
+          const dx=Math.abs(bird.x+bird.w/2-heroX);
+          const dy=Math.abs(bird.y+bird.h/2-heroY);
+          const alert=Math.max(0,1-Math.max(dx/155,dy/120));
+          const flap=Math.sin(seconds*(8.3+alert*3.8)+bird.phase*2.7);
+          const edge=Math.min(
+            Math.abs(bird.x-(bird.baseX-bird.range)),
+            Math.abs((bird.baseX+bird.range)-bird.x));
+          const turning=Math.max(0,1-edge/22);
+          return {
+            alert,flap,
+            wingLift:Math.round(3+(flap+1)*3.5),
+            stretch:1+flap*.065,
+            bob:Math.sin(seconds*2.2+bird.phase)*1.3,
+            bank:(bird.vx>0?-1:1)*(.026+turning*.105)+
+              Math.sin(seconds*1.6+bird.phase)*.022
+          };
+        }
+        function drawSkyBirdWings(bird,pose){
+          // Contornos pixelados das penas atrás do corpo original.
+          const w=bird.w,h=bird.h;
+          const rootX=-Math.round(w*.34),rootY=-Math.round(h*.23);
+          ctx.fillStyle='#29243f';
+          ctx.fillRect(rootX-5,rootY-pose.wingLift+2,19,5+pose.wingLift);
+          ctx.fillRect(rootX-9,rootY-pose.wingLift+7,12,5);
+          ctx.fillStyle='#55486e';
+          ctx.fillRect(rootX-4,rootY-pose.wingLift+2,12,2);
+          // Pequena ponta da asa contrária, com fase deslocada.
+          ctx.fillStyle='#39304f';
+          ctx.fillRect(Math.round(w*.13),rootY+2-Math.round(pose.wingLift*.55),8,4);
+        }
         function drawSkyBirds(){
+          const seconds=gameNow/1000;
+          const heroX=player.x+player.w/2,heroY=player.y+player.h/2;
           for(const bird of skyBirds){
-            if(!bird.alive)continue;
+            if(!bird.alive||bird.x+bird.w<cameraX-26||
+              bird.x>cameraX+GAME_WIDTH+26)continue;
+            const pose=skyBirdFlightPose(bird,seconds,heroX,heroY);
+            const centerX=Math.round(bird.x+bird.w/2);
+            const centerY=Math.round(bird.y+bird.h/2+pose.bob);
             ctx.save();
-            if(bird.vx>0){ctx.translate(bird.x+bird.w,0);ctx.scale(-1,1);drawObject(extras.skyCrow,0,bird.y,bird.w,bird.h);}
-            else drawObject(extras.skyCrow,bird.x,bird.y,bird.w,bird.h);
-            if(!extras.skyCrow){ctx.fillStyle='#332548';ctx.fillRect(bird.x,bird.y,bird.w,bird.h);}
+            ctx.translate(centerX,centerY);
+            if(bird.vx>0)ctx.scale(-1,1);
+            ctx.rotate(pose.bank);
+            ctx.scale(1,pose.stretch);
+            drawSkyBirdWings(bird,pose);
+            if(extras.skyCrow)
+              drawObject(extras.skyCrow,-Math.round(bird.w/2),
+                -Math.round(bird.h/2),bird.w,bird.h);
+            else{
+              // Fallback legível durante carregamento do 61.png.
+              ctx.fillStyle='#332548';
+              ctx.fillRect(-Math.round(bird.w/2),-Math.round(bird.h/2),
+                bird.w,bird.h);
+              ctx.fillStyle='#fae4a4';
+              ctx.fillRect(-Math.round(bird.w*.31),-4,3,3);
+            }
             ctx.restore();
+            // Pena desprendida ocasionalmente, sem criar partículas persistentes.
+            const feather=((seconds*.67+bird.phase)%2+2)%2;
+            if(feather<.85){
+              ctx.save();
+              ctx.globalAlpha=.29*(1-feather/.85);
+              ctx.fillStyle='#746681';
+              const sign=bird.vx>0?-1:1;
+              ctx.fillRect(Math.round(centerX+sign*(bird.w/2+feather*12)),
+                Math.round(centerY+10+feather*12),3,2);
+              ctx.restore();
+            }
+            // Sinal curto de susto quando Gabriel se aproxima.
+            if(pose.alert>.58&&Math.sin(seconds*7+bird.phase*3)>.38){
+              ctx.save();
+              ctx.globalAlpha=Math.min(.9,pose.alert);
+              ctx.fillStyle='#ffe2a3';
+              ctx.fillRect(centerX-1,Math.round(bird.y)-13,3,7);
+              ctx.fillRect(centerX-1,Math.round(bird.y)-4,3,3);
+              ctx.restore();
+            }
           }
         }
         // Posições compartilhadas pela câmera, personagens e objeto da cena final.
