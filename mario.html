@@ -2069,7 +2069,9 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
             head.textContent='ESPAÇO '+(i+1)+(save?.legacy?' • LEGADO':'');
             button.appendChild(head);
             const meta=document.createElement('span');meta.className='sgb-slot-meta';
-            meta.textContent=save?'Fase '+save.level+' • '+save.difficulty.toUpperCase()+' • '+new Date(save.savedAt).toLocaleDateString('pt-BR'):
+            const prologuePending=prologueSlots[i]?.started&&!prologueSlots[i]?.completed;
+            meta.textContent=save?(prologuePending?'PRÓLOGO • VITORIA NO CASTELO':'FASE '+save.level)+
+              ' • '+save.difficulty.toUpperCase()+' • '+new Date(save.savedAt).toLocaleDateString('pt-BR'):
               'VAZIO • NOVA AVENTURA';
             button.appendChild(meta);
             button.disabled=slotMode==='load'&&!save;
@@ -2245,8 +2247,13 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
             if(!found.some(Boolean))return menuMessage('Ainda não há saves nesta conta.');
             if(!window.confirm('Baixar os saves e substituir os espaços locais correspondentes?'))return;
             try{localStorage.setItem(GAME_SAVE_KEY+'-backup-'+Date.now(),JSON.stringify(slotTable));}catch(e){}
-            found.forEach((save,i)=>{if(save)slotTable[i]=save;});
+            found.forEach((save,i)=>{
+              if(save){slotTable[i]=save;prologueSlots[i]=null;}
+            });
             if(!writeSlotTable())throw new Error('Armazenamento local indisponível.');
+            // Download sobrescreve campanhas antigas: limpa também seus
+            // checkpoints locais para não misturar o prólogo de outro slot.
+            try{localStorage.setItem(PROLOGUE_SAVE_KEY,JSON.stringify(prologueSlots));}catch(e){}
             // Não deixar uma partida ativa antiga sobrescrever a cópia recebida.
             activeSlot=null;state='menu';inventoryOpen=false;
             inventory.story.splice(0);
@@ -2293,7 +2300,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           resetPosition();resetSkyNimbo();setHUD();
         }
         window.reiniciarFase=function(){
-          if(isPrologueState())startPrologue({resume:true});
+          if(isPrologueState())startPrologue({replay:true});
           else restartCurrentLevel();
         };
         function loseLife(reason='enemy'){
@@ -4100,7 +4107,12 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           level=0;state=saved?'prologuePlaying':'prologueIntro';
           prologueCheckpoint=saved?.checkpoint??60;
           prologueLibraryOpen=!!saved?.library;prologueClockOpen=!!saved?.clock;
-          princessPlayer.x=saved?.x??70;
+          const requestedX=saved?.x??70;
+          // Saves capturados sobre vãos/plataformas não reaparecem no vazio.
+          const safeSpawn=PROLOGUE_FLOOR.some(b=>
+            requestedX>=b.x+2&&requestedX+princessPlayer.w<=b.x+b.w-2);
+          princessPlayer.x=safeSpawn?requestedX:prologueCheckpoint;
+          if(!saved)princessPlayer.x=70;
           princessPlayer.y=312;princessPlayer.vx=princessPlayer.vy=0;
           princessPlayer.grounded=true;princessPlayer.direction=1;
           princessPlayer.walkClock=0;princessPlayer.idleClock=0;
