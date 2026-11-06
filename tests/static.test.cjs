@@ -554,52 +554,53 @@ check('Atmosfera é renderizada antes do terreno e dos personagens',
  !/new Image\(/.test(skyAtmosphereSource));
 
 
-const skyCrowsSource=mario.match(
- /        \/\/ FASE 3 — CORVOS VIVOS:[\s\S]*?(?=        \/\/ Posições compartilhadas pela câmera)/)?.[0];
-check('Animação dos corvos isolável e independente da física',!!skyCrowsSource);
-const birdCanvasCalls={rects:[],draws:[],scales:[],rotates:[],translates:[]};
-const birdMockCtx={
- save(){},restore(){},
- translate(...p){birdCanvasCalls.translates.push(p)},
- scale(...p){birdCanvasCalls.scales.push(p)},
- rotate(...p){birdCanvasCalls.rotates.push(p)},
- fillRect(...p){birdCanvasCalls.rects.push(p)}
-};
-const mockSkyBirds=[
- {x:800,y:200,w:38,h:34,vx:-1.45,baseX:800,range:90,phase:.3,alive:true},
- {x:930,y:220,w:38,h:34,vx:1.60,baseX:930,range:90,phase:1.8,alive:true},
- {x:1800,y:210,w:38,h:34,vx:-1.4,baseX:1800,range:90,phase:2.3,alive:true},
- {x:980,y:200,w:38,h:34,vx:-1.4,baseX:980,range:90,phase:3.1,alive:false}
-];
-const originalBirds=JSON.stringify(mockSkyBirds);
-const skyBirdTest=new Function(
- 'ctx','skyBirds','extras','drawObject','cameraX','GAME_WIDTH','gameNow','player',
- skyCrowsSource+'\nreturn {skyBirdFlightPose,drawSkyBirds};')(
- birdMockCtx,mockSkyBirds,{skyCrow:{width:38,height:34}},
- (...args)=>birdCanvasCalls.draws.push(args),780,400,2100,
- {x:810,y:220,w:32,h:55});
-const p0=skyBirdTest.skyBirdFlightPose(mockSkyBirds[0],2.1,815,241);
-const p1=skyBirdTest.skyBirdFlightPose(mockSkyBirds[0],2.35,815,241);
-const far=skyBirdTest.skyBirdFlightPose(mockSkyBirds[0],2.1,1200,400);
-check('Asas, inclinação e reação variam ao longo do tempo e proximidade',
- Math.abs(p0.flap-p1.flap)>.1&&
- p0.alert>far.alert&&
- p0.stretch>.9&&p0.stretch<1.1&&
- p0.wingLift>=3&&p0.wingLift<=10);
-skyBirdTest.drawSkyBirds();
-check('Só dois corvos visíveis são desenhados e sprite 61 é reutilizado',
- birdCanvasCalls.draws.length===2&&
- birdCanvasCalls.scales.some(([x,y])=>x===-1&&y===1)&&
- birdCanvasCalls.rotates.length===2&&
- birdCanvasCalls.rects.length>5&&
- JSON.stringify(mockSkyBirds)===originalBirds);
-check('Corvos mantêm movimento, colisões, pontos e ataque originais',
- mario.includes('function updateSkyBirds(t){')&&
+// Fase 3: três arquivos novos e corvos originais sem arte inventada.
+check('Novos sprites 265-267 estão presentes',
+ ['265.png','266.png','267.png'].every(name=>
+ fs.existsSync(path.join(root,name))&&fs.statSync(path.join(root,name)).size>1000));
+check('Remake usa 265 para fundo, 266 no parallax e 267 atrás do altar',
+ mario.includes("skyPanorama:'265.png'")&&mario.includes("skyRuins:'266.png'")&&
+ mario.includes("skyTempleFacade:'267.png'")&&
+ mario.includes('drawSkyRuinsParallax(); // ruínas 266 em profundidade')&&
+ mario.includes('drawSkyTempleFacade(); // 267 atrás do altar e dos personagens'));
+const skyArtSource=mario.match(
+ /        \/\/ REMAKE FASE 3: 265 panorama,[\s\S]*?(?=        function drawSkyBackground\(\))/)?.[0];
+check('Renderizadores de ruínas e templo estão isoláveis',!!skyArtSource);
+const skyArtCalls=[];
+const mockArtCtx={save(){},restore(){},drawImage(...args){skyArtCalls.push(args)}};
+const skyArt=new Function('extras','ctx','cameraX','GAME_WIDTH',
+ 'gameNow','SKY_END','SKY_ALTAR_X',skyArtSource+
+ '\nreturn {drawSkyRuinsParallax,skyTempleFacadeLayout,drawSkyTempleFacade};')(
+ {skyRuins:{width:1000,height:450},skyTempleFacade:{width:800,height:780}},
+ mockArtCtx,2480,800,7000,3280,3110);
+skyArt.drawSkyRuinsParallax();skyArt.drawSkyTempleFacade();
+const facade=skyArt.skyTempleFacadeLayout({width:800,height:780});
+check('Parallax visível e templo centralizado, com base no chão',
+ skyArtCalls.length>=2&&facade.x+facade.w<=3280&&
+ facade.y>=0&&facade.y+facade.h===380&&
+ Math.abs(facade.x+facade.w/2-3110)<=.5);
+const crowRender=mario.match(
+ /        \/\/ 61.png original até os PNGs[\s\S]*?(?=        \/\/ Posições compartilhadas pela câmera)/)?.[0];
+check('Asas procedurais e deformações dos corvos foram removidas',
+ !!crowRender&&!mario.includes('function skyBirdFlightPose(')&&
+ !mario.includes('function drawSkyBirdWings(')&&
+ !/rotate\(|wingLift|feather/.test(crowRender));
+const crowOps=[];
+const c={save(){},restore(){},translate(){},scale(){},fillRect(){}};
+const renderCrow=new Function('skyBirds','ctx','extras','cameraX','GAME_WIDTH','drawObject',
+ crowRender+'\nreturn drawSkyBirds;')(
+ [{x:100,y:200,w:38,h:34,vx:-1.5,alive:true},
+ {x:300,y:200,w:38,h:34,vx:1.5,alive:true},
+ {x:1600,y:200,w:38,h:34,vx:1.5,alive:true}],
+ c,{skyCrow:{width:38,height:34}},0,800,(...args)=>crowOps.push(args));
+renderCrow();
+check('Somente corvos visíveis desenhados com o sprite 61',
+ crowOps.length===2&&crowOps.every(a=>a[0].width===38));
+check('IA e hitboxes dos corvos preservadas',
  mario.includes('bird.x+=bird.vx*enemyDifficultyMultiplier();')&&
- mario.includes('bird.y=bird.baseY+Math.sin(t*2.5+bird.phase)*24;')&&
  mario.includes('if(isDashing()&&isColliding(player,bird))')&&
- !/bird\.x\s*[+\-]?=|bird\.y\s*[+\-]?=|bird\.vx\s*[+\-]?=/.test(skyCrowsSource)&&
- !/new Image\(/.test(skyCrowsSource));
+ mario.includes('bird.y=bird.baseY+Math.sin(t*2.5+bird.phase)*24;'));
+
 
 check('Inventário com dezoito espaços',mario.includes('inv-story-grid')&&mario.includes('inv-consumable-grid')&&mario.includes('for(let n=0;n<9;n++)'));
 check('Sprite 68 e categorias RPG',mario.includes('68.png')&&mario.includes('ITENS DE HISTÓRIA')&&mario.includes('CONSUMÍVEIS'));

@@ -1133,7 +1133,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           sky: '43.jpg', mountains: '44.png', trees: '45.png', giantTree: '46.png',
           forestGround: '47.png', dirt: '48.jpg', wood: '49.png', magic: '50.png',
           checkpointOff: '51.png', checkpointOn: '52.png', villain: '53.png', portal: '54.png', mapHead: '55.jpg',
-          totemOn: '56.png', totemOff: '57.png', skyTemple: '58.png', skyGround: '59.png', skyPlatform: '60.png', skyCrow: '61.png', skyAltarOff: '62.png', skyAltarOn: '63.png', windShort: '64.png', windLong: '65.png', windUp: '66.png', villainDrink: '67.png',
+          totemOn: '56.png', totemOff: '57.png', skyTemple: '58.png', skyPanorama:'265.png', skyRuins:'266.png', skyTempleFacade:'267.png', skyGround: '59.png', skyPlatform: '60.png', skyCrow: '61.png', skyAltarOff: '62.png', skyAltarOn: '63.png', windShort: '64.png', windLong: '65.png', windUp: '66.png', villainDrink: '67.png',
           superHero:'78.png', burger:'79.png', heart:'80.png', dashHero:'81.png', dashSuper:'82.png', heartHit:'83.png',
           // Teste visual: sem o foreground 120 e sem a folha decorativa 124.
           // Arquivos permanecem no repositório; basta reativar aqui se necessário.
@@ -1394,7 +1394,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
                 const sheet=cropSprite(img);
                 processedAssets.superHeroFrames=makeFrames(sheet,4);
                 extras[key]=sheet;
-              }else extras[key]=(['sky','mountains','trees','skyTemple'].includes(key)?img:cropSprite(img));
+              }else extras[key]=(['sky','mountains','trees','skyTemple','skyPanorama'].includes(key)?img:cropSprite(img));
             }catch(error){console.error('Falha ao processar '+path,error);}
           };
           img.onerror=()=>{ if(key!=='dirt')console.warn('Não foi possível carregar '+path); };
@@ -4216,13 +4216,44 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           }
           ctx.restore();
         }
+        // REMAKE FASE 3: 265 panorama, 266 ruínas e 267 fachada no fim.
+        function drawSkyRuinsParallax(){
+          const art=extras.skyRuins;
+          if(!art?.width||!art?.height)return;
+          const w=Math.min(580,Math.max(310,Math.round(160*art.width/art.height)));
+          const h=Math.max(1,Math.round(w*art.height/art.width));
+          const stride=w+145,pan=cameraX*.23+gameNow/1000*1.6;
+          const first=Math.floor(pan/stride)-1;
+          const last=Math.ceil((pan+GAME_WIDTH)/stride)+1;
+          ctx.save();ctx.globalAlpha=.72;
+          for(let i=first;i<=last;i++){
+            ctx.drawImage(art,Math.round(i*stride-pan),
+              Math.round(150+(i%3)*22-h*.45),w,h);
+          }
+          ctx.restore();
+        }
+        function skyTempleFacadeLayout(art){
+          const maxW=Math.min(336,(SKY_END-SKY_ALTAR_X)*2-8);
+          const w=Math.max(1,Math.round(Math.min(maxW,267*art.width/art.height)));
+          const h=Math.max(1,Math.round(w*art.height/art.width));
+          return {x:Math.round(SKY_ALTAR_X-w/2),y:380-h,w,h};
+        }
+        function drawSkyTempleFacade(){
+          const art=extras.skyTempleFacade;
+          if(!art?.width||!art?.height)return;
+          const r=skyTempleFacadeLayout(art);
+          if(r.x>cameraX+GAME_WIDTH+80||r.x+r.w<cameraX-80)return;
+          ctx.drawImage(art,r.x,r.y,r.w,r.h);
+        }
         function drawSkyBackground(){
-          if(extras.skyTemple)drawObject(extras.skyTemple,0,0,GAME_WIDTH,GAME_HEIGHT);
+          if(extras.skyPanorama)drawObject(extras.skyPanorama,0,0,GAME_WIDTH,GAME_HEIGHT);
+          else if(extras.skyTemple)drawObject(extras.skyTemple,0,0,GAME_WIDTH,GAME_HEIGHT);
           else{
             const g=ctx.createLinearGradient(0,0,0,GAME_HEIGHT);
             g.addColorStop(0,'#369bdc');g.addColorStop(.58,'#aea1ed');g.addColorStop(1,'#f2d9ec');
             ctx.fillStyle=g;ctx.fillRect(0,0,GAME_WIDTH,GAME_HEIGHT);
           }
+          drawSkyRuinsParallax(); // ruínas 266 em profundidade
           // Três planos de nuvens com velocidades e profundidades próprias.
           drawSkyCloudParallax();
         }
@@ -4301,86 +4332,21 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           else{ctx.fillStyle='#c4a05e';ctx.fillRect(x-22,foot-70,44,70);ctx.fillStyle=skyAltarActivated?'#80f4ff':'#536577';ctx.fillRect(x-13,foot-106,26,37);}
           ctx.shadowBlur=0;ctx.restore();
         }
-        // FASE 3 — CORVOS VIVOS: somente render, sem alterar hitboxes/IA.
-        // O 61.png continua sendo o corpo, com asas e expressões em Canvas.
-        function skyBirdFlightPose(bird,seconds,heroX,heroY){
-          const dx=Math.abs(bird.x+bird.w/2-heroX);
-          const dy=Math.abs(bird.y+bird.h/2-heroY);
-          const alert=Math.max(0,1-Math.max(dx/155,dy/120));
-          const flap=Math.sin(seconds*(8.3+alert*3.8)+bird.phase*2.7);
-          const edge=Math.min(
-            Math.abs(bird.x-(bird.baseX-bird.range)),
-            Math.abs((bird.baseX+bird.range)-bird.x));
-          const turning=Math.max(0,1-edge/22);
-          return {
-            alert,flap,
-            wingLift:Math.round(3+(flap+1)*3.5),
-            stretch:1+flap*.065,
-            bob:Math.sin(seconds*2.2+bird.phase)*1.3,
-            bank:(bird.vx>0?-1:1)*(.026+turning*.105)+
-              Math.sin(seconds*1.6+bird.phase)*.022
-          };
-        }
-        function drawSkyBirdWings(bird,pose){
-          // Contornos pixelados das penas atrás do corpo original.
-          const w=bird.w,h=bird.h;
-          const rootX=-Math.round(w*.34),rootY=-Math.round(h*.23);
-          ctx.fillStyle='#29243f';
-          ctx.fillRect(rootX-5,rootY-pose.wingLift+2,19,5+pose.wingLift);
-          ctx.fillRect(rootX-9,rootY-pose.wingLift+7,12,5);
-          ctx.fillStyle='#55486e';
-          ctx.fillRect(rootX-4,rootY-pose.wingLift+2,12,2);
-          // Pequena ponta da asa contrária, com fase deslocada.
-          ctx.fillStyle='#39304f';
-          ctx.fillRect(Math.round(w*.13),rootY+2-Math.round(pose.wingLift*.55),8,4);
-        }
+        // 61.png original até os PNGs do ciclo de voo ficarem prontos.
+        // Nenhuma asa de Canvas, rotação, distorção ou efeito de susto.
         function drawSkyBirds(){
-          const seconds=gameNow/1000;
-          const heroX=player.x+player.w/2,heroY=player.y+player.h/2;
           for(const bird of skyBirds){
-            if(!bird.alive||bird.x+bird.w<cameraX-26||
-              bird.x>cameraX+GAME_WIDTH+26)continue;
-            const pose=skyBirdFlightPose(bird,seconds,heroX,heroY);
-            const centerX=Math.round(bird.x+bird.w/2);
-            const centerY=Math.round(bird.y+bird.h/2+pose.bob);
+            if(!bird.alive||bird.x+bird.w<cameraX-30||
+              bird.x>cameraX+GAME_WIDTH+30)continue;
             ctx.save();
-            ctx.translate(centerX,centerY);
-            if(bird.vx>0)ctx.scale(-1,1);
-            ctx.rotate(pose.bank);
-            ctx.scale(1,pose.stretch);
-            drawSkyBirdWings(bird,pose);
-            if(extras.skyCrow)
-              drawObject(extras.skyCrow,-Math.round(bird.w/2),
-                -Math.round(bird.h/2),bird.w,bird.h);
-            else{
-              // Fallback legível durante carregamento do 61.png.
-              ctx.fillStyle='#332548';
-              ctx.fillRect(-Math.round(bird.w/2),-Math.round(bird.h/2),
-                bird.w,bird.h);
-              ctx.fillStyle='#fae4a4';
-              ctx.fillRect(-Math.round(bird.w*.31),-4,3,3);
-            }
+            if(bird.vx>0){
+              ctx.translate(bird.x+bird.w,0);ctx.scale(-1,1);
+              if(extras.skyCrow)drawObject(extras.skyCrow,0,bird.y,bird.w,bird.h);
+              else{ctx.fillStyle='#332548';ctx.fillRect(0,bird.y,bird.w,bird.h);}
+            }else if(extras.skyCrow)
+              drawObject(extras.skyCrow,bird.x,bird.y,bird.w,bird.h);
+            else{ctx.fillStyle='#332548';ctx.fillRect(bird.x,bird.y,bird.w,bird.h);}
             ctx.restore();
-            // Pena desprendida ocasionalmente, sem criar partículas persistentes.
-            const feather=((seconds*.67+bird.phase)%2+2)%2;
-            if(feather<.85){
-              ctx.save();
-              ctx.globalAlpha=.29*(1-feather/.85);
-              ctx.fillStyle='#746681';
-              const sign=bird.vx>0?-1:1;
-              ctx.fillRect(Math.round(centerX+sign*(bird.w/2+feather*12)),
-                Math.round(centerY+10+feather*12),3,2);
-              ctx.restore();
-            }
-            // Sinal curto de susto quando Gabriel se aproxima.
-            if(pose.alert>.58&&Math.sin(seconds*7+bird.phase*3)>.38){
-              ctx.save();
-              ctx.globalAlpha=Math.min(.9,pose.alert);
-              ctx.fillStyle='#ffe2a3';
-              ctx.fillRect(centerX-1,Math.round(bird.y)-13,3,7);
-              ctx.fillRect(centerX-1,Math.round(bird.y)-4,3,3);
-              ctx.restore();
-            }
           }
         }
         // Posições compartilhadas pela câmera, personagens e objeto da cena final.
@@ -4550,6 +4516,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           drawSkyBackground();drawSkyWind();
           ctx.save();ctx.translate(-Math.round(cameraX),0);
           drawSkyWindGlints(); // partículas discretas acompanham as zonas de vento
+          drawSkyTempleFacade(); // 267 atrás do altar e dos personagens
           for(const b of level3Blocks){
             if(b.type==='skyGround')drawSkyGround(b);
             else if(b.type==='skyPlatform'){
