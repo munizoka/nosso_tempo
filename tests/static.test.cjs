@@ -1016,6 +1016,88 @@ check('Piada de trinta minutos, ciúme e surpresa mantidos',
  prologueCode.includes("pose='prologueSurprised'")&&
  !prologueCode.includes('ESSE LOIRO'));
 
+
+// PROLOGO 292-295: imagens isoladas e atlas multiframes sem contaminacao.
+const royalAssetSource=mario.match(/        const prologueDecorPaths=\{[\s\S]*?\n        \};/)?.[0];
+check('Quatro assets reais registrados',!!royalAssetSource);
+const realPaths=new Function(royalAssetSource+'\nreturn prologueDecorPaths;')();
+check('292 piso, 293 plataforma, 294 alavanca e 295 soldado presentes',
+ realPaths.ground==='292 piso.png'&&realPaths.platform==='293 plataforma.png'&&
+ realPaths.lever==='294 alavanca.png'&&realPaths.guard==='295 soldado.png'&&
+ Object.values(realPaths).every(n=>fs.existsSync(path.join(root,n))&&
+ fs.statSync(path.join(root,n)).size>1000));
+const royalDraw=mario.match(/        \/\/ Nova textura 292:[\s\S]*?(?=        function drawPrologueVitoria\(\)\{)/)?.[0];
+check('Renderizadores do piso e dos atlas extraíveis',!!royalDraw);
+const calls=[],ctxArt={
+ save(){},restore(){},beginPath(){},rect(){},clip(){},fillRect(){},
+ translate(){},scale(){},drawImage(...args){calls.push(args)}
+};
+const sources={
+ ground:{width:1254,height:1254},platform:{width:1448,height:1086},
+ lever:{width:1448,height:1086},guard:{width:1448,height:1086}
+};
+const guardHero={x:1300,y:312,w:29,h:68};
+const artFns=new Function('ctx','prologueDecor','PROLOGUE_FLOOR','PROLOGUE_PLATFORMS',
+ 'cameraX','GAME_WIDTH','prologueNearLever','retroText','princessPlayer',
+ 'prologueBanter','gameNow','prologueBanterUntil',
+ royalDraw+'\nreturn {drawPrologueGround,drawPrologueLever,drawPrologueGuard,'+
+ 'prologueGuardPose,prologueLeverGeometry,PROLOGUE_GUARD_FRAMES,PROLOGUE_GUARD};')(
+ ctxArt,sources,[{x:0,y:380,w:510,h:120}],[{x:280,y:280,w:140,h:18}],
+ 0,800,()=>false,()=>{},guardHero,null,0,0);
+artFns.drawPrologueGround();
+const groundDraws=calls.filter(a=>a[0]===sources.ground);
+const platformDraws=calls.filter(a=>a[0]===sources.platform);
+check('292 repetido a 135x120 sem esticar a ultima peca',
+ groundDraws.length===4&&groundDraws.every(a=>a.length===9&&
+ a[1]===32&&a[2]===129&&a[3]===1191&&a[4]===1060&&
+ a[6]===380&&a[7]===135&&a[8]===120));
+check('293 desenhado com recorte real e acabamento sob a hitbox',
+ platformDraws.length===1&&platformDraws[0].length===9&&
+ platformDraws[0][1]===11&&platformDraws[0][2]===391&&
+ platformDraws[0][3]===1426&&platformDraws[0][4]===365&&
+ platformDraws[0][6]===280&&platformDraws[0][7]===140&&
+ platformDraws[0][8]>18);
+const off=artFns.prologueLeverGeometry({x:310,y:380},false);
+const on=artFns.prologueLeverGeometry({x:310,y:380},true);
+check('Alavanca ligada e desligada com pedestal fixo e haste mais alta',
+ Math.abs(off.x+(325-90)*.085-310)<1.5&&
+ Math.abs(on.x+(1010-788)*.085-310)<1.5&&
+ off.y+off.h===380&&on.y+on.h===380&&on.h>off.h);
+calls.length=0;
+artFns.drawPrologueLever({x:310,y:380},false);
+artFns.drawPrologueLever({x:310,y:380},true);
+const leverDraws=calls.filter(a=>a[0]===sources.lever);
+check('294 OFF/ON recortados em areas independentes sem o outro estado',
+ leverDraws.length===2&&leverDraws.every(a=>a.length===9)&&
+ leverDraws[0][1]===90&&leverDraws[0][2]===319&&
+ leverDraws[0][3]===596&&leverDraws[0][4]===572&&
+ leverDraws[1][1]===788&&leverDraws[1][2]===168&&
+ leverDraws[1][3]===481&&leverDraws[1][4]===723&&
+ leverDraws.every(a=>a[6]+a[8]===380));
+const guard=artFns.PROLOGUE_GUARD;
+const lookLeft=artFns.prologueGuardPose({x:guard.x-90,y:312,w:29,h:68});
+const lookRight=artFns.prologueGuardPose({x:guard.x+90,y:312,w:29,h:68});
+const highLeft=artFns.prologueGuardPose({x:guard.x-90,y:225,w:29,h:68});
+const highRight=artFns.prologueGuardPose({x:guard.x+90,y:225,w:29,h:68});
+check('Guarda acompanha esquerda/direita e olha para cima no salto',
+ lookLeft.frame===1&&lookLeft.mirror&&
+ lookRight.frame===1&&!lookRight.mirror&&
+ highLeft.frame===4&&!highLeft.mirror&&
+ highRight.frame===3&&!highRight.mirror);
+const mouthA=artFns.prologueGuardPose({x:guard.x,y:312,w:29,h:68},guard,true,0);
+const mouthB=artFns.prologueGuardPose({x:guard.x,y:312,w:29,h:68},guard,true,180);
+check('Guarda tem sprites distintos de boca aberta e fechada',
+ mouthA.frame===5&&mouthB.frame===6);
+check('Sete poses do soldado isoladas e alinhadas pelos pes',
+ artFns.PROLOGUE_GUARD_FRAMES.length===7&&
+ artFns.PROLOGUE_GUARD_FRAMES.every(r=>r[1]+r[3]===746)&&
+ artFns.PROLOGUE_GUARD_FRAMES.every((r,i,a)=>i===0||
+ r[0]>=a[i-1][0]+a[i-1][2]));
+check('Guarda nao altera colisoes nem as fases concluídas',
+ mario.includes('drawPrologueGuard();\n          drawPrologueVitoria();')&&
+ mario.includes('function drawLevelOne(){')&&
+ mario.includes('function drawLevelThree(){'));
+
 check('Inventário com dezoito espaços',mario.includes('inv-story-grid')&&mario.includes('inv-consumable-grid')&&mario.includes('for(let n=0;n<9;n++)'));
 check('Sprite 68 e categorias RPG',mario.includes('68.png')&&mario.includes('ITENS DE HISTÓRIA')&&mario.includes('CONSUMÍVEIS'));
 check('Relógio virtual congela na pausa',mario.includes('if(!inventoryOpen&&!menuOpen){')&&mario.includes('gameNow+=GAME_PHYSICS_STEP*1000')&&mario.includes('gameFrameRemainder=0;')&&mario.includes("if(!sceneReady||inventoryOpen||menuOpen||state==='menu')return"));
