@@ -1297,6 +1297,20 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           image.src=encodeURI(path);
         }
 
+        // REFINAMENTO DO PRÓLOGO — todas as artes estão na raiz do GitHub.
+        // A alavanca 294 e o guarda 295 são atlas (NÃO recortar como uma imagem inteira).
+        const prologueDecorPaths={
+          ground:'292 piso.png',platform:'293 plataforma.png',
+          lever:'294 alavanca.png',guard:'295 soldado.png'
+        };
+        const prologueDecor={};
+        for(const [name,path] of Object.entries(prologueDecorPaths)){
+          const image=new Image();
+          image.onload=()=>{prologueDecor[name]=image;};
+          image.onerror=()=>console.warn('Decoração do prólogo indisponível:',path);
+          image.src=encodeURI(path);
+        }
+
         // Os PNGs 84–93 são opcionais até serem enviados ao GitHub.
         // Nomes correspondem exatamente aos arquivos gerados pelo Gabriel.
         const mobSpritePaths={
@@ -4288,31 +4302,60 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
             ctx.restore();
           }
         }
+        // Nova textura 292: módulo real, cortado pelo clip (sem deformar a última peça).
+        // Coordenadas extraídas do PNG original de 1254×1254 com alpha.
+        const PROLOGUE_GROUND_CROP=[32,129,1191,1060];
+        // A plataforma 293 tem 1426×365 úteis; o suporte decora abaixo da hitbox.
+        const PROLOGUE_PLATFORM_CROP=[11,391,1426,365];
+        function prologueAtlasRect(image,baseWidth,baseHeight,crop){
+          return [crop[0]*image.width/baseWidth,crop[1]*image.height/baseHeight,
+            crop[2]*image.width/baseWidth,crop[3]*image.height/baseHeight];
+        }
         function drawPrologueGround(){
+          const ground=prologueDecor.ground;
           for(const b of PROLOGUE_FLOOR){
             if(b.x>cameraX+GAME_WIDTH||b.x+b.w<cameraX)continue;
             ctx.save();ctx.beginPath();ctx.rect(b.x-cameraX,b.y,b.w,b.h);ctx.clip();
             ctx.fillStyle='#766078';ctx.fillRect(b.x-cameraX,b.y,b.w,b.h);
-            for(let y=b.y+19;y<b.y+b.h;y+=24)
-              for(let x=Math.floor(b.x/72)*72;x<b.x+b.w;x+=72){
-                const offset=Math.floor(y/24)%2?36:0;
-                ctx.fillStyle='#ab8a85';
-                ctx.fillRect(x-cameraX+offset+2,y,68,20);
-                ctx.fillStyle='#d0b0a3';ctx.fillRect(x-cameraX+offset+4,y+2,62,3);
-              }
-            ctx.fillStyle='#f0cf97';ctx.fillRect(b.x-cameraX,b.y,b.w,8);
-            ctx.fillStyle='#b68c78';ctx.fillRect(b.x-cameraX,b.y+8,b.w,5);
+            if(ground?.width&&ground?.height){
+              const src=prologueAtlasRect(ground,1254,1254,PROLOGUE_GROUND_CROP);
+              // 120px de altura, escala proporcional ao asset: ~135px por módulo.
+              const tileH=120,tileW=Math.round(tileH*src[2]/src[3]);
+              // A repetição está presa ao mundo, não ao início de cada bloco.
+              const first=Math.floor(Math.max(b.x,cameraX-2)/tileW)*tileW;
+              const end=Math.min(b.x+b.w,cameraX+GAME_WIDTH+tileW);
+              for(let x=first;x<end;x+=tileW)
+                ctx.drawImage(ground,...src,Math.round(x-cameraX),b.y,tileW,tileH);
+            }else{
+              // Reserva enquanto a arte carrega; não deixa o piso invisível.
+              for(let y=b.y+19;y<b.y+b.h;y+=24)
+                for(let x=Math.floor(b.x/72)*72;x<b.x+b.w;x+=72){
+                  const offset=Math.floor(y/24)%2?36:0;
+                  ctx.fillStyle='#ab8a85';ctx.fillRect(x-cameraX+offset+2,y,68,20);
+                  ctx.fillStyle='#d0b0a3';ctx.fillRect(x-cameraX+offset+4,y+2,62,3);
+                }
+              ctx.fillStyle='#f0cf97';ctx.fillRect(b.x-cameraX,b.y,b.w,8);
+              ctx.fillStyle='#b68c78';ctx.fillRect(b.x-cameraX,b.y+8,b.w,5);
+            }
             ctx.restore();
           }
+          const platform=prologueDecor.platform;
           for(const p of PROLOGUE_PLATFORMS){
             if(p.x>cameraX+GAME_WIDTH||p.x+p.w<cameraX)continue;
-            const x=p.x-cameraX;
-            ctx.fillStyle='#785569';ctx.fillRect(x+3,p.y+4,p.w,p.h);
-            ctx.fillStyle='#f5d99e';ctx.fillRect(x,p.y,p.w,6);
-            ctx.fillStyle='#ba8d89';ctx.fillRect(x,p.y+6,p.w,9);
-            ctx.fillStyle='#755879';ctx.fillRect(x+7,p.y+15,p.w-14,4);
-            for(let i=14;i<p.w-10;i+=30){
-              ctx.fillStyle='#f3d99c';ctx.fillRect(x+i,p.y+9,4,4);
+            const x=Math.round(p.x-cameraX);
+            if(platform?.width&&platform?.height){
+              const src=prologueAtlasRect(platform,1448,1086,PROLOGUE_PLATFORM_CROP);
+              const visualH=Math.max(26,Math.round(p.w*src[3]/src[2]));
+              // A superfície fica em p.y; o ornamento pode descer abaixo da colisão.
+              ctx.drawImage(platform,...src,x,p.y,Math.round(p.w),visualH);
+            }else{
+              ctx.fillStyle='#785569';ctx.fillRect(x+3,p.y+4,p.w,p.h);
+              ctx.fillStyle='#f5d99e';ctx.fillRect(x,p.y,p.w,6);
+              ctx.fillStyle='#ba8d89';ctx.fillRect(x,p.y+6,p.w,9);
+              ctx.fillStyle='#755879';ctx.fillRect(x+7,p.y+15,p.w-14,4);
+              for(let i=14;i<p.w-10;i+=30){
+                ctx.fillStyle='#f3d99c';ctx.fillRect(x+i,p.y+9,4,4);
+              }
             }
           }
         }
@@ -4330,19 +4373,92 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
             ctx.fillStyle='#f9d983';ctx.fillRect(sx+3,272,8,10);
           }
         }
+        // Alavanca 294: OFF à esquerda, ON à direita. As caixas são
+        // assimétricas (a alavanca ligada é mais alta): pés e pedestal
+        // permanecem ancorados no MESMO centro e altura.
+        const PROLOGUE_LEVER_FRAMES={
+          off:{rect:[90,319,596,572],pedestalCenter:325},
+          on:{rect:[788,168,481,723],pedestalCenter:1010}
+        };
+        const PROLOGUE_LEVER_SCALE=.085;
+        function prologueLeverGeometry(lever,on){
+          const data=on?PROLOGUE_LEVER_FRAMES.on:PROLOGUE_LEVER_FRAMES.off;
+          const r=data.rect;
+          const w=Math.round(r[2]*PROLOGUE_LEVER_SCALE);
+          const h=Math.round(r[3]*PROLOGUE_LEVER_SCALE);
+          return {x:Math.round(lever.x-cameraX-
+            (data.pedestalCenter-r[0])*PROLOGUE_LEVER_SCALE),
+            y:lever.y-h,w,h,rect:r};
+        }
         function drawPrologueLever(lever,on){
-          if(lever.x<cameraX-60||lever.x>cameraX+GAME_WIDTH+60)return;
-          const x=Math.round(lever.x-cameraX),y=lever.y;
-          ctx.fillStyle='#5e3e59';ctx.fillRect(x-14,y-28,28,28);
-          ctx.fillStyle=on?'#6cdbbd':'#fbd17a';
-          ctx.fillRect(x-9,y-23,18,15);
-          ctx.fillStyle='#fff4ce';ctx.fillRect(x-3,y-37,6,21);
-          ctx.fillStyle=on?'#8cf5e3':'#e9a9a6';
-          ctx.fillRect(x-9,y-40,18,7);
-          if(!on&&prologueNearLever(lever)){
-            retroText('E / A',x,y-48,8,'#ffe6a8');
+          if(lever.x<cameraX-65||lever.x>cameraX+GAME_WIDTH+65)return;
+          const image=prologueDecor.lever,g=prologueLeverGeometry(lever,on);
+          if(image?.width&&image?.height){
+            const src=prologueAtlasRect(image,1448,1086,g.rect);
+            // NUNCA desenha a imagem inteira: evita a outra pose aparecer.
+            ctx.drawImage(image,...src,g.x,g.y,g.w,g.h);
+          }else{
+            const x=Math.round(lever.x-cameraX),y=lever.y;
+            ctx.fillStyle='#5e3e59';ctx.fillRect(x-14,y-28,28,28);
+            ctx.fillStyle=on?'#6cdbbd':'#fbd17a';ctx.fillRect(x-9,y-23,18,15);
+            ctx.fillStyle='#fff4ce';ctx.fillRect(x-3,y-37,6,21);
+            ctx.fillStyle=on?'#8cf5e3':'#e9a9a6';ctx.fillRect(x-9,y-40,18,7);
+          }
+          if(!on&&prologueNearLever(lever))
+            retroText('E / A',Math.round(lever.x-cameraX),g.y-14,8,'#ffe6a8');
+        }
+
+        // Guarda real do salão: uma ficha de SETE poses independentes.
+        // O sprite original mede 1448×1086; estas caixas foram verificadas
+        // pelas sete regiões opacas, todas com os pés em y=745.
+        const PROLOGUE_GUARD={x:1460,footY:380,height:75};
+        const PROLOGUE_GUARD_FRAMES=[
+          [16,316,184,430],   // 0: parado, olhando em frente
+          [229,316,181,430],  // 1: olhando à direita
+          [434,316,179,430],  // 2: olhando à direita (alternativa)
+          [628,316,188,430],  // 3: olhando para cima/direita
+          [834,316,172,430],  // 4: olhando para cima/esquerda
+          [1041,315,177,431], // 5: falando, boca aberta
+          [1241,316,177,430]  // 6: falando, boca fechada
+        ];
+        function prologueGuardPose(hero,guard=PROLOGUE_GUARD,speaking=false,time=0){
+          const dx=hero.x+hero.w/2-guard.x;
+          const jumping=hero.y+hero.h/2<guard.footY-72;
+          if(speaking&&Math.abs(dx)<220)
+            return {frame:Math.floor(time/180)%2===0?5:6,mirror:false};
+          if(jumping){
+            return dx<0?{frame:4,mirror:false}:{frame:3,mirror:false};
+          }
+          if(dx<-12)return {frame:1,mirror:true};
+          if(dx>12)return {frame:1,mirror:false};
+          return {frame:0,mirror:false};
+        }
+        function drawPrologueGuard(){
+          const guard=PROLOGUE_GUARD;
+          if(guard.x<cameraX-75||guard.x>cameraX+GAME_WIDTH+75)return;
+          const image=prologueDecor.guard;
+          const speaking=prologueBanter?.speaker==='GUARDA'&&
+            gameNow<prologueBanterUntil;
+          const pose=prologueGuardPose(princessPlayer,guard,speaking,gameNow);
+          const sx=guard.x-cameraX;
+          if(image?.width&&image?.height){
+            const rect=PROLOGUE_GUARD_FRAMES[pose.frame];
+            const src=prologueAtlasRect(image,1448,1086,rect);
+            const width=Math.round(guard.height*rect[2]/rect[3]);
+            ctx.save();ctx.translate(Math.round(sx),guard.footY);
+            if(pose.mirror)ctx.scale(-1,1);
+            // O corpo não se desloca: apenas mudamos o quadro da cabeça.
+            ctx.drawImage(image,...src,-Math.round(width/2),-guard.height,
+              width,guard.height);
+            ctx.restore();
+          }else{
+            // Guarda provisório só se o atlas ainda não carregou.
+            ctx.fillStyle='#722d63';ctx.fillRect(sx-13,guard.footY-59,26,59);
+            ctx.fillStyle='#e6bd77';ctx.fillRect(sx-13,guard.footY-68,26,11);
+            ctx.fillStyle='#ffedcc';ctx.fillRect(sx-7,guard.footY-49,14,12);
           }
         }
+
         function drawPrologueVitoria(){
           const v=princessPlayer;
           let pose='prologueIdle';
@@ -4391,6 +4507,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
             pixelText('ENTER OU BOTÃO A: PULAR CENA',GAME_HEIGHT-17,7,'#fff2d3');
             return;
           }
+          drawPrologueGuard();
           drawPrologueVitoria();
           const room=prologueRoomAt(princessPlayer.x);
           ctx.fillStyle='rgba(24,12,34,.60)';ctx.fillRect(202,52,396,24);
