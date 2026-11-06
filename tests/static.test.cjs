@@ -635,7 +635,9 @@ check('Sprites opcionais e alerta de impacto estão ligados',
 check('Nimbo atualiza só na Fase 3 e fica atrás do herói',
  mario.includes("if(state==='playing')updateSkyNimbo(dt);")&&
  mario.includes('drawSkyNimbo(); // Nimbo no alto da Fase 3')&&
- mario.includes('skyBirds=freshSkyBirds();resetSkyNimbo();')&&
+ mario.includes('resetPosition();resetSkyNimbo();setHUD();')&&
+ mario.includes('resetPosition();resetSkyNimbo();invulnerable=1.5;')&&
+ mario.includes('if(level===3)resetSkyNimbo(); // acompanha posição salva no checkpoint')&&
  mario.includes('function resetSkyNimbo()'));
 
 check('Inventário com dezoito espaços',mario.includes('inv-story-grid')&&mario.includes('inv-consumable-grid')&&mario.includes('for(let n=0;n<9;n++)'));
