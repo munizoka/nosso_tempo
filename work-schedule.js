@@ -79,9 +79,9 @@
         const node = el('ws-notice');
         if (!node) return;
         node.textContent = text;
-        node.className = 'text-xs rounded-xl border px-4 py-3 ' +
-            (error ? 'border-rose-700/50 text-rose-200 bg-rose-950/20' :
-                'border-zinc-800 text-zinc-400 bg-[#141418]');
+        // Indicador leve, sem criar mais uma caixa acima do calendário.
+        node.className = 'text-xs leading-5 px-1 ' +
+            (error ? 'text-rose-300' : 'text-zinc-500');
         node.classList.toggle('hidden', !text);
     }
     function renderCalendar() {
@@ -107,12 +107,13 @@
             const button = document.createElement('button');
             button.type = 'button';
             button.textContent = String(day);
-            button.className = 'relative h-11 md:h-12 rounded-lg text-sm font-medium transition-all hover:brightness-125 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white';
-            button.style.background = !result ? '#27272a' : result.status === 'off' ? '#123b2c' : '#44232c';
-            button.style.color = !result ? '#71717a' : result.status === 'off' ? '#a7f3d0' : '#fecdd3';
-            button.style.opacity = loaded ? '1' : '.75';
-            button.style.border = date === selected ? '2px solid white' :
-                date === today ? '2px solid #93c5fd' : '1px solid rgba(255,255,255,.07)';
+            button.className = 'relative w-full h-11 sm:h-12 rounded-lg text-sm font-medium transition-all hover:brightness-125 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white';
+            button.style.background = !result ? '#1b1b20' : result.status === 'off' ? '#14362c' : '#3a232b';
+            button.style.color = !result ? '#6b6b76' : result.status === 'off' ? '#9ee0bc' : '#ebabb8';
+            button.style.opacity = loaded ? '1' : '.82';
+            // Apenas o dia selecionado/atual recebe contorno; demais células ficam leves.
+            button.style.border = date === selected ? '2px solid rgba(245,245,245,.9)' :
+                date === today ? '2px solid rgba(125,211,252,.85)' : '2px solid transparent';
             button.disabled = !validDate(date);
             button.setAttribute('aria-label', formatDate(date) + ': ' +
                 (!result ? 'fora do período da escala' : result.status === 'off' ? 'folga' : 'trabalho') +
@@ -135,9 +136,9 @@
     function renderSelected() {
         const result = getStatus(selected);
         el('ws-selected-date').textContent = formatDate(selected);
-        el('ws-selected-status').textContent = (loaded ? '' : 'Prévia · ') +
-            (result.status === 'off' ? '🏡 Dia de folga' : '💼 Dia de trabalho');
-        el('ws-selected-status').className = 'text-lg font-semibold ' +
+        // Uma linha discreta: o indicador de "prévia" já está no topo.
+        el('ws-selected-status').textContent = result.status === 'off' ? 'Folga' : 'Trabalho';
+        el('ws-selected-status').className = 'text-sm font-semibold mt-0.5 ' +
             (result.status === 'off' ? 'text-emerald-300' : 'text-rose-300');
         el('ws-selected-message').textContent = loaded ?
             (result.status === 'off' ? 'Dia livre para aproveitar com o Gabriel! ❤️' :
@@ -157,17 +158,17 @@
         renderSelected();
         if (loaded) showNotice('');
         else if (syncState === 'guest')
-            showNotice('Prévia da escala inicial (sem alterações salvas). Para ver a escala verdadeira e editar, entre com sua conta autorizada no GabiBot.');
+            showNotice('Prévia · Entre no GabiBot para sincronizar sua escala.');
         else if (syncState === 'unauthorized')
-            showNotice('Esta conta não está autorizada em gabibotAccess. Exibindo apenas uma prévia da escala inicial.', true);
+            showNotice('Prévia · Conta sem permissão para consultar a escala.', true);
         else if (syncState === 'error')
             showNotice(syncError, true);
         else if (syncState === 'slow')
-            showNotice('O Firebase está demorando a responder. Esta é apenas uma prévia inicial; confira sua conexão, o App Check e as regras publicadas do Firestore.', true);
+            showNotice('Prévia · Firebase demorando a responder. Confira sua conexão e as permissões.', true);
         else if (syncState === 'loading')
-            showNotice('Sincronizando escala do Firebase... Exibindo uma prévia inicial enquanto isso.');
+            showNotice('Prévia · Sincronizando com o Firebase...');
         else
-            showNotice('Verificando acesso à escala... Exibindo uma prévia inicial enquanto isso.');
+            showNotice('Prévia · Verificando acesso...');
     }
     function moveMonth(offset) {
         const d = new Date(Date.UTC(year,month+offset,1));
@@ -181,7 +182,8 @@
         render();
     }
     function goToMonth(y,m) {
-        if (y < 2026 || y > 2030 || (y === 2026 && m < 10) || m > 11 || m < 0) return;
+        if (y === 2026 && m < 10) m = 10;
+        if (y < 2026 || y > 2030 || m > 11 || m < 0) return;
         year = y; month = m;
         const start = year + '-' + String(month+1).padStart(2,'0') + '-01';
         selected = start < FIRST ? FIRST : start;
@@ -331,7 +333,7 @@
         el('ws-edit').addEventListener('click',()=>el('ws-editor').classList.toggle('hidden'));
         el('ws-save').addEventListener('click',()=>changeSchedule('save'));
         el('ws-undo').addEventListener('click',()=>changeSchedule('undo'));
-        el('ws-gabibot').addEventListener('click',openGabiBot);
+        // Atalho único, discreto, sempre visível no cabeçalho do calendário.
         el('ws-gabibot-top').addEventListener('click',openGabiBot);
         render();
         auth.onAuthStateChanged(async user => {
