@@ -1366,7 +1366,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           loadingFill.style.width='0%';
           loadingHint.textContent=stageLoadingInputHint();
           const painting=nextStageSplash();
-          const paths=[...new Set(stageResourcePaths(kind))];
+          const paths=[...new Set([...Object.values(originalPaths),...stageResourcePaths(kind)])];
           const total=paths.length+1; // a ilustração também precisa carregar
           const mark=ok=>{
             if(!stageLoading||stageLoading.serial!==serial)return;
@@ -2654,7 +2654,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           level=3;state='title3';cameraX=0;unlockInventory();
           keys.left=keys.right=keys.up=keys.down=false;
           setHUD();
-          beginStageLoading('sky');
+          if(typeof beginStageLoading==='function')beginStageLoading('sky');
         }
         function startSkyLevel(){
           if(state!=='title3')return;
@@ -2703,7 +2703,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           level=2;state='title2';cameraX=0;
           keys.left=keys.right=keys.up=false;
           setHUD();
-          beginStageLoading('forest');
+          if(typeof beginStageLoading==='function')beginStageLoading('forest');
         }
         // Cada fase terá uma aparição de Vitoria e do vilão no começo e no fim.
         // As cenas nunca alteram pontuação, vidas ou checkpoint.
@@ -4480,7 +4480,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           keys.left=keys.right=keys.up=keys.down=false;
           if(!saved||replay)savePrologueProgress(false);
           setHUD();
-          beginStageLoading('prologue');
+          if(typeof beginStageLoading==='function')beginStageLoading('prologue');
         }
         function finishPrologueIntro(){
           if(state!=='prologueIntro')return;
@@ -4510,7 +4510,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           restartCurrentLevel();
           if(activeSlot!==null)saveCurrentSlot(false);
           showItemToast('PRÓLOGO CONCLUÍDO! ENCONTRE VITORIA NO CASTELO!');
-          beginStageLoading('valley');
+          if(typeof beginStageLoading==='function')beginStageLoading('valley');
         }
         function prologueNearLever(lever){
           return Math.abs(princessPlayer.x+princessPlayer.w/2-lever.x)<60&&
