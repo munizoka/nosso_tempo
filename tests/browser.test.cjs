@@ -110,7 +110,10 @@ const mock=()=>{
       assert.match(await trabalho.getAttribute('aria-label'),/trabalho.*prévia/i);
       assert.equal(await page.locator('#ws-grid button[aria-label^="01/11/2026"]').isDisabled(),true);
       await folga.click();
-      assert.match(await page.locator('#ws-selected-status').innerText(),/Prévia.*folga/i);
+      assert.match(await page.locator('#ws-selected-status').innerText(),/^Folga$/i);
+      assert.match(await page.locator('#ws-notice').innerText(),/Prévia/i);
+      assert.equal(await page.locator('#ws-gabibot').count(),0);
+      assert.equal(await page.locator('#ws-gabibot-top').count(),1);
       assert.equal(await page.locator('#ws-edit').isDisabled(),true);
       assert.match(await page.locator('#ws-notice').innerText(),/Prévia|prévia/i);
       assert.equal(await page.evaluate('window.WorkSchedule.isLoaded()'),false);
@@ -123,12 +126,46 @@ const mock=()=>{
     await test('ViMória continua navegável',async()=>{
       assert.equal(await page.evaluate('switchTab("jogo"); !document.getElementById("view-jogo").classList.contains("hidden")'),true);
     });
+    await test('Escala compacta preserva navegação e atalho no celular',async()=>{
+      await page.setViewportSize({width:390,height:844});
+      await page.evaluate('switchTab("escala")');
+      const right=page.locator('#ws-next');
+      await page.locator('#ws-year').selectOption('2026');
+      await page.locator('#ws-month').selectOption('10');
+      await right.click();
+      assert.equal(await page.locator('#ws-month').inputValue(),'11');
+      await page.locator('#ws-prev').click();
+      assert.equal(await page.locator('#ws-month').inputValue(),'10');
+      // Nesta suite todos os CDNs externos são bloqueados, inclusive o
+      // Tailwind. Assim, dimensões CSS computadas não seriam confiáveis.
+      // Conferimos a estrutura responsiva + navegação real no DOM.
+      const layout=await page.evaluate(()=>{
+        const section=document.getElementById('view-escala');
+        const grid=document.getElementById('ws-grid');
+        const link=document.getElementById('ws-gabibot-top');
+        return {
+          compactSection:section.classList.contains('max-w-2xl') &&
+                         section.classList.contains('space-y-3'),
+          sevenColumns:grid.classList.contains('grid-cols-7'),
+          compactShortcut:link.classList.contains('shrink-0'),
+          editorClosed:document.getElementById('ws-editor').classList.contains('hidden'),
+          extraBotButtons:document.querySelectorAll('#ws-gabibot').length
+        };
+      });
+      assert.equal(layout.compactSection,true);
+      assert.equal(layout.sevenColumns,true);
+      assert.equal(layout.compactShortcut,true);
+      assert.equal(layout.editorClosed,true);
+      assert.equal(layout.extraBotButtons,0);
+      await page.locator('#ws-gabibot-top').click();
+      assert.equal(await page.locator('#view-chat').isVisible(),true);
+    });
     await test('Navegação mobile básica',async()=>{
       await page.setViewportSize({width:390,height:844});
       assert.equal(await page.evaluate('switchTab("lugares"); !document.getElementById("view-lugares").classList.contains("hidden")'),true);
     });
     await test('Firebase real não recebeu gravações',async()=>assert.equal(await page.evaluate('window.__writes.length'),0));
-    console.log('RESULTADO: '+ok+'/12 testes de interface isolados aprovados.');
+    console.log('RESULTADO: '+ok+'/13 testes de interface isolados aprovados.');
     console.log('OBS: O teste bloqueia Firebase e Gemini reais; não substitui avaliação manual visual com CSS/CDNs.');
   }catch(e){console.error('❌ Teste visual falhou:',e);process.exitCode=1}
   finally{if(browser)await browser.close();await new Promise(resolve=>server.close(resolve))}
