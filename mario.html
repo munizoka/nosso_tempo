@@ -5998,7 +5998,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
             // Desenhamos somente quando há atualização de simulação:
             // PCs de alta frequência não executam frames extras de física.
             if(advanceGameSimulation(dt)>0)draw();
-            if(FPS_DEBUG)updateFpsDiagnostics(now);
+            if(typeof FPS_DEBUG!=='undefined'&&FPS_DEBUG)updateFpsDiagnostics(now);
           }else{
             // Descarta qualquer fração pendente antes da pausa.
             gameFrameRemainder=0;
