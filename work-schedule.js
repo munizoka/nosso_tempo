@@ -103,20 +103,20 @@
         for (let day=1; day<=lastDay; day++) {
             const date = year + '-' + String(month+1).padStart(2,'0') + '-' + String(day).padStart(2,'0');
             // Exibe a escala inicial mesmo antes da sincronização, como PRÉVIA.
-            const result = getStatus(date);
+            const result = getStatus(date); // 1–5/11/2026 ficam fora do período.
             const button = document.createElement('button');
             button.type = 'button';
             button.textContent = String(day);
             button.className = 'relative h-11 md:h-12 rounded-lg text-sm font-medium transition-all hover:brightness-125 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white';
-            button.style.background = result.status === 'off' ? '#123b2c' : '#44232c';
-            button.style.color = result.status === 'off' ? '#a7f3d0' : '#fecdd3';
+            button.style.background = !result ? '#27272a' : result.status === 'off' ? '#123b2c' : '#44232c';
+            button.style.color = !result ? '#71717a' : result.status === 'off' ? '#a7f3d0' : '#fecdd3';
             button.style.opacity = loaded ? '1' : '.75';
             button.style.border = date === selected ? '2px solid white' :
                 date === today ? '2px solid #93c5fd' : '1px solid rgba(255,255,255,.07)';
             button.disabled = !validDate(date);
             button.setAttribute('aria-label', formatDate(date) + ': ' +
-                (result.status === 'off' ? 'folga' : 'trabalho') +
-                (loaded ? '' : ' (prévia inicial, não sincronizada)'));
+                (!result ? 'fora do período da escala' : result.status === 'off' ? 'folga' : 'trabalho') +
+                (!result || loaded ? '' : ' (prévia inicial, não sincronizada)'));
             button.setAttribute('aria-pressed', String(date === selected));
             if (date === today) button.setAttribute('aria-current','date');
             if (result && result.manual) {
