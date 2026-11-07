@@ -1571,6 +1571,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
             catch(error){console.warn('Falha ao processar pose da Vitoria:',path,error);}
           };
           image.onerror=()=>console.warn('Imagem da Vitoria indisponível:',path);
+          trackSceneImage(image,path);
           image.src=encodeURI(path);
         }
 
@@ -1653,6 +1654,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
               catch(err){console.warn('Sprite do inimigo não pôde ser processado:',path,err);}
             };
             img.onerror=()=>{ /* Sem asset publicado: conserva o sprite 37.jpg. */ };
+            trackSceneImage(img,path);
             img.src=encodeURI(path);
           }
         }
@@ -2637,9 +2639,13 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           skyBirds=freshSkyBirds();sgbParticles.length=0;fallenEnemies.length=0;
           resetPosition();resetSkyNimbo();invulnerable=1.5;setHUD();
         }
+        let valleyPrincessSceneAnchor=null;
         function startCutscene(){
           cancelGabrielAfk();
           if(state!=='playing'||level!==1)return;
+          // Foto exata da posição visual anterior, sem salto no primeiro frame.
+          valleyPrincessSceneAnchor={x:princess.x+princess.w/2,
+            foot:princess.y+princess.h};
           state='cutscene';cutsceneStart=gameNow;cinematicSeconds=0;
           player.vx=0;player.vy=0;keys.left=false;keys.right=false;keys.up=false;
           player.direction=1;player.animFrame=0;
@@ -3131,7 +3137,20 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
             else if(state==='forestOutro'){
               // Gabriel caminha até a pista após a fuga do vilão.
               const walk=easeOut((forestSceneSeconds-11.25)/3.6);
-              player.x=FOREST_END-455+(FOREST_CLUE_X-24-(FOREST_END-455))*walk;
+              const target=FOREST_END-455+(FOREST_CLUE_X-24-(FOREST_END-455))*walk;
+              const before=player.x;
+              player.x=target;
+              const moving=forestSceneSeconds>=11.25&&forestSceneSeconds<14.85&&
+                Math.abs(target-before)>.005;
+              player.vx=moving?(target>before?player.speed:-player.speed):0;
+              if(moving){
+                player.direction=player.vx>0?1:-1;
+                player.animTimer+=dt;
+                if(player.animTimer>=.11){
+                  player.animTimer-=.11;
+                  player.animFrame=(player.animFrame+1)%4;
+                }
+              }else{player.animTimer=0;player.animFrame=0;}
               if(forestSceneSeconds>=15.0)giveVillainMedallion();
               if(forestSceneSeconds>=FOREST_OUTRO_DURATION)finishForestOutro();
             }
@@ -4285,7 +4304,10 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
         function getGabrielVisual({inShop=false}={}){
           const powered=!inShop&&isSuperGabriel();
           const shopLine=inShop?shopConversation?.lines[shopConversation.index]?.[0]:null;
-          const speaking=(inShop?shopLine:activeDialogueSpeaker())==='GABRIEL';
+          const storyWalking=state==='forestOutro'&&forestSceneSeconds>=11.25&&
+            forestSceneSeconds<14.85&&Math.abs(player.vx)>.05;
+          const speaking=!storyWalking&&
+            (inShop?shopLine:activeDialogueSpeaker())==='GABRIEL';
           const moving=inShop?(keys.left!==keys.right):Math.abs(player.vx)>.05;
           const walkFrame=powered?Math.floor(superRunClock/.09)%4:
             inShop?Math.floor(shopHeroDistance/22)%4:player.animFrame;
@@ -4469,7 +4491,10 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
         }
         function beginPrologueOutro(){
           if(state!=='prologuePlaying')return;
-          princessPlayer.x=PROLOGUE_END-130;princessPlayer.y=312;
+          // Conserva a posição exata onde o jogador alcançou o portão:
+          // a cinemática não deve teletransportar a princesa para outro x.
+          princessPlayer.x=Math.min(PROLOGUE_END-100,princessPlayer.x);
+          princessPlayer.y=312;
           princessPlayer.vx=princessPlayer.vy=0;princessPlayer.grounded=true;
           prologueSceneStart=gameNow;prologueSceneSeconds=0;
           state='prologueOutro';keys.left=keys.right=keys.up=keys.down=false;
@@ -4725,6 +4750,25 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
             ctx.fillStyle='#fff4ce';ctx.fillRect(x-3,y-37,6,21);
             ctx.fillStyle=on?'#8cf5e3':'#e9a9a6';ctx.fillRect(x-9,y-40,18,7);
           }
+          // Aura mágica suave e três pontos de brilho: destaca o mecanismo
+          // sem cobrir o atlas nem ficar excessivo no celular.
+          if(!on){
+            const cx=lever.x-cameraX,cy=lever.y-27;
+            const pulse=.5+.5*Math.sin(gameNow/260);
+            ctx.save();
+            ctx.globalAlpha=.12+.12*pulse;
+            ctx.fillStyle='#fff4ad';ctx.beginPath();
+            ctx.ellipse(cx,cy,32+3*pulse,35+3*pulse,0,0,Math.PI*2);
+            ctx.fill();
+            ctx.globalAlpha=.55+.25*pulse;
+            ctx.fillStyle='#fff9cb';
+            for(let k=0;k<3;k++){
+              const angle=gameNow/730+k*Math.PI*2/3;
+              ctx.fillRect(Math.round(cx+21*Math.cos(angle)),
+                Math.round(cy+23*Math.sin(angle)),3,3);
+            }
+            ctx.restore();
+          }
           if(!on&&prologueNearLever(lever))
             retroText('E / A',Math.round(lever.x-cameraX),g.y-14,8,'#ffe6a8');
         }
@@ -4816,15 +4860,13 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
             const sprite=processedAssets.vitoria[pose]||processedAssets.vitoria.idle||
               processedAssets.princess;
             drawSpriteOnFeet(sprite,
-              outro?PROLOGUE_END-130-cameraX:295,380,68,1);
+              princessPlayer.x-cameraX+princessPlayer.w/2,
+              princessPlayer.y+princessPlayer.h,68,1);
             if(current)drawStoryDialogue(current.speaker,current.message,'#ffbdd9');
             if(!outro&&prologueSceneSeconds<1.3)
               retroText('PRÓLOGO • UMA PRINCESA NADA COMPORTADA',400,260,9,'#fff4d0');
-            if(outro&&prologueSceneSeconds>14){
-              const fade=Math.min(1,(prologueSceneSeconds-14)/1.8);
-              ctx.fillStyle='rgba(12,6,21,'+fade+')';
-              ctx.fillRect(0,0,GAME_WIDTH,GAME_HEIGHT);
-            }
+            // A íris rosa fecha o prólogo; sem fade escuro duplicado.
+
             pixelText('ENTER OU BOTÃO A: PULAR CENA',GAME_HEIGHT-17,7,'#fff2d3');
             return;
           }
@@ -4850,8 +4892,8 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           // o vilão SAI do portal à direita, vai até Vitoria à esquerda,
           // captura a princesa e volta COM ELA para a direita, entrando no portal.
           const portalC=princess.x+103, portalY=princess.y-47;
-          const princessStartX=princess.x+princess.w/2;
-          const princessStartFoot=princess.y+princess.h;
+          const princessStartX=valleyPrincessSceneAnchor?.x??princess.x+princess.w/2;
+          const princessStartFoot=valleyPrincessSceneAnchor?.foot??princess.y+princess.h;
           const villainAtPrincess=princessStartX+28;
           const easeInOut=v=>{
             const x=Math.max(0,Math.min(1,v));
