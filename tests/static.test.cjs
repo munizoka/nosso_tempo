@@ -1098,6 +1098,109 @@ check('Guarda nao altera colisoes nem as fases concluídas',
  mario.includes('function drawLevelOne(){')&&
  mario.includes('function drawLevelThree(){'));
 
+
+// Otimização do motor: cache, descarte fora da câmera e HUD incremental.
+const perfBackdropSource=mario.match(
+ /        const scaledBackdropCache=new WeakMap\(\);[\s\S]*?(?=        \/\/ No iPhone horizontal,)/)?.[0];
+check('Cache de fundos estáticos disponível',!!perfBackdropSource);
+let perfBufferAllocations=0,perfResizes=0,perfActualDraws=0;
+const perfCanvasCtx={drawImage(){perfActualDraws++}};
+const perfDoc={
+ createElement(name){
+  if(name!=='canvas')throw Error('Only canvas allowed');
+  perfBufferAllocations++;
+  return {width:0,height:0,getContext(){return {
+   imageSmoothingEnabled:true,drawImage(){perfResizes++}
+  }}};
+ }
+};
+const perfBackdrop=new Function('document','ctx',
+ perfBackdropSource+'\nreturn drawScaledBackdrop;')(perfDoc,perfCanvasCtx);
+const perfLargeImage={width:2000,height:1200};
+perfBackdrop(perfLargeImage,0,0,800,450);
+perfBackdrop(perfLargeImage,5,0,800,450);
+perfBackdrop(perfLargeImage,10,0,800,450);
+check('Imagem de fundo é escalada uma vez em vez de três',
+ perfBufferAllocations===1&&perfResizes===1&&perfActualDraws===3);
+perfBackdrop({width:800,height:450},0,0,800,450);
+check('Panorama já pequeno não cria buffer extra',
+ perfBufferAllocations===1&&perfActualDraws===4);
+check('Cache aplicado às fases 1, 2, 3, prólogo e loja',
+ mario.includes('drawScaledBackdrop(valleyArt.sky,0,0,GAME_WIDTH,GAME_HEIGHT);')&&
+ mario.includes('drawScaledBackdrop(forestRemakeArt.sky,0,0,GAME_WIDTH,GAME_HEIGHT);')&&
+ mario.includes('drawScaledBackdrop(extras.skyPanorama,0,0,GAME_WIDTH,GAME_HEIGHT);')&&
+ mario.includes('drawScaledBackdrop(art,Math.round(x-cameraX),0,tileW,GAME_HEIGHT);')&&
+ mario.includes('drawScaledBackdrop(bg,x,0,1120,GAME_HEIGHT);'));
+const perfCoinCode=mario.match(
+ /        function drawLevelCoins\(\)\{[\s\S]*?(?=        let collectedPickups=new Set\(\);)/)?.[0];
+check('Moedas têm renderizador isolável',!!perfCoinCode);
+let perfCoinDraws=0;
+const perfCoins=new Function('ctx','cameraX','GAME_WIDTH','COIN_PICKUPS',
+ 'level','collectedPickups','elapsedSeconds',
+ perfCoinCode+'\nreturn drawLevelCoins;')(
+ {save(){},restore(){},translate(){},fillRect(){perfCoinDraws++}},
+ 0,800,
+ [{level:1,x:110,y:320,w:28,h:28,id:'near'},
+  {level:1,x:3300,y:320,w:28,h:28,id:'far'}],
+ 1,new Set(),0);
+perfCoins();
+check('Moedas fora de 800px não são pintadas',
+ perfCoinDraws>0&&perfCoinDraws<18);
+const perfItemCode=mario.match(
+ /        function drawLevelPickups\(\)\{[\s\S]*?(?=        function itemUsable\()/)?.[0];
+check('Itens têm renderizador isolável',!!perfItemCode);
+let perfItemDraws=0;
+const perfItems=new Function('ctx','cameraX','GAME_WIDTH','worldPickups',
+ 'level','collectedPickups','ITEM_CATALOG',
+ perfItemCode+'\nreturn drawLevelPickups;')(
+ {save(){},restore(){},translate(){},fillRect(){perfItemDraws++},fillText(){}},
+ 0,800,[{x:110,y:310,w:26,h:26,level:1,itemId:'life',id:'near'},
+ {x:1600,y:310,w:26,h:26,level:1,itemId:'life',id:'far'}],
+ 1,new Set(),{life:{icon:'x'}});
+perfItems();
+check('Itens fora da câmera deixam de desenhar',perfItemDraws===2);
+const perfEnemyCode=mario.match(
+ /        function drawEnemies\(\)\{[\s\S]*?(?=        \/\/ AFK do Gabriel NORMAL:)/)?.[0];
+check('Inimigos têm renderizador isolável',!!perfEnemyCode);
+let perfEnemyDraws=0;
+const perfEnemies=new Function('enemies','cameraX','GAME_WIDTH','processedAssets',
+ 'elapsedSeconds','drawSpriteOnFeet','ctx','enemyWalkPose',
+ perfEnemyCode+'\nreturn drawEnemies;')(
+ [{alive:true,x:120,y:340,w:32,h:32,type:'mushroom',vx:-1},
+  {alive:true,x:3400,y:340,w:32,h:32,type:'mushroom',vx:-1}],
+ 0,800,{mobFrames:{}},0,()=>{perfEnemyDraws++},
+ {save(){},restore(){},fillRect(){},strokeText(){},fillText(){}},
+ ()=> 'idle');
+perfEnemies();
+check('Inimigos distantes não geram drawSprite',perfEnemyDraws===1);
+check('Terreno da floresta e partículas possuem descarte fora da câmera',
+ mario.includes("if(b.x+b.w<cameraX-95||b.x>cameraX+GAME_WIDTH+95)continue;")&&
+ mario.includes("if(e.x+e.w<cameraX-48||e.x>cameraX+GAME_WIDTH+48)continue;")&&
+ mario.includes("if(p.x+p.size<cameraX-15||p.x>cameraX+GAME_WIDTH+15)continue;"));
+const perfHudCode=mario.match(
+ /        function setHUD\(\) \{[\s\S]*?(?=        \/\/ Os sprites originais)/)?.[0];
+check('HUD incremental pode ser testado separadamente',!!perfHudCode);
+let perfHudWrites=0;
+const perfText=()=>({_v:'',get textContent(){return this._v},
+ set textContent(v){this._v=v;perfHudWrites++}});
+const perfHud={score:perfText(),coins:perfText(),level:perfText(),
+ time:perfText(),lives:null};
+const perfHudUpdate=new Function('HUD','score','coins','state','level',
+ 'isPrologueState','elapsedSeconds','lives','damagedHeartUntil',
+ 'lastHeartSignature','gameLives','updateDashButton',
+ perfHudCode+'\nreturn setHUD;')(
+ perfHud,0,0,'playing',1,()=>false,0,5,0,'',()=>5,()=>{});
+perfHudUpdate();
+const perfHudInitialWrites=perfHudWrites;
+perfHudUpdate();
+check('HUD não reescreve DOM em quadros sem mudanças',
+ perfHudInitialWrites===4&&perfHudWrites===perfHudInitialWrites);
+check('Medição opcional ?fps=1 não altera o passo fixo do motor',
+ mario.includes("get('fps')==='1'")&&
+ mario.includes("if(typeof FPS_DEBUG!=='undefined'&&FPS_DEBUG)updateFpsDiagnostics(now);")&&
+ mario.includes('const GAME_PHYSICS_STEP=1/60;')&&
+ mario.includes('if(advanceGameSimulation(dt)>0)draw();'));
+
 check('Inventário com dezoito espaços',mario.includes('inv-story-grid')&&mario.includes('inv-consumable-grid')&&mario.includes('for(let n=0;n<9;n++)'));
 check('Sprite 68 e categorias RPG',mario.includes('68.png')&&mario.includes('ITENS DE HISTÓRIA')&&mario.includes('CONSUMÍVEIS'));
 check('Relógio virtual congela na pausa',mario.includes('if(!inventoryOpen&&!menuOpen){')&&mario.includes('gameNow+=GAME_PHYSICS_STEP*1000')&&mario.includes('gameFrameRemainder=0;')&&mario.includes("if(!sceneReady||inventoryOpen||menuOpen||state==='menu')return"));
