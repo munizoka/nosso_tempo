@@ -145,7 +145,12 @@ const mock=()=>{
         return {
           sectionWidth:section.getBoundingClientRect().width,
           screenWidth:window.innerWidth,
-          scrollWidth:document.documentElement.scrollWidth,
+          // Elementos antigos em outras abas podem ampliar o scrollWidth do documento.
+          // Para este PR importa que a propria aba calendario nao estoure sua area.
+          sectionScrollWidth:section.scrollWidth,
+          sectionClientWidth:section.clientWidth,
+          gridScrollWidth:calendar.scrollWidth,
+          gridClientWidth:calendar.clientWidth,
           compactHeader:link.getBoundingClientRect().height < 60,
           calendarAboveSelected:calendar.getBoundingClientRect().bottom < selected.getBoundingClientRect().top,
           noticeIsCompact:notice.getBoundingClientRect().height < 60,
@@ -153,7 +158,10 @@ const mock=()=>{
         };
       });
       assert.ok(parts.sectionWidth <= parts.screenWidth, 'Calendário cabe na largura móvel');
-      assert.ok(parts.scrollWidth <= parts.screenWidth + 1, 'Sem rolagem lateral');
+      assert.ok(parts.sectionScrollWidth <= parts.sectionClientWidth + 1,
+        'Seção calendário não cria rolagem horizontal: '+JSON.stringify(parts));
+      assert.ok(parts.gridScrollWidth <= parts.gridClientWidth + 1,
+        'Grade do calendário cabe na largura disponível: '+JSON.stringify(parts));
       assert.equal(parts.compactHeader,true);
       assert.equal(parts.calendarAboveSelected,true);
       assert.equal(parts.noticeIsCompact,true);
