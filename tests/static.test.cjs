@@ -967,7 +967,7 @@ for(let i=0;i<60;i++)prologueTest.tick(1/60);
 prologueKeys.right=false;
 check('Vitoria anda a 60Hz sem acelerar',
  prologueTest.state()==='prologuePlaying'&&
- Math.abs(prologueTest.princessPlayer.x-(70+60*4.55))<.01);
+ Math.abs(prologueTest.princessPlayer.x-(280+60*4.55))<.01);
 prologueTest.princessPlayer.x=prologueTest.PROLOGUE_GATE_LIBRARY-34;
 prologueTest.princessPlayer.y=312;prologueTest.princessPlayer.grounded=true;
 prologueKeys.right=true;
