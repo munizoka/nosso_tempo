@@ -685,6 +685,9 @@ Contexto e Personalidade:
             gainNode = audioCtx.createGain();
             const track = audioCtx.createMediaElementSource(bgMusic);
             track.connect(gainNode).connect(audioCtx.destination);
+            // A trilha fica no ganho 0. O audio HTML deve ficar em 1 para
+            // que o ganho do slider consiga produzir som quando ativado.
+            bgMusic.volume = 1;
             gainNode.gain.value = parseFloat(volSlider.value);
         }
 
