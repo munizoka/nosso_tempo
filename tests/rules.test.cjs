@@ -70,6 +70,38 @@ async function principal() {
   await verificar('Revogação bloqueia mensagem nova',()=>assertFails(setDoc(doc(admin,caminho,'sem-consentimento-depois'),mensagem())));
   await verificar('Titular apaga histórico mesmo após revogar',()=>assertSucceeds(deleteDoc(doc(admin,caminho,'consentida'))));
 
+  // Escala: leitura somente para membros, escrita pelo casal e documento validado.
+  const escala = (db) => doc(db,'gabibotWorkSchedules','vitoria');
+  const escalaValida = () => ({
+    version:1,cycles:{'2026-11-06':'off'},overrides:{},updatedAt:serverTimestamp()
+  });
+  await verificar('Visitante não consulta escala',()=>assertFails(getDoc(escala(visitante))));
+  await verificar('Conta sem autorização não consulta escala',()=>assertFails(getDoc(escala(estranho))));
+  await verificar('Vitória pode iniciar calendário',()=>assertSucceeds(setDoc(escala(vitoria),escalaValida())));
+  await verificar('Gabriel pode consultar calendário compartilhado',()=>assertSucceeds(getDoc(escala(admin))));
+  await verificar('Visitante não altera calendário',()=>assertFails(setDoc(escala(visitante),escalaValida())));
+  await verificar('Conta desconhecida não altera calendário',()=>assertFails(setDoc(escala(estranho),escalaValida())));
+  await verificar('Vitória salva troca pontual',()=>assertSucceeds(setDoc(escala(vitoria),{
+    ...escalaValida(),overrides:{'2026-11-08':'off'}
+  })));
+  await verificar('Gabriel inicia novo ciclo sem apagar anterior',()=>assertSucceeds(setDoc(escala(admin),{
+    ...escalaValida(),cycles:{'2026-11-06':'off','2027-01-04':'work'},
+    overrides:{'2026-11-08':'off'}
+  })));
+  await verificar('Documento extra bloqueado',()=>assertFails(setDoc(escala(admin),{
+    ...escalaValida(),secreto:'nao'
+  })));
+  await verificar('Data base obrigatória',()=>assertFails(setDoc(escala(admin),{
+    ...escalaValida(),cycles:{'2027-01-04':'work'}
+  })));
+  await verificar('Status inicial inválido bloqueado',()=>assertFails(setDoc(escala(admin),{
+    ...escalaValida(),cycles:{'2026-11-06':'invalido'}
+  })));
+  await verificar('Coleção de outras escalas bloqueada',()=>assertFails(setDoc(
+    doc(admin,'gabibotWorkSchedules','outro'),escalaValida()
+  )));
+  await verificar('Escala não pode ser excluída',()=>assertFails(deleteDoc(escala(admin))));
+
   // Super Gabriel Bros: saves são privados por UID, sem exigir role do GabiBot.
   const jogo=(id='slot1')=>'superGabrielSaves/'+ADMIN+'/slots/'+id;
   const saveJogo=(slotId='slot1')=>({
