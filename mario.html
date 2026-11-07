@@ -495,6 +495,38 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
         canvas.width = GAME_WIDTH;
         canvas.height = GAME_HEIGHT;
         ctx.imageSmoothingEnabled = false;
+
+        // Cache de cenários estáticos: imagens grandes são escaladas apenas UMA
+        // vez, na resolução nativa do Canvas (800×450), não a cada quadro.
+        // O WeakMap acompanha o ciclo de vida da imagem original e evita cópias
+        // para sprites móveis, que continuam sendo renderizados normalmente.
+        const scaledBackdropCache=new WeakMap();
+        function drawScaledBackdrop(image,x,y,width,height){
+          if(!image?.width||!image?.height)return false;
+          const w=Math.max(1,Math.round(width)),h=Math.max(1,Math.round(height));
+          if(image.width===w&&image.height===h){
+            ctx.drawImage(image,Math.round(x),Math.round(y));
+            return true;
+          }
+          let cache=scaledBackdropCache.get(image);
+          if(!cache){cache=new Map();scaledBackdropCache.set(image,cache);}
+          const key=w+'x'+h;
+          let buffer=cache.get(key);
+          if(!buffer){
+            buffer=document.createElement('canvas');
+            buffer.width=w;buffer.height=h;
+            const painter=buffer.getContext('2d',{alpha:true});
+            if(!painter){
+              ctx.drawImage(image,Math.round(x),Math.round(y),w,h);
+              return true;
+            }
+            painter.imageSmoothingEnabled=false;
+            painter.drawImage(image,0,0,w,h);
+            cache.set(key,buffer);
+          }
+          ctx.drawImage(buffer,Math.round(x),Math.round(y));
+          return true;
+        }
         // No iPhone horizontal, sem barras laterais e sem recortar o mapa ou HUD.
         // Limitação: a imagem 16:9 recebe ajuste horizontal suave em displays mais largos.
         // A janela standalone do iOS ainda pode reservar espaço para a barra do sistema.
@@ -717,7 +749,8 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
         function drawLevelCoins(){
           ctx.save();ctx.translate(-Math.round(cameraX),0);
           for(const coin of COIN_PICKUPS){
-            if(coin.level!==level||collectedPickups.has(coin.id))continue;
+            if(coin.level!==level||collectedPickups.has(coin.id)||
+              coin.x+coin.w<cameraX-32||coin.x>cameraX+GAME_WIDTH+32)continue;
             const x=coin.x,y=coin.y+Math.round(Math.sin(elapsedSeconds*4+coin.x*.035)*2);
             ctx.fillStyle='#673612';
             ctx.fillRect(x+8,y,12,28);ctx.fillRect(x+4,y+4,20,20);ctx.fillRect(x,y+9,28,10);
@@ -790,7 +823,8 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
         function drawLevelPickups(){
           ctx.save();ctx.translate(-Math.round(cameraX),0);
           for(const item of worldPickups){
-            if(item.level!==level||collectedPickups.has(item.id))continue;
+            if(item.level!==level||collectedPickups.has(item.id)||
+              item.x+item.w<cameraX-32||item.x>cameraX+GAME_WIDTH+32)continue;
             ctx.fillStyle='#f6db8a';ctx.fillRect(item.x-3,item.y-3,32,32);
             ctx.fillStyle='#2f2450';ctx.fillRect(item.x,item.y,26,26);
             ctx.font='20px sans-serif';ctx.textAlign='center';ctx.fillText(ITEM_CATALOG[item.itemId].icon,item.x+13,item.y+21);
@@ -1095,21 +1129,40 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           const show=isSuperGabriel()&&state==='playing'&&!menuOpen&&!inventoryOpen;
           const powerButton=document.getElementById('btn-power');
           const canActivate=state==='playing'&&!menuOpen&&!inventoryOpen&&!isSuperGabriel()&&(inventory.consumables.burger||0)>0;
-          if(powerButton){powerButton.classList.toggle('sgb-power-visible',canActivate);powerButton.disabled=!canActivate;powerButton.setAttribute('aria-hidden',String(!canActivate));}
-          button.classList.toggle('sgb-dash-visible',show);
-          button.disabled=!show||elapsedSeconds<superPower.cooldownUntil;
-          button.setAttribute('aria-hidden',String(!show));
+          if(powerButton){
+            if(powerButton.classList.contains('sgb-power-visible')!==canActivate)
+              powerButton.classList.toggle('sgb-power-visible',canActivate);
+            if(powerButton.disabled===canActivate)powerButton.disabled=!canActivate;
+            const hidden=String(!canActivate);
+            if(powerButton.getAttribute('aria-hidden')!==hidden)
+              powerButton.setAttribute('aria-hidden',hidden);
+          }
+          if(button.classList.contains('sgb-dash-visible')!==show)
+            button.classList.toggle('sgb-dash-visible',show);
+          const disableDash=!show||elapsedSeconds<superPower.cooldownUntil;
+          if(button.disabled!==disableDash)button.disabled=disableDash;
+          const dashHidden=String(!show);
+          if(button.getAttribute('aria-hidden')!==dashHidden)
+            button.setAttribute('aria-hidden',dashHidden);
           const meter=document.getElementById('sgb-super-meter');
           if(meter){
-            meter.classList.toggle('active',show);
-            document.getElementById('sgb-super-meter-label').textContent='SUPER FORÇA · ATÉ O FIM DA FASE';
-            document.getElementById('sgb-super-meter-fill').style.width='100%';
+            if(meter.classList.contains('active')!==show)
+              meter.classList.toggle('active',show);
+            const label=document.getElementById('sgb-super-meter-label');
+            const fill=document.getElementById('sgb-super-meter-fill');
+            if(label&&label.textContent!=='SUPER FORÇA · ATÉ O FIM DA FASE')
+              label.textContent='SUPER FORÇA · ATÉ O FIM DA FASE';
+            if(fill&&fill.style.width!=='100%')fill.style.width='100%';
           }
         }
         function setHUD() {
-          HUD.score.textContent = `SCORE: ${score}`;
+          const scoreText=`SCORE: ${score}`;
+          if(HUD.score.textContent!==scoreText)HUD.score.textContent=scoreText;
           if(HUD.coins && HUD.coins.textContent!=='🪙 '+coins)HUD.coins.textContent='🪙 '+coins;
-          if (HUD.level) HUD.level.textContent = isPrologueState()?'PRÓLOGO':(state==='shop'?'CANO BURGER':('FASE: '+level));
+          if(HUD.level){
+            const label=isPrologueState()?'PRÓLOGO':(state==='shop'?'CANO BURGER':('FASE: '+level));
+            if(HUD.level.textContent!==label)HUD.level.textContent=label;
+          }
           const showDamage=elapsedSeconds<damagedHeartUntil;
           const signature=[lives,gameLives(),showDamage?damagedHeartIndex:-1].join(':');
           if(HUD.lives&&signature!==lastHeartSignature){
@@ -1131,7 +1184,8 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           const h = String(Math.floor(sec / 3600)).padStart(2,'0');
           const m = String(Math.floor((sec % 3600) / 60)).padStart(2,'0');
           const t = String(sec % 60).padStart(2,'0');
-          HUD.time.textContent = `⏱ ${h}:${m}:${t}`;
+          const clockText=`⏱ ${h}:${m}:${t}`;
+          if(HUD.time.textContent!==clockText)HUD.time.textContent=clockText;
           updateDashButton();
         }
 
@@ -1876,6 +1930,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
         function drawCombatFxWorld(){
           ctx.save();ctx.translate(-Math.round(cameraX),0);
           for(const e of fallenEnemies){
+            if(e.x+e.w<cameraX-48||e.x>cameraX+GAME_WIDTH+48)continue;
             ctx.save();ctx.globalAlpha=Math.min(1,Math.max(0,(e.until-elapsedSeconds)*2.5));
             const sprites=processedAssets.mobFrames?.[e.type]||{};
             const sprite=sprites.dead;
@@ -1892,6 +1947,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
             ctx.restore();
           }
           for(const p of sgbParticles){
+            if(p.x+p.size<cameraX-15||p.x>cameraX+GAME_WIDTH+15)continue;
             ctx.globalAlpha=Math.max(0,1-p.age/p.life);ctx.fillStyle=p.color;
             ctx.fillRect(Math.round(p.x),Math.round(p.y),Math.ceil(p.size),Math.ceil(p.size));
           }
@@ -2777,9 +2833,17 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
             }
           }
         }
+        let lastMapCss=null,lastShopCss=null;
         function update(dt,now){
-          document.body.classList.toggle('map-mode',state==='map');
-          document.body.classList.toggle('sgb-shop-mode',state==='shop');
+          const mapCss=state==='map',shopCss=state==='shop';
+          if(mapCss!==lastMapCss){
+            document.body.classList.toggle('map-mode',mapCss);
+            lastMapCss=mapCss;
+          }
+          if(shopCss!==lastShopCss){
+            document.body.classList.toggle('sgb-shop-mode',shopCss);
+            lastShopCss=shopCss;
+          }
           if(!sceneReady||inventoryOpen||menuOpen||state==='menu')return;
           updateToast();
           if(isPrologueState()){updatePrologue(dt,now);return;}
@@ -3624,7 +3688,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
         function drawForestBackground(){
           ctx.fillStyle='#10152f';ctx.fillRect(0,0,GAME_WIDTH,GAME_HEIGHT);
           if(forestRemakeArt.sky)
-            ctx.drawImage(forestRemakeArt.sky,0,0,GAME_WIDTH,GAME_HEIGHT);
+            drawScaledBackdrop(forestRemakeArt.sky,0,0,GAME_WIDTH,GAME_HEIGHT);
           forestDrawParallax('mountains',.12,1320,345,.90);
           forestDrawParallax('distantForest',.29,1050,395,.91);
         }
@@ -3650,7 +3714,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
         }
         function drawValleyBackground(){
           ctx.fillStyle='#8bd7fd';ctx.fillRect(0,0,GAME_WIDTH,GAME_HEIGHT);
-          if(valleyArt.sky)ctx.drawImage(valleyArt.sky,0,0,GAME_WIDTH,GAME_HEIGHT);
+          if(valleyArt.sky)drawScaledBackdrop(valleyArt.sky,0,0,GAME_WIDTH,GAME_HEIGHT);
           // 215 e 216 incluem imagens incompatíveis com o céu; produziam
           // retângulos azulados e silhuetas fantasma. Não renderizá-las.
           valleyParallax('mountains',.10,162,960,188,.9);
@@ -3849,10 +3913,12 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           drawValleyTerrain();
           drawValleyForegroundProps(); // cercas completas e setas visíveis acima da vegetação
           valleyImage('castle',castle.x,castle.y,castle.w,castle.h);
-          if(!valleyArt.castle)drawObject(processedAssets.castle,castle.x,castle.y,castle.w,castle.h);
+          if(!valleyArt.castle&&valleyVisible(castle.x,castle.w))
+            drawObject(processedAssets.castle,castle.x,castle.y,castle.w,castle.h);
           drawValleyObjects();
           if(state==='cutscene')drawCinematicCharacters(cinematicSeconds);
-          else drawVitoriaNew(princess.x+princess.w/2,princess.y+princess.h,{
+          else if(valleyVisible(princess.x,princess.w,100))
+            drawVitoriaNew(princess.x+princess.w/2,princess.y+princess.h,{
             pose:Math.floor(gameNow/6500)%3===0?'ok':'idle',speaking:false
           });
           drawEnemies();drawHero();
@@ -3860,7 +3926,8 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           if(state==='cutscene')drawCinematicText(cinematicSeconds);
         }
         function drawEnemies(){
-          for(const e of enemies){if(!e.alive)continue;
+          for(const e of enemies){
+            if(!e.alive||e.x+e.w<cameraX-80||e.x>cameraX+GAME_WIDTH+80)continue;
             const poses=processedAssets.mobFrames?.[e.type]||{};
             const showingOff=e.type==='leek'&&e.aiState==='patrol'&&
               e.showOffUntil>elapsedSeconds;
@@ -4287,7 +4354,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
               const start=Math.floor((cameraX-room.start)/tileW)*tileW;
               for(let x=room.start+start;x<room.end;x+=tileW){
                 if(x+tileW<cameraX||x>cameraX+GAME_WIDTH)continue;
-                ctx.drawImage(art,Math.round(x-cameraX),0,tileW,GAME_HEIGHT);
+                drawScaledBackdrop(art,Math.round(x-cameraX),0,tileW,GAME_HEIGHT);
               }
             }else{
               ctx.fillStyle=room.shade;
@@ -4799,12 +4866,14 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           drawForestScenery(); // cenário inteiro atrás do terreno e dos personagens
           drawForestFireflies(); // pontos de luz entre as árvores
           for(const b of level2Blocks){
+            if(b.x+b.w<cameraX-95||b.x>cameraX+GAME_WIDTH+95)continue;
             if(b.type==='forestGround')drawForestGround(b);
             else if(b.type==='wood'||b.type==='magic')drawForestPlatform(b);
           }
           drawForestMist(); // névoa sutil, recortada ao chão firme
           drawForestWitchDecorations(); // acima do chão, antes de Gabriel
           for(const x of FOREST_CHECKPOINTS){
+            if(x+42<cameraX-55||x>cameraX+GAME_WIDTH+55)continue;
             const lit=checkpointReached&&checkpointX>=x;
             const flag=lit?extras.checkpointOn:extras.checkpointOff;
             if(flag)drawObject(flag,x,312,42,68);
@@ -4957,8 +5026,8 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           ctx.restore();
         }
         function drawSkyBackground(){
-          if(extras.skyPanorama)drawObject(extras.skyPanorama,0,0,GAME_WIDTH,GAME_HEIGHT);
-          else if(extras.skyTemple)drawObject(extras.skyTemple,0,0,GAME_WIDTH,GAME_HEIGHT);
+          if(extras.skyPanorama)drawScaledBackdrop(extras.skyPanorama,0,0,GAME_WIDTH,GAME_HEIGHT);
+          else if(extras.skyTemple)drawScaledBackdrop(extras.skyTemple,0,0,GAME_WIDTH,GAME_HEIGHT);
           else{
             const g=ctx.createLinearGradient(0,0,0,GAME_HEIGHT);
             g.addColorStop(0,'#369bdc');g.addColorStop(.58,'#aea1ed');g.addColorStop(1,'#f2d9ec');
@@ -5801,7 +5870,12 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           ctx.fillStyle='#251521';ctx.fillRect(0,0,GAME_WIDTH,GAME_HEIGHT);
           ctx.save();ctx.translate(-Math.round(cameraX),0);
           const bg=extras.canoBackground;
-          if(bg?.width){for(let x=0;x<CANO_WIDTH;x+=1120)drawObject(bg,x,0,1120,GAME_HEIGHT);}
+          if(bg?.width){
+            for(let x=0;x<CANO_WIDTH;x+=1120){
+              if(x+1120<cameraX-5||x>cameraX+GAME_WIDTH+5)continue;
+              drawScaledBackdrop(bg,x,0,1120,GAME_HEIGHT);
+            }
+          }
           else{ctx.fillStyle='#9c623b';ctx.fillRect(0,0,CANO_WIDTH,CANO_FLOOR);ctx.fillStyle='#b88650';ctx.fillRect(0,CANO_FLOOR,CANO_WIDTH,69);}
           // As portas são sprites diferentes, com a entrada à esquerda e o estoque à direita.
           if(extras.canoFront)drawObject(extras.canoFront,CANO_FRONT_X-77,185,154,196);
@@ -5843,6 +5917,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           if(foot)pixelText(foot,260,9,'#e8e9fc');
         }
         function draw(){
+          if(FPS_DEBUG)fpsFrameStarted=performance.now();
           ctx.imageSmoothingEnabled=false;
           if(!sceneReady){ctx.fillStyle='#5c94fc';ctx.fillRect(0,0,GAME_WIDTH,GAME_HEIGHT);pixelText('CARREGANDO A MAGIA...',GAME_HEIGHT/2,12);return;}
           if(state==='menu'){ctx.fillStyle='#0f1432';ctx.fillRect(0,0,GAME_WIDTH,GAME_HEIGHT);return;}
@@ -5858,6 +5933,43 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
             if(level===3)overlay('FASE 3 CONCLUÍDA!','O TEMPLO DOS VENTOS FOI SUPERADO.','O MISTÉRIO CONTINUA...  |  ENTER / A: MAPA');
             else overlay('FASE 2 CONCLUÍDA!','PISTA 01: MEDALHÃO RACHADO NO INVENTÁRIO','FASE 3 DISPONÍVEL  |  ENTER / A: MAPA');
           }
+        }
+
+        // Diagnóstico voluntário: ?fps=1 mostra FPS reais e custo de desenho.
+        // Não altera a velocidade do jogo nem coleta/envia dados.
+        const FPS_DEBUG=new URLSearchParams(window.location.search).get('fps')==='1';
+        let fpsFrameStarted=0,fpsDebugCount=0,fpsDebugRenderMs=0;
+        let fpsDebugPeakMs=0,fpsDebugSince=0,fpsDebugOverlay=null;
+        function updateFpsDiagnostics(now){
+          if(!FPS_DEBUG)return;
+          if(fpsFrameStarted){
+            const cost=Math.max(0,performance.now()-fpsFrameStarted);
+            fpsFrameStarted=0;
+            fpsDebugCount++;
+            fpsDebugRenderMs+=cost;
+            fpsDebugPeakMs=Math.max(fpsDebugPeakMs,cost);
+          }
+          if(!fpsDebugSince)fpsDebugSince=now;
+          const elapsed=now-fpsDebugSince;
+          if(elapsed<1000)return;
+          if(!fpsDebugOverlay){
+            fpsDebugOverlay=document.createElement('div');
+            fpsDebugOverlay.id='sgb-fps-diagnostics';
+            Object.assign(fpsDebugOverlay.style,{
+              position:'fixed',left:'12px',top:'60px',zIndex:'10000',
+              pointerEvents:'none',background:'rgba(11,16,30,.82)',
+              color:'#eaffdf',font:'bold 11px monospace',padding:'7px 9px',
+              borderRadius:'6px',whiteSpace:'pre'
+            });
+            document.body.appendChild(fpsDebugOverlay);
+          }
+          const fps=Math.round(fpsDebugCount*1000/Math.max(1,elapsed));
+          const average=fpsDebugCount?fpsDebugRenderMs/fpsDebugCount:0;
+          fpsDebugOverlay.textContent=
+            'FPS: '+fps+' | desenho médio: '+average.toFixed(1)+'ms'+
+            ' | pico: '+fpsDebugPeakMs.toFixed(1)+'ms';
+          fpsDebugCount=0;fpsDebugRenderMs=0;fpsDebugPeakMs=0;
+          fpsDebugSince=now;
         }
         // MOTOR DE TEMPO FIXO — a física funciona a 60 Hz no PC e no celular.
         // A tela pode atualizar a 30, 60, 120, 144 ou 240 Hz sem acelerar
@@ -5886,6 +5998,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
             // Desenhamos somente quando há atualização de simulação:
             // PCs de alta frequência não executam frames extras de física.
             if(advanceGameSimulation(dt)>0)draw();
+            if(typeof FPS_DEBUG!=='undefined'&&FPS_DEBUG)updateFpsDiagnostics(now);
           }else{
             // Descarta qualquer fração pendente antes da pausa.
             gameFrameRemainder=0;
