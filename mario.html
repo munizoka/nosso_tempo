@@ -4429,7 +4429,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
             if(Array.isArray(raw))return [0,1,2].map(i=>{
               const s=raw[i];if(!s||s.started!==true)return null;
               return {started:true,completed:s.completed===true,
-                x:Number.isFinite(s.x)?Math.max(60,Math.min(PROLOGUE_END-90,s.x)):70,
+                x:Number.isFinite(s.x)?Math.max(60,Math.min(PROLOGUE_END-90,s.x)):280,
                 checkpoint:PROLOGUE_CHECKPOINTS.includes(s.checkpoint)?s.checkpoint:60,
                 library:s.library===true,clock:s.clock===true};
             });
@@ -4438,7 +4438,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
         }
         const prologueSlots=readPrologueSlots();
         const princessPlayer={
-          x:70,y:312,w:29,h:68,vx:0,vy:0,speed:4.55,
+          x:280,y:312,w:29,h:68,vx:0,vy:0,speed:4.55,
           gravity:.62,jumpPower:-12.7,grounded:true,direction:1,
           walkClock:0,idleClock:0
         };
@@ -4465,12 +4465,12 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           level=0;state=saved?'prologuePlaying':'prologueIntro';
           prologueCheckpoint=saved?.checkpoint??60;
           prologueLibraryOpen=!!saved?.library;prologueClockOpen=!!saved?.clock;
-          const requestedX=saved?.x??70;
+          const requestedX=saved?.x??280;
           // Saves capturados sobre vãos/plataformas não reaparecem no vazio.
           const safeSpawn=PROLOGUE_FLOOR.some(b=>
             requestedX>=b.x+2&&requestedX+princessPlayer.w<=b.x+b.w-2);
           princessPlayer.x=safeSpawn?requestedX:prologueCheckpoint;
-          if(!saved)princessPlayer.x=70;
+          if(!saved)princessPlayer.x=280;
           princessPlayer.y=312;princessPlayer.vx=princessPlayer.vy=0;
           princessPlayer.grounded=true;princessPlayer.direction=1;
           princessPlayer.walkClock=0;princessPlayer.idleClock=0;
@@ -4512,7 +4512,9 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           level=1;state='playing';
           restartCurrentLevel();
           // Não manter Gabriel suspenso no ar durante a íris preta.
-          player.y=340;player.vy=0;player.grounded=true;
+          if(typeof player!=='undefined'){
+            player.y=340;player.vy=0;player.grounded=true;
+          }
           if(activeSlot!==null)saveCurrentSlot(false);
           showItemToast('PRÓLOGO CONCLUÍDO! ENCONTRE VITORIA NO CASTELO!');
           if(typeof beginStageLoading==='function')beginStageLoading('valley');
