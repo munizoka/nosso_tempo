@@ -18,6 +18,34 @@
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
     <style>
         html, body {margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:#131628;touch-action:none;font-family:'Press Start 2P',cursive;}
+
+        /* Splash arts do próprio jogo; barra branca discreta, sem porcentagem. */
+        #sgb-stage-loading[hidden]{display:none!important}
+        #sgb-stage-loading{position:fixed;inset:0;z-index:220;background:#161321;overflow:hidden;
+          touch-action:manipulation;user-select:none;-webkit-user-select:none;cursor:default}
+        #sgb-stage-loading-art{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;
+          object-position:center;display:block}
+        #sgb-stage-loading-shade{position:absolute;inset:0;pointer-events:none;
+          background:linear-gradient(0deg,rgba(12,8,21,.51),transparent 35%)}
+        #sgb-stage-loading-bottom{position:absolute;right:max(32px,calc(env(safe-area-inset-right) + 25px));
+          bottom:max(24px,calc(env(safe-area-inset-bottom) + 20px));width:min(190px,30vw);
+          display:flex;align-items:flex-end;flex-direction:column;gap:13px;
+          color:#fff;pointer-events:none}
+        #sgb-stage-loading-track{width:100%;height:3px;overflow:hidden;
+          background:rgba(255,255,255,.27);border-radius:3px}
+        #sgb-stage-loading-fill{height:100%;width:0%;background:white;border-radius:3px;
+          transition:width .18s ease-out}
+        #sgb-stage-loading-hint{display:none;text-align:right;max-width:290px;
+          font:600 clamp(9px,1.4vw,12px)/1.65 system-ui,-apple-system,sans-serif;
+          letter-spacing:.13em;text-shadow:0 1px 5px rgba(0,0,0,.85);white-space:nowrap;
+          animation:sgb-hint-pulse 2.5s ease-in-out infinite}
+        #sgb-stage-loading[data-ready="true"]{cursor:pointer}
+        #sgb-stage-loading[data-ready="true"] #sgb-stage-loading-track{display:none}
+        #sgb-stage-loading[data-ready="true"] #sgb-stage-loading-hint{display:block}
+        @keyframes sgb-hint-pulse{0%,100%{opacity:.35}45%,60%{opacity:1}}
+        @media (prefers-reduced-motion:reduce){#sgb-stage-loading-hint{animation:none!important;opacity:1}}
+        @media(max-width:700px){#sgb-stage-loading-bottom{width:min(170px,36vw);right:24px;bottom:18px}
+          #sgb-stage-loading-hint{font-size:9px;white-space:normal}}
         #game-shell {position:fixed;inset:0;display:flex;align-items:center;justify-content:center;overflow:hidden;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);box-sizing:border-box;}
         #game-canvas {display:block;width:800px;height:450px;max-width:100%;max-height:100%;image-rendering:pixelated;image-rendering:crisp-edges;background:#d7c6a6;touch-action:none;}
         #game-hud {top:max(8px,env(safe-area-inset-top));left:max(8px,env(safe-area-inset-left));right:max(8px,env(safe-area-inset-right));}
@@ -482,6 +510,16 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
         </div>
     </div>
 
+
+    <!-- Carregamento das fases: arte sem legendas, progresso real por asset. -->
+    <div id="sgb-stage-loading" hidden data-ready="false" role="status" aria-live="polite">
+      <img id="sgb-stage-loading-art" alt="" decoding="async">
+      <div id="sgb-stage-loading-shade"></div>
+      <div id="sgb-stage-loading-bottom">
+        <span id="sgb-stage-loading-hint"></span>
+        <div id="sgb-stage-loading-track"><div id="sgb-stage-loading-fill"></div></div>
+      </div>
+    </div>
     <script src="https://www.gstatic.com/firebasejs/13.1.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/13.1.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/13.1.0/firebase-firestore-compat.js"></script>
@@ -1191,6 +1229,205 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
 
         // Os sprites originais precisam do recorte do fundo verde, mas as novas
         // imagens extras usam seus formatos originais (43.jpg, 48.jpg e demais PNGs) sem chroma key.
+
+        // LOADING REMAKE — oito pinturas 296–303, em ordem embaralhada sem
+        // repetição imediata. Uma única imagem permanece durante CADA loading.
+        const STAGE_SPLASH_PATHS=[
+          '296 loading 1.png','297 loading 2.png','298 loading 3.png',
+          '299 loading 3.png','300 loading 4.png','301 loading 7.png',
+          '302 loading 6.png','303 loading 8.png'
+        ];
+        const sceneAssetRegistry=new Map();
+        function trackSceneImage(image,path){
+          let resource=sceneAssetRegistry.get(path);
+          if(!resource){
+            resource={status:'pending',waiters:[]};
+            sceneAssetRegistry.set(path,resource);
+          }
+          const done=ok=>{
+            resource.status=ok?'loaded':'failed';
+            for(const resolve of resource.waiters.splice(0))resolve(ok);
+          };
+          // As rotinas onload existentes já terão processado o PNG:
+          // registramos esse listener após o handler de crop/atlas.
+          image.addEventListener('load',()=>done(true),{once:true});
+          image.addEventListener('error',()=>done(false),{once:true});
+          return image;
+        }
+        function waitSceneAsset(path){
+          const resource=sceneAssetRegistry.get(path);
+          if(!resource){
+            // Recursos opcionais/legados sem cadastro também são verificados.
+            return new Promise(resolve=>{
+              const image=new Image();
+              image.onload=()=>resolve(true);
+              image.onerror=()=>resolve(false);
+              trackSceneImage(image,path);
+            image.src=encodeURI(path);
+            });
+          }
+          if(resource.status!=='pending')
+            return Promise.resolve(resource.status==='loaded');
+          return new Promise(resolve=>resource.waiters.push(resolve));
+        }
+        let splashQueue=[],lastSplash=null,stageLoading=null,stageLoadSerial=0;
+        let stageIris=null;
+        const loadingLayer=document.getElementById('sgb-stage-loading');
+        const loadingArt=document.getElementById('sgb-stage-loading-art');
+        const loadingFill=document.getElementById('sgb-stage-loading-fill');
+        const loadingHint=document.getElementById('sgb-stage-loading-hint');
+        function nextStageSplash(){
+          if(!splashQueue.length){
+            splashQueue=STAGE_SPLASH_PATHS.slice();
+            for(let i=splashQueue.length-1;i>0;i--){
+              const j=Math.floor(Math.random()*(i+1));
+              [splashQueue[i],splashQueue[j]]=[splashQueue[j],splashQueue[i]];
+            }
+            if(splashQueue.length>1&&splashQueue[splashQueue.length-1]===lastSplash)
+              [splashQueue[0],splashQueue[splashQueue.length-1]]=
+                [splashQueue[splashQueue.length-1],splashQueue[0]];
+          }
+          lastSplash=splashQueue.pop();
+          return lastSplash;
+        }
+        function stageResourcePaths(kind){
+          const gabriel=Object.values(gabrielSpritePaths.normal);
+          if(kind==='prologue')return [
+            ...Object.values(prologueBackgroundPaths),...Object.values(prologueDecorPaths),
+            ...Object.values(vitoriaSpritePaths),
+            extraPaths.checkpointOff,extraPaths.checkpointOn
+          ];
+          if(kind==='forest')return [
+            ...Object.values(forestRemakePaths),extraPaths.wood,extraPaths.magic,
+            extraPaths.portal,extraPaths.villain,
+            ...gabriel,...Object.values(mobSpritePaths.leek),
+            ...Object.values(vitoriaSpritePaths).slice(0,6)
+          ];
+          if(kind==='sky')return [
+            extraPaths.skyPanorama,extraPaths.skyRuins,extraPaths.skyTempleFacade,
+            extraPaths.skyObservatory,extraPaths.skyGroundTexture,extraPaths.skyGround,
+            extraPaths.skyPlatform,extraPaths.skyCrowUp,extraPaths.skyCrowMid,extraPaths.skyCrowDown,
+            extraPaths.skyNimboIdle,extraPaths.skyNimboCharge,extraPaths.skyNimboFire,
+            extraPaths.skyNimboTired,extraPaths.skyNimboBolt,
+            extraPaths.skyAltarOff,extraPaths.skyAltarOn,
+            extraPaths.windShort,extraPaths.windLong,extraPaths.windUp,
+            ...gabriel
+          ];
+          if(kind==='shop')return [
+            extraPaths.canoBackground,extraPaths.canoCounter,extraPaths.canoFront,
+            extraPaths.canoBack,...gabriel
+          ];
+          return [
+            ...Object.values(valleyAssetPaths),extraPaths.villain,extraPaths.portal,
+            ...gabriel,...Object.values(vitoriaSpritePaths).slice(0,6),
+            ...Object.values(mobSpritePaths.mushroom)
+          ];
+        }
+        function stageLoadingInputHint(){
+          const touch=window.matchMedia?.('(pointer:coarse)').matches||
+            (navigator.maxTouchPoints>0&&window.innerWidth<1025);
+          return touch?'TOQUE PARA PROSSEGUIR':'ESPAÇO / ENTER / E PARA PROSSEGUIR';
+        }
+        function resetStageSceneClock(){
+          // A primeira fala só começa DEPOIS da abertura do círculo.
+          if(state==='prologueIntro'||state==='prologueOutro'){
+            prologueSceneStart=gameNow;prologueSceneSeconds=0;
+          }else if(state==='forestIntro'||state==='forestOutro'){
+            forestSceneStart=gameNow;forestSceneSeconds=0;
+          }else if(state==='skyIntro'||state==='skyOutro'){
+            skySceneStart=gameNow;skySceneSeconds=0;
+          }else if(state==='cutscene'){
+            cutsceneStart=gameNow;cinematicSeconds=0;
+          }
+        }
+        function startIrisTransition(character,mode,callback=null){
+          stageIris={character,mode,callback,started:performance.now(),duration:580};
+          keys.left=keys.right=keys.up=keys.down=false;
+        }
+        function finishStageLoading(){
+          if(!stageLoading||!stageLoading.ready)return false;
+          const kind=stageLoading.kind;
+          stageLoading=null;
+          loadingLayer.hidden=true;
+          loadingLayer.dataset.ready='false';
+          if(kind==='forest'&&state==='title2')startForest();
+          else if(kind==='sky'&&state==='title3')startSkyLevel();
+          startIrisTransition(kind==='prologue'?'vitoria':'gabriel','opening');
+          gameFrameRemainder=0;
+          return true;
+        }
+        function beginStageLoading(kind){
+          const serial=++stageLoadSerial;
+          stageLoading={kind,serial,ready:false,failures:0,done:0};
+          stageIris=null;
+          keys.left=keys.right=keys.up=keys.down=false;
+          loadingLayer.hidden=false;
+          loadingLayer.dataset.ready='false';
+          loadingFill.style.width='0%';
+          loadingHint.textContent=stageLoadingInputHint();
+          const painting=nextStageSplash();
+          const paths=[...new Set(stageResourcePaths(kind))];
+          const total=paths.length+1; // a ilustração também precisa carregar
+          const mark=ok=>{
+            if(!stageLoading||stageLoading.serial!==serial)return;
+            stageLoading.done++;
+            if(!ok)stageLoading.failures++;
+            loadingFill.style.width=(stageLoading.done/total*100).toFixed(2)+'%';
+            if(stageLoading.done===total){
+              // PNGs que falharem têm os fallbacks existentes no Canvas.
+              stageLoading.ready=true;
+              loadingHint.textContent=stageLoadingInputHint();
+              loadingLayer.dataset.ready='true';
+            }
+          };
+          const artwork=new Image();
+          artwork.onload=()=>{
+            if(stageLoading?.serial===serial)loadingArt.src=artwork.src;
+            mark(true);
+          };
+          artwork.onerror=()=>{mark(false);};
+          loadingArt.removeAttribute('src');
+          artwork.src=encodeURI(painting);
+          for(const path of paths)
+            waitSceneAsset(path).then(mark).catch(()=>mark(false));
+          gameFrameRemainder=0;
+        }
+        // Captura antes dos controles/menus: nenhuma tecla pula a primeira fala.
+        window.addEventListener('keydown',event=>{
+          if(!stageLoading&&!stageIris)return;
+          if(['Enter','Space','KeyE'].includes(event.code)&&
+            !event.repeat&&stageLoading?.ready)finishStageLoading();
+          event.preventDefault();
+          event.stopImmediatePropagation();
+        },true);
+        loadingLayer.addEventListener('pointerdown',event=>{
+          event.preventDefault();
+          if(stageLoading?.ready)finishStageLoading();
+        });
+        function drawIrisMask(now){
+          if(!stageIris)return;
+          const i=stageIris;
+          const t=Math.min(1,Math.max(0,(now-i.started)/i.duration));
+          const eased=t*t*(3-2*t);
+          const maxRadius=Math.hypot(GAME_WIDTH/2,GAME_HEIGHT/2)+2;
+          const radius=maxRadius*(i.mode==='opening'?eased:1-eased);
+          ctx.save();
+          ctx.fillStyle=i.character==='vitoria'?'#e8a0c5':'#0c0b12';
+          ctx.beginPath();
+          ctx.rect(0,0,GAME_WIDTH,GAME_HEIGHT);
+          ctx.moveTo(GAME_WIDTH/2+radius,GAME_HEIGHT/2);
+          ctx.arc(GAME_WIDTH/2,GAME_HEIGHT/2,Math.max(.01,radius),0,Math.PI*2,true);
+          ctx.fill('evenodd'); // Cor só FORA da abertura circular.
+          ctx.restore();
+          if(t>=1){
+            const finished=i;
+            stageIris=null;
+            if(finished.mode==='opening')resetStageSceneClock();
+            else if(finished.callback)finished.callback();
+            gameFrameRemainder=0;
+          }
+        }
+
         const assets = {};
         const processedAssets = {};
         let originalLoaded = 0;
@@ -1303,6 +1540,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
               catch(error){console.warn('Falha ao tratar sprite do Gabriel:',path,error);}
             };
             image.onerror=()=>console.warn('Sprite Gabriel indisponível:',path);
+            trackSceneImage(image,path);
             image.src=encodeURI(path);
           }
         }
@@ -1452,6 +1690,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
               catch(error){console.warn('Sprite CANO BURGER:',path,error);}
             };
             image.onerror=()=>console.warn('Imagem de NPC ausente:',path);
+            trackSceneImage(image,path);
             image.src=encodeURI(path);
           }
         }
@@ -1499,6 +1738,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
             } catch(e){ console.error('Erro processando '+path,e); }
           };
           img.onerror=()=>console.error('Arquivo original ausente: '+path);
+          trackSceneImage(img,path);
           img.src=path;
         });
         Object.entries(extraPaths).forEach(([key,path])=>{
@@ -1517,6 +1757,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
             }catch(error){console.error('Falha ao processar '+path,error);}
           };
           img.onerror=()=>{ if(key!=='dirt')console.warn('Não foi possível carregar '+path); };
+          trackSceneImage(img,path);
           img.src=path;
         });
 
@@ -1597,6 +1838,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
             }
           };
           img.onerror=()=>console.warn('Asset da Floresta Sombria indisponível:',path);
+          trackSceneImage(img,path);
           img.src=encodeURI(path); // Mantém espaços e nome exato no GitHub.
         }
 
