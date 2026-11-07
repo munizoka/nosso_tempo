@@ -192,6 +192,8 @@
         if (kind === 'save' && mode === 'cycle' &&
             !confirm('Recalcular a escala a partir de ' + formatDate(day) +
                 '? Mudanças de ciclo e exceções futuras serão substituídas; o passado será preservado.')) return;
+        let feedback = '';
+        let failed = false;
         saving = true;
         renderSelected();
         showNotice('Salvando alteração no Firebase...');
@@ -217,13 +219,15 @@
                     updatedAt:firebase.firestore.FieldValue.serverTimestamp()});
             });
             el('ws-editor').classList.add('hidden');
-            showNotice('Escala atualizada e compartilhada com o GabiBot! 💜');
+            feedback = 'Escala atualizada e compartilhada com o GabiBot! 💜';
         } catch (error) {
             console.error('Escala: falha ao salvar',error);
-            showNotice('Não foi possível salvar. Verifique o acesso e a publicação das regras do Firestore.',true);
+            failed = true;
+            feedback = 'Não foi possível salvar. Verifique o acesso e a publicação das regras do Firestore.';
         } finally {
             saving = false;
             render();
+            if (feedback) showNotice(feedback,failed);
         }
     }
 
@@ -278,7 +282,7 @@
     }
     function init() {
         const now = brazilToday();
-        selected = validDate(now) ? now : FIRST;
+        selected = validDate(now) ? now : now > LAST ? LAST : FIRST;
         year = Number(selected.slice(0,4));
         month = Number(selected.slice(5,7))-1;
         for (let y=2026; y<=2030; y++) {
