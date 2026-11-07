@@ -12,6 +12,10 @@
     let data = defaultData();
     let authorized = false;
     let loaded = false;
+    // Uma prévia local é mostrada sem revelar alterações privadas do Firestore.
+    let syncState = 'checking';
+    let syncError = '';
+    let syncTimer = null;
     let saving = false;
     let authRevision = 0;
     let unsubscribe = null;
@@ -98,18 +102,21 @@
         const today = brazilToday();
         for (let day=1; day<=lastDay; day++) {
             const date = year + '-' + String(month+1).padStart(2,'0') + '-' + String(day).padStart(2,'0');
-            const result = loaded ? getStatus(date) : null;
+            // Exibe a escala inicial mesmo antes da sincronização, como PRÉVIA.
+            const result = getStatus(date);
             const button = document.createElement('button');
             button.type = 'button';
             button.textContent = String(day);
             button.className = 'relative h-11 md:h-12 rounded-lg text-sm font-medium transition-all hover:brightness-125 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white';
-            button.style.background = !result ? '#27272a' : result.status === 'off' ? '#123b2c' : '#44232c';
-            button.style.color = !result ? '#a1a1aa' : result.status === 'off' ? '#a7f3d0' : '#fecdd3';
+            button.style.background = result.status === 'off' ? '#123b2c' : '#44232c';
+            button.style.color = result.status === 'off' ? '#a7f3d0' : '#fecdd3';
+            button.style.opacity = loaded ? '1' : '.75';
             button.style.border = date === selected ? '2px solid white' :
                 date === today ? '2px solid #93c5fd' : '1px solid rgba(255,255,255,.07)';
             button.disabled = !validDate(date);
             button.setAttribute('aria-label', formatDate(date) + ': ' +
-                (result ? result.status === 'off' ? 'folga' : 'trabalho' : 'escala não carregada'));
+                (result.status === 'off' ? 'folga' : 'trabalho') +
+                (loaded ? '' : ' (prévia inicial, não sincronizada)'));
             button.setAttribute('aria-pressed', String(date === selected));
             if (date === today) button.setAttribute('aria-current','date');
             if (result && result.manual) {
@@ -126,16 +133,16 @@
         }
     }
     function renderSelected() {
-        const result = loaded ? getStatus(selected) : null;
+        const result = getStatus(selected);
         el('ws-selected-date').textContent = formatDate(selected);
-        el('ws-selected-status').textContent = result ?
-            (result.status === 'off' ? '🏡 Dia de folga' : '💼 Dia de trabalho') :
-            'Entre com uma conta autorizada para consultar a escala';
+        el('ws-selected-status').textContent = (loaded ? '' : 'Prévia · ') +
+            (result.status === 'off' ? '🏡 Dia de folga' : '💼 Dia de trabalho');
         el('ws-selected-status').className = 'text-lg font-semibold ' +
-            (!result ? 'text-zinc-400' : result.status === 'off' ? 'text-emerald-300' : 'text-rose-300');
-        el('ws-selected-message').textContent = result ?
+            (result.status === 'off' ? 'text-emerald-300' : 'text-rose-300');
+        el('ws-selected-message').textContent = loaded ?
             (result.status === 'off' ? 'Dia livre para aproveitar com o Gabriel! ❤️' :
-                'Dia de trabalho. Você consegue, princesa! 💜') : 'Seu calendário ficará sincronizado com o GabiBot.';
+                'Dia de trabalho. Você consegue, princesa! 💜') :
+            'Somente a escala inicial está visível. Trocas de plantão e mudanças salvas aparecerão após a sincronização.';
         el('ws-edit').disabled = !authorized || !loaded || saving;
         el('ws-save').disabled = !authorized || !loaded || saving;
         el('ws-status').value = result ? result.status : 'off';
@@ -148,9 +155,19 @@
     function render() {
         renderCalendar();
         renderSelected();
-        if (!authorized) showNotice('Entre com sua conta Google autorizada na área GabiBot para consultar e editar a escala.');
-        else if (!loaded) showNotice('Carregando escala do Firebase...');
-        else showNotice('');
+        if (loaded) showNotice('');
+        else if (syncState === 'guest')
+            showNotice('Prévia da escala inicial (sem alterações salvas). Para ver a escala verdadeira e editar, entre com sua conta autorizada no GabiBot.');
+        else if (syncState === 'unauthorized')
+            showNotice('Esta conta não está autorizada em gabibotAccess. Exibindo apenas uma prévia da escala inicial.', true);
+        else if (syncState === 'error')
+            showNotice(syncError, true);
+        else if (syncState === 'slow')
+            showNotice('O Firebase está demorando a responder. Esta é apenas uma prévia inicial; confira sua conexão, o App Check e as regras publicadas do Firestore.', true);
+        else if (syncState === 'loading')
+            showNotice('Sincronizando escala do Firebase... Exibindo uma prévia inicial enquanto isso.');
+        else
+            showNotice('Verificando acesso à escala... Exibindo uma prévia inicial enquanto isso.');
     }
     function moveMonth(offset) {
         const d = new Date(Date.UTC(year,month+offset,1));
@@ -280,6 +297,18 @@
             'se a data solicitada não estiver listada, peça a data exata ou indique o calendário. ' +
             'Não confunda folga de Vitória com disponibilidade do Gabriel.\n' + list.join('; ');
     }
+    function stopSyncTimer() {
+        if (syncTimer !== null) { clearTimeout(syncTimer); syncTimer = null; }
+    }
+    function startSyncTimer(revision) {
+        stopSyncTimer();
+        syncTimer = setTimeout(() => {
+            syncTimer = null;
+            if (revision !== authRevision || loaded || syncState !== 'loading') return;
+            syncState = 'slow';
+            render();
+        }, 12000);
+    }
     function init() {
         const now = brazilToday();
         selected = validDate(now) ? now : now > LAST ? LAST : FIRST;
@@ -308,27 +337,52 @@
         auth.onAuthStateChanged(async user => {
             const revision = ++authRevision;
             if (unsubscribe) { unsubscribe(); unsubscribe = null; }
-            data = defaultData(); loaded = false; authorized = false; render();
+            stopSyncTimer();
+            data = defaultData();
+            loaded = false;
+            authorized = false;
+            syncState = user ? 'checking' : 'guest';
+            syncError = '';
+            render();
             if (!user) return;
             try {
                 const access = await db.collection('gabibotAccess').doc(user.uid).get();
                 if (revision !== authRevision) return;
                 authorized = access.exists && ['admin','vitoria'].includes(access.data().role);
-                if (!authorized) { render(); return; }
+                if (!authorized) { syncState = 'unauthorized'; render(); return; }
+                syncState = 'loading';
+                render();
+                startSyncTimer(revision);
                 unsubscribe = db.collection(COLLECTION).doc('vitoria').onSnapshot(doc => {
                     if (revision !== authRevision) return;
+                    stopSyncTimer();
                     data = normalize(doc.exists ? doc.data() : null);
                     loaded = true;
+                    syncState = 'ready';
+                    syncError = '';
                     render();
                 }, error => {
                     if (revision !== authRevision) return;
-                    console.error('Escala: erro de leitura',error);
-                    loaded = false; render();
-                    showNotice('Erro ao ler a escala. Publique as regras do Firestore para ativar esta seção.',true);
+                    stopSyncTimer();
+                    console.error('Escala: erro de leitura', error);
+                    loaded = false;
+                    syncState = 'error';
+                    syncError = error.code === 'permission-denied' ?
+                        'O Firestore negou acesso à escala (permission-denied). Publique as novas regras firestore.rules no Firebase Console e verifique sua conta autorizada. Exibindo apenas a prévia inicial.' :
+                        'Não foi possível sincronizar a escala (' + (error.code || 'falha de conexão') +
+                        '). Confira sua internet, o App Check e as regras do Firestore. Esta é apenas a prévia inicial.';
+                    render();
                 });
             } catch (error) {
-                console.error('Escala: autorização',error);
-                if (revision === authRevision) { authorized = false; loaded = false; render(); }
+                if (revision !== authRevision) return;
+                stopSyncTimer();
+                console.error('Escala: autorização', error);
+                authorized = false;
+                loaded = false;
+                syncState = 'error';
+                syncError = 'Não foi possível verificar sua autorização no Firebase (' +
+                    (error.code || 'falha de conexão') + '). Confira o login e a conexão. Mostrando a prévia inicial.';
+                render();
             }
         });
     }
