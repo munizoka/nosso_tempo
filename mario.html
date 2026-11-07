@@ -44,7 +44,7 @@
         #sgb-stage-loading[data-ready="true"] #sgb-stage-loading-hint{display:block}
         @keyframes sgb-hint-pulse{0%,100%{opacity:.35}45%,60%{opacity:1}}
         @media (prefers-reduced-motion:reduce){#sgb-stage-loading-hint{animation:none!important;opacity:1}}
-        @media(max-width:700px){#sgb-stage-loading-bottom{width:min(170px,36vw);right:24px;bottom:18px}
+        @media(max-width:700px){#sgb-stage-loading-bottom{width:min(170px,36vw);right:max(24px,calc(env(safe-area-inset-right) + 16px));bottom:max(18px,env(safe-area-inset-bottom))}
           #sgb-stage-loading-hint{font-size:9px;white-space:normal}}
         #game-shell {position:fixed;inset:0;display:flex;align-items:center;justify-content:center;overflow:hidden;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);box-sizing:border-box;}
         #game-canvas {display:block;width:800px;height:450px;max-width:100%;max-height:100%;image-rendering:pixelated;image-rendering:crisp-edges;background:#d7c6a6;touch-action:none;}
@@ -1005,7 +1005,10 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           restartCurrentLevel();
           if(node.id===2)showForestTitle();
           else if(node.id===3)showSkyTitle();
-          else{state='playing';beginStageLoading('valley');}
+          else{
+            state='playing';player.y=340;player.vy=0;player.grounded=true;
+            beginStageLoading('valley');
+          }
           setHUD();
         }
         function updateMap(dt) {
@@ -4508,6 +4511,8 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           // Gabriel assume no começo do Vale, sem alterar o sequestro original.
           level=1;state='playing';
           restartCurrentLevel();
+          // Não manter Gabriel suspenso no ar durante a íris preta.
+          player.y=340;player.vy=0;player.grounded=true;
           if(activeSlot!==null)saveCurrentSlot(false);
           showItemToast('PRÓLOGO CONCLUÍDO! ENCONTRE VITORIA NO CASTELO!');
           if(typeof beginStageLoading==='function')beginStageLoading('valley');
