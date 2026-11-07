@@ -71,6 +71,23 @@ const mock=()=>{
       assert.equal(await page.locator('#gb-bulk-import').isDisabled(),true);
       assert.equal(await page.evaluate('window.__writes.length'),0);
     });
+    await test('Escala mostra prévia 2x2 sem depender de Firebase real',async()=>{
+      await page.evaluate('switchTab("escala")');
+      await page.locator('#ws-year').selectOption('2026');
+      await page.locator('#ws-month').selectOption('10');
+      const folga=page.locator('#ws-grid button[aria-label^="06/11/2026"]');
+      const trabalho=page.locator('#ws-grid button[aria-label^="08/11/2026"]');
+      assert.match(await folga.getAttribute('aria-label'),/folga.*prévia/i);
+      assert.match(await trabalho.getAttribute('aria-label'),/trabalho.*prévia/i);
+      assert.equal(await page.locator('#ws-grid button[aria-label^="01/11/2026"]').isDisabled(),true);
+      await folga.click();
+      assert.match(await page.locator('#ws-selected-status').innerText(),/Prévia.*folga/i);
+      assert.equal(await page.locator('#ws-edit').isDisabled(),true);
+      assert.match(await page.locator('#ws-notice').innerText(),/Prévia|prévia/i);
+      assert.equal(await page.evaluate('window.WorkSchedule.isLoaded()'),false);
+      assert.equal(await page.evaluate('window.WorkSchedule.getContextForQuestion("folga amanhã")'),'');
+      assert.equal(await page.evaluate('window.__writes.length'),0);
+    });
     await test('Menu abre GabiBot',async()=>{
       assert.equal(await page.evaluate('switchTab("chat"); !document.getElementById("view-chat").classList.contains("hidden")'),true);
     });
@@ -82,7 +99,7 @@ const mock=()=>{
       assert.equal(await page.evaluate('switchTab("lugares"); !document.getElementById("view-lugares").classList.contains("hidden")'),true);
     });
     await test('Firebase real não recebeu gravações',async()=>assert.equal(await page.evaluate('window.__writes.length'),0));
-    console.log('RESULTADO: '+ok+'/10 testes de interface isolados aprovados.');
+    console.log('RESULTADO: '+ok+'/11 testes de interface isolados aprovados.');
     console.log('OBS: O teste bloqueia Firebase e Gemini reais; não substitui avaliação manual visual com CSS/CDNs.');
   }catch(e){console.error('❌ Teste visual falhou:',e);process.exitCode=1}
   finally{if(browser)await browser.close();await new Promise(resolve=>server.close(resolve))}
