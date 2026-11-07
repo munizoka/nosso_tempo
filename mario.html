@@ -998,14 +998,14 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           const node=mapClosest();
           if(!node){mapTip='APROXIME-SE DE UMA FASE';return;}
           if(!node.open){mapTip='FASE BLOQUEADA!';return;}
-          if(node.id==='shop'){enterCanoShop();return;}
+          if(node.id==='shop'){enterCanoShop();beginStageLoading('shop');return;}
           if(node.id==='prologue'){startPrologue({replay:true});return;}
           level=node.id;
           state='playing';
           restartCurrentLevel();
           if(node.id===2)showForestTitle();
           else if(node.id===3)showSkyTitle();
-          else state='playing';
+          else{state='playing';beginStageLoading('valley');}
           setHUD();
         }
         function updateMap(dt) {
@@ -1586,6 +1586,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           const image=new Image();
           image.onload=()=>{prologueArt[place]=image;};
           image.onerror=()=>console.warn('Cenário do prólogo indisponível:',path);
+          trackSceneImage(image,path);
           image.src=encodeURI(path);
         }
 
@@ -1600,6 +1601,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           const image=new Image();
           image.onload=()=>{prologueDecor[name]=image;};
           image.onerror=()=>console.warn('Decoração do prólogo indisponível:',path);
+          trackSceneImage(image,path);
           image.src=encodeURI(path);
         }
 
@@ -1717,6 +1719,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
                 if(testMode==='final'){
                   player.x=princess.x-40; player.y=340; player.grounded=true;
                   cameraX=Math.max(0,princess.x-390); startCutscene();
+                  beginStageLoading('valley');
                 } else if(testMode==='floresta'){showForestTitle();}
                 else if(testMode==='intro2'){showForestTitle();startForest();}
                 else if(testMode==='final2'){showForestTitle();startForest();beginForestScene('forestOutro');}
@@ -1879,6 +1882,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
             catch(error){console.warn('Falha no PNG inteiro:',path,error);valleyArt[key]=image;}
           };
           image.onerror=()=>console.warn('Asset do Vale indisponível:',path);
+          trackSceneImage(image,path);
           image.src=encodeURI(path);
         }
         // Os atlas ainda necessários (solo, checkpoint, brilho) têm recortes separados.
@@ -2368,6 +2372,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           renderInventory();setHUD();closeMainMenu();menuMessage('');
           if(prologueSlots[index]?.started&&!prologueSlots[index]?.completed)
             startPrologue({resume:true});
+          else if(state==='playing')beginStageLoading(level===1?'valley':level===2?'forest':'sky');
         }
 
 
@@ -2643,6 +2648,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           level=3;state='title3';cameraX=0;unlockInventory();
           keys.left=keys.right=keys.up=keys.down=false;
           setHUD();
+          beginStageLoading('sky');
         }
         function startSkyLevel(){
           if(state!=='title3')return;
@@ -2691,6 +2697,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           level=2;state='title2';cameraX=0;
           keys.left=keys.right=keys.up=false;
           setHUD();
+          beginStageLoading('forest');
         }
         // Cada fase terá uma aparição de Vitoria e do vilão no começo e no fim.
         // As cenas nunca alteram pontuação, vidas ou checkpoint.
@@ -2753,7 +2760,9 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           if(state==='skyAltarCharge'){beginSkyScene('skyOutro');return true;}
           if(state==='skyOutro'){finishSkyOutro();return true;}
           if(state==='prologueIntro'){finishPrologueIntro();return true;}
-          if(state==='prologueOutro'){finishPrologueOutro();return true;}
+          if(state==='prologueOutro'){
+            startIrisTransition('vitoria','closing',finishPrologueOutro);return true;
+          }
           return false;
         }
 
@@ -4449,6 +4458,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           keys.left=keys.right=keys.up=keys.down=false;
           if(!saved||replay)savePrologueProgress(false);
           setHUD();
+          beginStageLoading('prologue');
         }
         function finishPrologueIntro(){
           if(state!=='prologueIntro')return;
@@ -4475,6 +4485,7 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           restartCurrentLevel();
           if(activeSlot!==null)saveCurrentSlot(false);
           showItemToast('PRÓLOGO CONCLUÍDO! ENCONTRE VITORIA NO CASTELO!');
+          beginStageLoading('valley');
         }
         function prologueNearLever(lever){
           return Math.abs(princessPlayer.x+princessPlayer.w/2-lever.x)<60&&
@@ -4505,7 +4516,8 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
           }
           if(state==='prologueOutro'){
             prologueSceneSeconds=(now-prologueSceneStart)/1000;
-            if(prologueSceneSeconds>=15.8)finishPrologueOutro();
+            if(prologueSceneSeconds>=15.8&&!stageIris)
+            startIrisTransition('vitoria','closing',finishPrologueOutro);
             return;
           }
           if(state!=='prologuePlaying')return;
@@ -6229,10 +6241,21 @@ body.sgb-menu-active #game-hud,body.sgb-menu-active #mobile-controls{display:non
             gameNow+=GAME_PHYSICS_STEP*1000;
             update(GAME_PHYSICS_STEP,gameNow);
             ticks++;
+            if((typeof stageLoading!=='undefined'&&stageLoading)||
+               (typeof stageIris!=='undefined'&&stageIris))break;
           }
           return ticks;
         }
         function loop(now){
+          if(typeof stageLoading!=='undefined'&&stageLoading){
+            previousFrame=now;gameFrameRemainder=0;
+            requestAnimationFrame(loop);return;
+          }
+          if(typeof stageIris!=='undefined'&&stageIris){
+            previousFrame=now;gameFrameRemainder=0;
+            draw();drawIrisMask(now);
+            requestAnimationFrame(loop);return;
+          }
           const dt=Math.min(GAME_MAX_CATCHUP,
             Math.max(0,(now-previousFrame)/1000));
           previousFrame=now;
