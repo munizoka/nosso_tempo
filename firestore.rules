@@ -28,6 +28,22 @@ service cloud.firestore {
         && data.createdAt is timestamp && data.updatedAt is timestamp;
     }
 
+    // Escala 2x2 compartilhada: calendario e GabiBot usam UM documento.
+    function gbScheduleFields(data) {
+      return data.keys().hasAll(['version', 'cycles', 'overrides', 'updatedAt'])
+        && data.keys().hasOnly(['version', 'cycles', 'overrides', 'updatedAt'])
+        && data.version == 1
+        && data.cycles is map
+        && data.cycles.keys().size() >= 1
+        && data.cycles.keys().size() <= 60
+        && data.cycles.keys().hasAll(['2026-11-06'])
+        && data.cycles['2026-11-06'] in ['off', 'work']
+        && data.overrides is map
+        && data.overrides.keys().size() <= 600
+        && data.updatedAt is timestamp
+        && data.updatedAt == request.time;
+    }
+
     // Progresso do Super Gabriel Bros isolado por Firebase Auth UID.
     // Nunca misturar com permissões de histórico do GabiBot.
     function sgbValidSave(data,slotId) {
@@ -117,6 +133,13 @@ service cloud.firestore {
     match /gabibotAccess/{userId} {
       allow get: if gbIsSelf(userId);
       allow list, create, update, delete: if false;
+    }
+    match /gabibotWorkSchedules/{scheduleId} {
+      allow get: if scheduleId == 'vitoria' && gbIsMember();
+      allow list: if false;
+      allow create, update: if scheduleId == 'vitoria'
+        && gbIsMember() && gbScheduleFields(request.resource.data);
+      allow delete: if false;
     }
     match /gabibotSharedMemories/{memoryId} {
       allow get, list: if gbIsMember();

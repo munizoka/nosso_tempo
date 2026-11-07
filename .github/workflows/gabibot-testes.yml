@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - 'index.html'
+      - 'work-schedule.js'
       - 'firestore.rules'
       - 'tests/**'
       - 'package.json'
@@ -40,6 +41,8 @@ jobs:
         run: npm install --no-audit --no-fund
       - name: Verificar sintaxe e estrutura
         run: npm run test:static
+      - name: Validar calculos da escala 2x2
+        run: npm run test:schedule
       - name: Validar regras no emulador local
         run: npm run test:rules
       - name: Instalar Playwright para teste de interface isolado
