@@ -967,7 +967,7 @@ for(let i=0;i<60;i++)prologueTest.tick(1/60);
 prologueKeys.right=false;
 check('Vitoria anda a 60Hz sem acelerar',
  prologueTest.state()==='prologuePlaying'&&
- Math.abs(prologueTest.princessPlayer.x-(70+60*4.55))<.01);
+ Math.abs(prologueTest.princessPlayer.x-(280+60*4.55))<.01);
 prologueTest.princessPlayer.x=prologueTest.PROLOGUE_GATE_LIBRARY-34;
 prologueTest.princessPlayer.y=312;prologueTest.princessPlayer.grounded=true;
 prologueKeys.right=true;
@@ -1030,7 +1030,7 @@ const royalDraw=mario.match(/        \/\/ Nova textura 292:[\s\S]*?(?=        fu
 check('Renderizadores do piso e dos atlas extraíveis',!!royalDraw);
 const calls=[],ctxArt={
  save(){},restore(){},beginPath(){},rect(){},clip(){},fillRect(){},
- translate(){},scale(){},drawImage(...args){calls.push(args)}
+ ellipse(){},fill(){},translate(){},scale(){},drawImage(...args){calls.push(args)}
 };
 const sources={
  ground:{width:1254,height:1254},platform:{width:1448,height:1086},
@@ -1200,6 +1200,139 @@ check('Medição opcional ?fps=1 não altera o passo fixo do motor',
  mario.includes("if(typeof FPS_DEBUG!=='undefined'&&FPS_DEBUG)updateFpsDiagnostics(now);")&&
  mario.includes('const GAME_PHYSICS_STEP=1/60;')&&
  mario.includes('if(advanceGameSimulation(dt)>0)draw();'));
+
+
+// Novas telas 296–303, barra branca, controles e circulos de protagonista.
+const splashSource=mario.match(/        \/\/ LOADING REMAKE —[\s\S]*?(?=        const assets = \{\};)/)?.[0];
+check('Controlador de carregamento isolável',!!splashSource);
+const splashPaths=mario.match(/        const STAGE_SPLASH_PATHS=\[([\s\S]*?)\];/)?.[1]?.match(/\d{3} loading [^']+\.png/g)||[];
+check('Oito imagens 296–303 únicas e presentes',splashPaths.length===8&&
+ new Set(splashPaths).size===8&&
+ splashPaths.every((name,i)=>name.startsWith(String(296+i))&&
+ fs.existsSync(path.join(root,name))&&fs.statSync(path.join(root,name)).size>1000));
+check('UI branca minimalista sem porcentagem',
+ mario.includes('id="sgb-stage-loading-art"')&&
+ mario.includes('id="sgb-stage-loading-hint"')&&
+ mario.includes('id="sgb-stage-loading-fill"')&&
+ mario.includes('#sgb-stage-loading-fill{height:100%;width:0%;background:white')&&
+ !mario.includes('id="sgb-stage-loading-percent"'));
+check('Touch e PC aguardam confirmação',splashSource.includes('TOQUE PARA PROSSEGUIR')&&
+ splashSource.includes('ESPAÇO / ENTER / E PARA PROSSEGUIR')&&
+ splashSource.includes("['Enter','Space','KeyE']")&&
+ splashSource.includes("loadingLayer.addEventListener('pointerdown'"));
+const loadNode={
+ 'sgb-stage-loading':{hidden:true,dataset:{},addEventListener(){}},
+ 'sgb-stage-loading-art':{removeAttribute(){},src:''},
+ 'sgb-stage-loading-fill':{style:{width:'0%'}},
+ 'sgb-stage-loading-hint':{textContent:''}
+};
+const irisOperations=[];
+const mockCtx={save(){},restore(){},beginPath(){},rect(){},moveTo(){},
+ arc(...args){irisOperations.push({radius:args[2],color:this.fillStyle})},
+ fill(mode){irisOperations.push({mode,color:this.fillStyle})}};
+const splashFactory=new Function('document','window','Image','performance','keys','ctx',
+ 'GAME_WIDTH','GAME_HEIGHT','navigator','gameFrameRemainder','state',
+ 'gabrielSpritePaths','vitoriaSpritePaths','prologueBackgroundPaths',
+ 'prologueDecorPaths','forestRemakePaths','extraPaths','valleyAssetPaths','mobSpritePaths',
+ splashSource+'\nreturn {nextStageSplash,trackSceneImage,sceneAssetRegistry,'+
+ 'stageResourcePaths,startIrisTransition,drawIrisMask,iris:()=>stageIris};');
+const mockPaths={
+ checkpointOff:'off.png',checkpointOn:'on.png',skyPanorama:'panorama.png',
+ skyRuins:'ruins.png',skyTempleFacade:'facade.png',skyObservatory:'observatory.png',
+ skyGroundTexture:'soil.png',skyGround:'ground.png',skyPlatform:'deck.png',
+ skyCrowUp:'crow1.png',skyCrowMid:'crow2.png',skyCrowDown:'crow3.png',
+ skyNimboIdle:'nimbo1.png',skyNimboCharge:'nimbo2.png',skyNimboFire:'nimbo3.png',
+ skyNimboTired:'nimbo4.png',skyNimboBolt:'bolt.png',
+ skyAltarOff:'altar1.png',skyAltarOn:'altar2.png',
+ windShort:'wind1.png',windLong:'wind2.png',windUp:'wind3.png',
+ wood:'wood.png',magic:'magic.png',portal:'portal.png',villain:'villain.png'
+};
+const mockKeys={left:false,right:false,up:false,down:false};
+const splash=splashFactory(
+ {getElementById:key=>loadNode[key]},
+ {addEventListener(){},matchMedia:()=>({matches:false}),innerWidth:1600},
+ function(){}, {now:()=>1000},mockKeys,mockCtx,800,450,
+ {maxTouchPoints:0},0,'playing',
+ {normal:{idle:'g.png'}},{idle:'v.png'},
+ {bedroom:'quarto.png'}, {lever:'alavanca.png'}, {sky:'escuro.png'},
+ mockPaths,{sky:'vale.png'},{mushroom:{idle:'cogumelo.png'},leek:{idle:'alho.png'}});
+const firstEight=Array.from({length:8},()=>splash.nextStageSplash());
+const ninth=splash.nextStageSplash();
+check('Imagens sorteadas sem repetição até esgotar as oito',
+ new Set(firstEight).size===8&&ninth!==firstEight[7]);
+const fakeImage={events:{},addEventListener(type,cb){this.events[type]=cb}};
+splash.trackSceneImage(fakeImage,'sprite-ficticio.png');
+check('Recurso começa pendente',
+ splash.sceneAssetRegistry.get('sprite-ficticio.png').status==='pending');
+fakeImage.events.load();
+check('Somente o evento load conclui o recurso',
+ splash.sceneAssetRegistry.get('sprite-ficticio.png').status==='loaded');
+check('Recursos são separados para cada fase',
+ splash.stageResourcePaths('prologue').includes('quarto.png')&&
+ splash.stageResourcePaths('prologue').includes('alavanca.png')&&
+ splash.stageResourcePaths('forest').includes('escuro.png')&&
+ splash.stageResourcePaths('sky').includes('panorama.png')&&
+ splash.stageResourcePaths('valley').includes('vale.png'));
+splash.startIrisTransition('vitoria','opening');
+splash.drawIrisMask(1000);
+splash.drawIrisMask(1290);
+const open=irisOperations.filter(x=>x.radius!==undefined).map(x=>x.radius);
+check('Círculo rosado abre gradualmente',
+ open.length===2&&open[1]>open[0]&&
+ irisOperations.some(x=>x.mode==='evenodd'&&x.color==='#e8a0c5'));
+splash.drawIrisMask(1580);
+check('Íris termina de abrir',splash.iris()===null);
+irisOperations.length=0;
+splash.startIrisTransition('gabriel','closing');
+splash.drawIrisMask(1000);
+splash.drawIrisMask(1290);
+const closing=irisOperations.filter(x=>x.radius!==undefined).map(x=>x.radius);
+check('Círculo preto fecha gradualmente',
+ closing.length===2&&closing[0]>closing[1]&&
+ irisOperations.some(x=>x.mode==='evenodd'&&x.color==='#0c0b12'));
+check('Motor congela física durante loading e íris',
+ mario.includes("if(typeof stageLoading!=='undefined'&&stageLoading){")&&
+ mario.includes("if(typeof stageIris!=='undefined'&&stageIris){")&&
+ mario.includes('resetStageSceneClock();')&&
+ mario.includes('const GAME_PHYSICS_STEP=1/60;'));
+
+const loadingLoopSource=mario.match(
+ /        function loop\(now\)\{[\s\S]*?(?=        setHUD\(\);\n        sgbStartSlideshow\(\);)/)?.[0];
+check('Loop de jogo isolável para garantir travamento do relógio',!!loadingLoopSource);
+let queuedFrames=0,frozenDraws=0,irisDraws=0;
+const waitLoop=new Function('stageLoading','stageIris','previousFrame',
+ 'gameFrameRemainder','requestAnimationFrame','draw','drawIrisMask',
+ loadingLoopSource+'\nreturn loop;')(
+ {ready:false},null,0,0,()=>{queuedFrames++},
+ ()=>{frozenDraws++},()=>{irisDraws++});
+waitLoop(33.3);
+check('Carregamento impede desenhar ou avançar cinematic antes do toque',
+ queuedFrames===1&&frozenDraws===0&&irisDraws===0);
+const irisLoop=new Function('stageLoading','stageIris','previousFrame',
+ 'gameFrameRemainder','requestAnimationFrame','draw','drawIrisMask',
+ loadingLoopSource+'\nreturn loop;')(
+ null,{mode:'opening'},0,0,()=>{queuedFrames++},
+ ()=>{frozenDraws++},()=>{irisDraws++});
+irisLoop(66.6);
+check('Íris desenha a fase sem passar pela atualização de física',
+ queuedFrames===2&&frozenDraws===1&&irisDraws===1);
+check('Mensagem pronta pulsa com fade completo sem piscar de forma agressiva',
+ mario.includes('@keyframes sgb-hint-pulse{0%,100%{opacity:0}45%,60%{opacity:1}}')&&
+ mario.includes('@media (prefers-reduced-motion:reduce)'));
+
+check('Começo e fim do prólogo têm transições de Vitoria',
+ mario.includes("beginStageLoading('prologue');")&&
+ mario.includes("startIrisTransition('vitoria','closing',finishPrologueOutro);")&&
+ mario.includes("startIrisTransition(kind==='prologue'?'vitoria':'gabriel','opening');"));
+check('Ancoragem da Vitoria corrigida após cinemáticas',
+ mario.includes('princessPlayer.x-cameraX+princessPlayer.w/2,')&&
+ mario.includes('valleyPrincessSceneAnchor?.x??princess.x+princess.w/2'));
+check('Gabriel anima caminhada na saída da Fase 2',
+ mario.includes('player.animFrame=(player.animFrame+1)%4;')&&
+ mario.includes("const storyWalking=state==='forestOutro'"));
+check('Alavancas têm brilho pulsante, mantendo as duas poses',
+ mario.includes('Aura mágica suave e três pontos de brilho')&&
+ mario.includes("const image=prologueDecor.lever,g=prologueLeverGeometry(lever,on);"));
 
 check('Inventário com dezoito espaços',mario.includes('inv-story-grid')&&mario.includes('inv-consumable-grid')&&mario.includes('for(let n=0;n<9;n++)'));
 check('Sprite 68 e categorias RPG',mario.includes('68.png')&&mario.includes('ITENS DE HISTÓRIA')&&mario.includes('CONSUMÍVEIS'));
@@ -1527,7 +1660,7 @@ check('31 arquivos CANO BURGER publicados na raiz',
  canoSprites.every(file=>fs.existsSync(path.join(root,file))&&fs.statSync(path.join(root,file)).size>1000));
 check('CANO BURGER no mapa sem substituir fase 1–3',
  mario.includes("id:'shop',name:'CANO BURGER'")&&
- mario.includes("if(node.id==='shop'){enterCanoShop();return;}")&&
+ mario.includes("if(node.id==='shop'){enterCanoShop();beginStageLoading('shop');return;}")&&
  mario.includes("if(state==='shop'){drawCanoShop();return;}")
 );
 check('Duas portas utilizáveis e loja como fase horizontal',
