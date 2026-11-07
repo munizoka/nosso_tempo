@@ -1635,7 +1635,7 @@ check('31 arquivos CANO BURGER publicados na raiz',
  canoSprites.every(file=>fs.existsSync(path.join(root,file))&&fs.statSync(path.join(root,file)).size>1000));
 check('CANO BURGER no mapa sem substituir fase 1–3',
  mario.includes("id:'shop',name:'CANO BURGER'")&&
- mario.includes("if(node.id==='shop'){enterCanoShop();return;}")&&
+ mario.includes("if(node.id==='shop'){enterCanoShop();beginStageLoading('shop');return;}")&&
  mario.includes("if(state==='shop'){drawCanoShop();return;}")
 );
 check('Duas portas utilizáveis e loja como fase horizontal',
