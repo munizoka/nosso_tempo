@@ -52,6 +52,35 @@ const mock=()=>{
       assert.equal(await page.locator('#avatar-vitoria').count(),1);
       assert.equal(await page.locator('#gb-legacy-welcome-login').count(),1);
     });
+    await test('Trilha sonora começa muda e só pode ser ativada manualmente',async()=>{
+      const inicial=await page.evaluate(()=>{
+        const music=document.getElementById('bg-music');
+        const slider=document.getElementById('volume-slider');
+        return {volume:music.volume,slider:slider.value,paused:music.paused,
+          icon:document.getElementById('vol-icon').innerHTML};
+      });
+      assert.equal(inicial.slider,'0');
+      assert.equal(inicial.volume,0);
+      assert.equal(inicial.paused,true);
+      assert.match(inicial.icon,/x1="23"/); // ícone de mudo
+      const depois=await page.evaluate(()=>{
+        initWebAudio();
+        const ganhoInicial=gainNode.gain.value;
+        setVolume(0.55);
+        const ganhoAumentado=gainNode.gain.value;
+        const slider=document.getElementById('volume-slider').value;
+        const volumeHTML=document.getElementById('bg-music').volume;
+        setVolume(0);
+        return {ganhoInicial,ganhoAumentado,slider,volumeHTML,
+          ganhoFinal:gainNode.gain.value,paused:document.getElementById('bg-music').paused};
+      });
+      assert.equal(depois.ganhoInicial,0);
+      assert.equal(depois.ganhoAumentado,0.55);
+      assert.equal(depois.slider,'0.55');
+      assert.equal(depois.volumeHTML,1); // Web Audio controla o ganho
+      assert.equal(depois.ganhoFinal,0);
+      assert.equal(depois.paused,true);
+    });
     await test('Nenhuma escrita ao abrir o site',async()=>assert.equal(await page.evaluate('window.__writes.length'),0));
     await test('Edição de avatar requer permissão',async()=>{
       await page.evaluate('solicitarEdicaoAvatar("Vitoria")');
@@ -99,7 +128,7 @@ const mock=()=>{
       assert.equal(await page.evaluate('switchTab("lugares"); !document.getElementById("view-lugares").classList.contains("hidden")'),true);
     });
     await test('Firebase real não recebeu gravações',async()=>assert.equal(await page.evaluate('window.__writes.length'),0));
-    console.log('RESULTADO: '+ok+'/11 testes de interface isolados aprovados.');
+    console.log('RESULTADO: '+ok+'/12 testes de interface isolados aprovados.');
     console.log('OBS: O teste bloqueia Firebase e Gemini reais; não substitui avaliação manual visual com CSS/CDNs.');
   }catch(e){console.error('❌ Teste visual falhou:',e);process.exitCode=1}
   finally{if(browser)await browser.close();await new Promise(resolve=>server.close(resolve))}
