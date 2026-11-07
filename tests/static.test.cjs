@@ -1295,6 +1295,31 @@ check('Motor congela física durante loading e íris',
  mario.includes("if(typeof stageIris!=='undefined'&&stageIris){")&&
  mario.includes('resetStageSceneClock();')&&
  mario.includes('const GAME_PHYSICS_STEP=1/60;'));
+
+const loadingLoopSource=mario.match(
+ /        function loop\(now\)\{[\s\S]*?(?=        setHUD\(\);\n        sgbStartSlideshow\(\);)/)?.[0];
+check('Loop de jogo isolável para garantir travamento do relógio',!!loadingLoopSource);
+let queuedFrames=0,frozenDraws=0,irisDraws=0;
+const waitLoop=new Function('stageLoading','stageIris','previousFrame',
+ 'gameFrameRemainder','requestAnimationFrame','draw','drawIrisMask',
+ loadingLoopSource+'\nreturn loop;')(
+ {ready:false},null,0,0,()=>{queuedFrames++},
+ ()=>{frozenDraws++},()=>{irisDraws++});
+waitLoop(33.3);
+check('Carregamento impede desenhar ou avançar cinematic antes do toque',
+ queuedFrames===1&&frozenDraws===0&&irisDraws===0);
+const irisLoop=new Function('stageLoading','stageIris','previousFrame',
+ 'gameFrameRemainder','requestAnimationFrame','draw','drawIrisMask',
+ loadingLoopSource+'\nreturn loop;')(
+ null,{mode:'opening'},0,0,()=>{queuedFrames++},
+ ()=>{frozenDraws++},()=>{irisDraws++});
+irisLoop(66.6);
+check('Íris desenha a fase sem passar pela atualização de física',
+ queuedFrames===2&&frozenDraws===1&&irisDraws===1);
+check('Mensagem pronta pulsa com fade completo sem piscar de forma agressiva',
+ mario.includes('@keyframes sgb-hint-pulse{0%,100%{opacity:0}45%,60%{opacity:1}}')&&
+ mario.includes('@media (prefers-reduced-motion:reduce)'));
+
 check('Começo e fim do prólogo têm transições de Vitoria',
  mario.includes("beginStageLoading('prologue');")&&
  mario.includes("startIrisTransition('vitoria','closing',finishPrologueOutro);")&&
