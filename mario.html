@@ -42,7 +42,7 @@
         #sgb-stage-loading[data-ready="true"]{cursor:pointer}
         #sgb-stage-loading[data-ready="true"] #sgb-stage-loading-track{display:none}
         #sgb-stage-loading[data-ready="true"] #sgb-stage-loading-hint{display:block}
-        @keyframes sgb-hint-pulse{0%,100%{opacity:.35}45%,60%{opacity:1}}
+        @keyframes sgb-hint-pulse{0%,100%{opacity:0}45%,60%{opacity:1}}
         @media (prefers-reduced-motion:reduce){#sgb-stage-loading-hint{animation:none!important;opacity:1}}
         @media(max-width:700px){#sgb-stage-loading-bottom{width:min(170px,36vw);right:max(24px,calc(env(safe-area-inset-right) + 16px));bottom:max(18px,env(safe-area-inset-bottom))}
           #sgb-stage-loading-hint{font-size:9px;white-space:normal}}
